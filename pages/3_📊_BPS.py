@@ -7,8 +7,8 @@ st.set_page_config(page_title="BPS Data - IndoEcon Explorer", layout="wide")
 
 st.title("📊 Indikator Strategis BPS")
 st.write(
-    "Akses langsung indikator pembangunan, makroekonomi, dan sosial resmi BPS"
-    " dari tingkat **Nasional**, **Provinsi**, hingga **Kabupaten/Kota**."
+    "Eksplorasi indikator makroekonomi, sosial, dan pembangunan resmi dari"
+    " **BPS** (Nasional, Provinsi, hingga Kabupaten/Kota)."
 )
 
 HEADERS = {
@@ -20,10 +20,13 @@ HEADERS = {
 if "BPS_APP_ID" in st.secrets:
   BPS_APP_ID = st.secrets["BPS_APP_ID"]
 else:
-  st.error("⚠️ Masukkan `BPS_APP_ID` di Streamlit Secrets terlebih dahulu.")
+  st.error(
+      "⚠️ Kunci `BPS_APP_ID` belum tersimpan di Secrets. Buka Manage app >"
+      " Settings > Secrets."
+  )
   st.stop()
 
-# Daftar Domain Provinsi BPS
+# Daftar Domain Provinsi
 PROVINCES = {
     "Nasional / Seluruh Indonesia": "0000",
     "Aceh": "1100",
@@ -67,128 +70,126 @@ PROVINCES = {
 }
 
 
+# 1. Pilihan Wilayah
 @st.cache_data(ttl=86400)
-def get_kabupaten_list(prov_code):
+def get_kabupaten(prov_code):
   url = f"https://webapi.bps.go.id/v1/api/list/model/domain/lang/ind/domain/{prov_code}/key/{BPS_APP_ID}/"
   try:
     r = requests.get(url, headers=HEADERS, timeout=15)
-    res = r.json()
-    if res.get("status") == "OK" and "data" in res and len(res["data"]) > 1:
-      return {item["domain_name"]: item["domain_id"] for item in res["data"][1]}
+    data = r.json()
+    if data.get("status") == "OK" and len(data.get("data", [])) > 1:
+      return {item["domain_name"]: item["domain_id"] for item in data["data"][1]}
   except Exception:
     pass
   return {}
 
 
-# 1. Pemilihan Wilayah Berjenjang
-col_w1, col_w2 = st.columns(2)
-with col_w1:
+col_p1, col_p2 = st.columns(2)
+with col_p1:
   selected_prov = st.selectbox("1. Pilih Tingkat / Provinsi:", list(PROVINCES.keys()))
   prov_code = PROVINCES[selected_prov]
 
 target_domain = prov_code
-wilayah_label = selected_prov
+label_wilayah = selected_prov
 
 if prov_code != "0000":
-  kab_options = get_kabupaten_list(prov_code)
-  with col_w2:
-    if kab_options:
-      pilihan = [f"Seluruh {selected_prov} (Provinsi)"] + list(kab_options.keys())
-      selected_kab = st.selectbox("2. Pilih Wilayah Spesifik:", pilihan)
+  kab_map = get_kabupaten(prov_code)
+  with col_p2:
+    if kab_map:
+      pilihan_kab = [f"Seluruh {selected_prov} (Provinsi)"] + list(kab_map.keys())
+      selected_kab = st.selectbox("2. Pilih Wilayah Administratif:", pilihan_kab)
       if selected_kab != f"Seluruh {selected_prov} (Provinsi)":
-        target_domain = kab_options[selected_kab]
-        wilayah_label = f"{selected_kab}, {selected_prov}"
+        target_domain = kab_map[selected_kab]
+        label_wilayah = f"{selected_kab}, {selected_prov}"
 
-st.caption(f"📍 Domain aktif BPS: **{wilayah_label}** (`{target_domain}`)")
+st.caption(f"📍 Wilayah terpilih: **{label_wilayah}** (Domain: `{target_domain}`)")
 
 
-# 2. Ambil Daftar Indikator Strategis
+# 2. Ambil Daftar Indikator dengan Format URL Resmi BPS
 @st.cache_data(ttl=43200)
-def get_indicators(domain):
-  # Endpoint indikator strategis resmi
-  url = f"https://webapi.bps.go.id/v1/api/list/model/indicator/domain/{domain}/lang/ind/key/{BPS_APP_ID}/"
-  try:
-    r = requests.get(url, headers=HEADERS, timeout=20)
-    res = r.json()
-    if res.get("status") == "OK" and "data" in res and len(res["data"]) > 1:
-      return res["data"][1]
-  except Exception:
-    pass
-  return []
+def fetch_all_indicators(domain):
+  indicators = []
+  # Ambil halaman 1 sampai 5 untuk menampung seluruh indikator strategis
+  for page in range(1, 6):
+    url = f"https://webapi.bps.go.id/v1/api/list/model/indicator/lang/ind/domain/{domain}/page/{page}/key/{BPS_APP_ID}/"
+    try:
+      res = requests.get(url, headers=HEADERS, timeout=15).json()
+      if res.get("status") == "OK" and len(res.get("data", [])) > 1:
+        items = res["data"][1]
+        if not items:
+          break
+        indicators.extend(items)
+      else:
+        break
+    except Exception:
+      break
+  return indicators
 
 
-indicator_list = get_indicators(target_domain)
+with st.spinner("Memuat katalog indikator strategis..."):
+  indicator_list = fetch_all_indicators(target_domain)
 
 if not indicator_list:
   st.warning(
-      f"Tidak ada daftar indikator strategis langsung untuk {wilayah_label}. Coba"
-      " pilih tingkat Provinsi atau Nasional."
+      f"Tidak ditemukan indikator strategis langsung untuk {label_wilayah}."
+      " Coba beralih ke Nasional atau Provinsi lain."
   )
   st.stop()
 
-# Buat mapping nama indikator ke objek datanya
-indicator_dict = {
-    f"{item['title']} (Kategori: {item.get('name_category', 'Umum')})": item
+# Buat mapping judul indikator
+indicator_options = {
+    f"{item['title']} [{item.get('name_category', 'Umum')}]": item
     for item in indicator_list
 }
 
-selected_ind_label = st.selectbox(
-    "3. Pilih Indikator Strategis:", list(indicator_dict.keys())
+selected_label = st.selectbox(
+    "3. Pilih Indikator Strategis:", list(indicator_options.keys())
 )
-chosen_indicator = indicator_dict[selected_ind_label]
-indicator_id = chosen_indicator["indicator_id"]
+selected_ind = indicator_options[selected_label]
+ind_id = selected_ind["indicator_id"]
 
 with st.expander("ℹ️ Metadata Indikator"):
-  st.write(f"**Satuan:** {chosen_indicator.get('unit', '-')}")
-  st.write(f"**Kategori:** {chosen_indicator.get('name_category', '-')}")
+  st.write(f"**Satuan:** {selected_ind.get('unit', '-')}")
+  st.write(f"**Kategori:** {selected_ind.get('name_category', '-')}")
   st.write(
-      "**Catatan:**"
-      f" {chosen_indicator.get('notes', 'Tidak ada catatan tambahan.')}"
+      "**Definisi / Catatan:**"
+      f" {selected_ind.get('notes', 'Tidak ada catatan tambahan.')}"
   )
 
-# 3. Penarikan Data Time-Series Indikator
+# 3. Penarikan Data Angka
 if st.button("📊 Tampilkan Data", type="primary"):
-  with st.spinner("Mengambil angka indikator dari server BPS..."):
-    # Endpoint detail nilai indikator strategis
-    detail_url = f"https://webapi.bps.go.id/v1/api/view/model/indicator/domain/{target_domain}/indicator/{indicator_id}/lang/ind/key/{BPS_APP_ID}/"
+  with st.spinner("Mengambil angka data..."):
+    # Endpoint detail nilai indikator strategis BPS yang presisi
+    val_url = f"https://webapi.bps.go.id/v1/api/view/model/indicator/lang/ind/domain/{target_domain}/var/{ind_id}/key/{BPS_APP_ID}/"
     try:
-      r_det = requests.get(detail_url, headers=HEADERS, timeout=20)
-      det_json = r_det.json()
+      r_val = requests.get(val_url, headers=HEADERS, timeout=20)
+      res_val = r_val.json()
 
-      if det_json.get("status") == "OK" and "data" in det_json:
-        raw_data = det_json["data"]
+      if res_val.get("status") == "OK" and "data" in res_val:
+        raw = res_val["data"]
+        rows = []
 
-        # Membaca data array
-        data_rows = []
-        if isinstance(raw_data, list):
-          for row in raw_data:
-            data_rows.append({
-                "Periode / Tahun": row.get("label", row.get("period", "-")),
-                "Nilai": row.get("value", None),
+        if isinstance(raw, list):
+          for r in raw:
+            rows.append({
+                "Periode": str(r.get("label", r.get("period", "-"))),
+                "Nilai": r.get("value", None),
             })
-        elif isinstance(raw_data, dict):
-          # Fallback jika data berbentuk key tahun
-          for k, v in raw_data.items():
-            data_rows.append({"Periode / Tahun": k, "Nilai": v})
+        elif isinstance(raw, dict):
+          for k, v in raw.items():
+            rows.append({"Periode": str(k), "Nilai": v})
 
-        df = pd.DataFrame(data_rows)
-        # Hapus baris bernilai kosong atau None
-        df = df.dropna(subset=["Nilai"])
+        df = pd.DataFrame(rows).dropna(subset=["Nilai"])
 
         if not df.empty:
           st.divider()
-          st.subheader(f"📈 {chosen_indicator['title']}")
-          st.caption(
-              f"Wilayah: {wilayah_label} | Satuan:"
-              f" {chosen_indicator.get('unit', '-')}"
-          )
+          st.subheader(f"📈 {selected_ind['title']}")
 
-          # Tombol download
           c1, c2 = st.columns(2)
           c1.download_button(
               "📥 Unduh CSV",
               df.to_csv(index=False).encode("utf-8"),
-              f"bps_{indicator_id}.csv",
+              f"bps_{ind_id}.csv",
               "text/csv",
           )
           buf = io.BytesIO()
@@ -197,19 +198,19 @@ if st.button("📊 Tampilkan Data", type="primary"):
           c2.download_button(
               "📊 Unduh Excel (.xlsx)",
               buf.getvalue(),
-              f"bps_{indicator_id}.xlsx",
+              f"bps_{ind_id}.xlsx",
               "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
           )
 
           st.dataframe(df, use_container_width=True)
-
-          with st.expander("🔍 Respon JSON Resmi BPS"):
-            st.json(det_json)
         else:
-          st.warning("Data observasi angka untuk indikator ini masih kosong.")
+          st.info(
+              "Indikator ini tercatat, namun rincian time-series belum"
+              " dipublikasikan di WebAPI domain ini."
+          )
       else:
         st.error(
-            f"Gagal memuat detail data (Pesan BPS: {det_json.get('status')})."
+            f"BPS mengembalikan pesan: {res_val.get('status', 'Gagal memuat')}"
         )
     except Exception as e:
       st.error(f"Terjadi kesalahan saat memproses data: {e}")
