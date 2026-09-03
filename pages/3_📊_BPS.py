@@ -110,86 +110,23 @@ with col2:
 
 # Tombol Tarik Data
 if st.button("📊 Tampilkan Data BPS", type="primary"):
-  with st.spinner(f"Menghubungkan ke API BPS untuk {selected_indicator}..."):
-    # Endpoint data dinamis resmi BPS
+  with st.spinner("Menghubungkan ke API BPS..."):
     url = f"https://webapi.bps.go.id/v1/api/list/model/data/lang/ind/domain/{domain_code}/var/{var_id}/key/{BPS_APP_ID}/"
 
     try:
       r = requests.get(url, headers=HEADERS, timeout=25)
-      res = r.json()
 
-      if (
-          res.get("status") == "OK"
-          and res.get("data-availability") != "list-not-available"
-      ):
-        data_content = res.get("datacontent", {})
-        vervar = {
-            str(item["val"]): item["label"] for item in res.get("vervar", [])
-        }
-        tahun_dict = {
-            str(item["val"]): item["label"] for item in res.get("tahun", [])
-        }
+      st.markdown("### 🔍 Hasil Diagnostik API BPS")
+      st.write(f"**HTTP Status Code:** `{r.status_code}`")
+      st.write(f"**URL yang dipanggil:** `{url.replace(BPS_APP_ID, 'KUNCI_DIRAHASIAKAN')}`")
 
-        # Parsing data multidimensi BPS ke format tabel bersih
-        records = []
-        for key, val in data_content.items():
-          if val is not None:
-            # Pola key BPS: vervar + var + turvar + tahun + turtahun
-            k_str = str(key)
-            wilayah_nama = selected_prov
-            tahun_label = "Terkini"
+      try:
+        res_json = r.json()
+        st.write("**Respon Asli dari Server BPS:**")
+        st.json(res_json)
+      except Exception:
+        st.write("**Respon Teks Mentah (Bukan JSON):**")
+        st.code(r.text)
 
-            for v_code, v_label in vervar.items():
-              if k_str.startswith(v_code):
-                wilayah_nama = v_label
-                break
-
-            for t_code, t_label in tahun_dict.items():
-              if t_code in k_str:
-                tahun_label = t_label
-                break
-
-            records.append({
-                "Wilayah / Klasifikasi": wilayah_nama,
-                "Periode / Tahun": tahun_label,
-                "Nilai": val,
-            })
-
-        df = pd.DataFrame(records)
-
-        if not df.empty:
-          st.divider()
-          st.subheader(f"📈 {selected_indicator}")
-          st.caption(f"Sumber: WebAPI BPS | Wilayah: {selected_prov}")
-
-          c1, c2 = st.columns(2)
-          c1.download_button(
-              "📥 Unduh CSV",
-              df.to_csv(index=False).encode("utf-8"),
-              f"bps_{var_id}.csv",
-              "text/csv",
-          )
-          buf = io.BytesIO()
-          with pd.ExcelWriter(buf, engine="openpyxl") as writer:
-            df.to_excel(writer, index=False, sheet_name="BPS Data")
-          c2.download_button(
-              "📊 Unduh Excel (.xlsx)",
-              buf.getvalue(),
-              f"bps_{var_id}.xlsx",
-              "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-          )
-
-          st.dataframe(df, use_container_width=True)
-        else:
-          st.warning(
-              "Data tercatat di katalog, tetapi observasi numerik belum"
-              " dipublikasikan untuk domain ini."
-          )
-      else:
-        st.warning(
-            "BPS merespons bahwa data indikator ini belum dialokasikan untuk"
-            f" domain {selected_prov}. Coba gunakan cakupan 'Nasional / Seluruh"
-            " Indonesia'."
-        )
     except Exception as e:
-      st.error(f"Terjadi kesalahan saat memanggil server BPS: {e}")
+      st.error(f"Koneksi gagal ke server BPS: {e}")
