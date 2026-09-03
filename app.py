@@ -8,7 +8,7 @@ st.set_page_config(
 
 st.title("🌐 Portal Data Terpadu Indonesia")
 st.write("""
-Selamat datang di repositori eksplorasi data ekonomi, pembangunan, dan finansial.
+Selamat datang di repositori eksplorasi data Indonesia, khususnya ekonomi, pembangunan, dan finansial.
 Pilih sumber data yang ingin diakses melalui menu navigasi di bilah sisi (**sidebar**) sebelah kiri:
 
 * **🏛️ World Bank:** Data indikator pembangunan lintas sektor (makro, sosial, kemiskinan, lingkungan).
