@@ -17,44 +17,68 @@ HEADERS = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
 }
 
-if "BPS_APP_ID" in st.secrets:
-    # Cek ketersediaan Secrets
+# 1. Cek Secrets App ID
 BPS_APP_ID = st.secrets.get("BPS_APP_ID") or st.secrets.get("BPS_API_KEY")
 
 if not BPS_APP_ID:
-    st.error("⚠️ Key BPS belum ditemukan di Streamlit Secrets. Pastikan tertulis `BPS_APP_ID = 'isi_key'`.")
+    st.error("⚠️ Key BPS belum ditemukan di Streamlit Secrets. Pastikan tertulis `BPS_APP_ID = '...'`.")
     st.stop()
 
-DOMAIN = "0000"
+DOMAIN = "0000"  # Agregat Nasional
 
+# 2. Ambil Seluruh Subjek Resmi dari BPS
 @st.cache_data(ttl=86400)
 def get_bps_subjects():
-    # URL resmi katalog subjek BPS
     url = f"https://webapi.bps.go.id/v1/api/list/model/sub/domain/{DOMAIN}/key/{BPS_APP_ID}/"
     try:
         r = requests.get(url, headers=HEADERS, timeout=15)
         res = r.json()
         if res.get("status") == "OK" and len(res.get("data", [])) > 1:
-            return {item["title"]: str(item["sub_id"]) for item in res["data"][1]}, None
+            data_dict = {item["title"]: str(item["sub_id"]) for item in res["data"][1]}
+            return data_dict, None
         else:
-            return {}, f"Respon BPS: {res.get('status')} - {res.get('data-availability', 'Gagal memuat data')}"
+            return {}, f"Respon BPS: {res.get('status')} - {res.get('data-availability', 'Gagal memuat')}"
     except Exception as e:
         return {}, f"Koneksi gagal: {str(e)}"
+
+# 3. Ambil Seluruh Variabel Berdasarkan Subjek
+@st.cache_data(ttl=43200)
+def get_variables_by_subject(sub_id):
+    all_vars = {}
+    page = 1
+    while True:
+        url = f"https://webapi.bps.go.id/v1/api/list/model/var/domain/{DOMAIN}/sub/{sub_id}/page/{page}/key/{BPS_APP_ID}/"
+        try:
+            r = requests.get(url, headers=HEADERS, timeout=15)
+            res = r.json()
+            if res.get("status") == "OK" and len(res.get("data", [])) > 1:
+                items = res["data"][1]
+                for it in items:
+                    all_vars[f"{it['title']} (ID: {it['var_id']})"] = str(it["var_id"])
+                
+                total_pages = res["data"][0].get("pages", 1)
+                if page >= total_pages or page >= 5:
+                    break
+                page += 1
+            else:
+                break
+        except Exception:
+            break
+    return all_vars
 
 subjects, err_msg = get_bps_subjects()
 
 if not subjects:
     st.error(f"Gagal terhubung ke katalog WebAPI BPS. Detail: {err_msg}")
+    st.info("💡 Pastikan `BPS_APP_ID` pada Streamlit Secrets valid dan server BPS tidak sedang memblokir request.")
     st.stop()
 
-# ==========================================
-# 3. Kontrol Navigasi Katalog
-# ==========================================
+# 4. Kontrol Navigasi Katalog
 col_sub, col_var = st.columns([1, 2])
 
 with col_sub:
     selected_sub_title = st.selectbox(
-        "1. Pilih Subjek / Bidang Statistik Resmi BPS:",
+        "1. Pilih Subjek / Bidang Statistik:",
         list(subjects.keys())
     )
     selected_sub_id = subjects[selected_sub_title]
@@ -64,17 +88,15 @@ variables = get_variables_by_subject(selected_sub_id)
 with col_var:
     if variables:
         selected_var_title = st.selectbox(
-            f"2. Pilih Indikator BPS ({len(variables)} Variabel Ditemukan di Subjek Ini):",
+            f"2. Pilih Indikator BPS ({len(variables)} Variabel Ditemukan):",
             list(variables.keys())
         )
         selected_var_id = variables[selected_var_title]
     else:
-        st.warning("Belum ada tabel variabel dinamis aktif di bawah subjek ini.")
+        st.warning("Belum ada tabel variabel dinamis aktif di subjek ini.")
         st.stop()
 
-# ==========================================
-# 4. Filter Waktu (1945–2025)
-# ==========================================
+# 5. Filter Rentang Tahun (1945–2025)
 YEARS = [str(y) for y in range(1945, 2026)]
 
 col_t1, col_t2 = st.columns(2)
@@ -87,12 +109,9 @@ if int(th_start) > int(th_end):
     st.error("Tahun mulai tidak boleh lebih besar dari tahun selesai.")
     st.stop()
 
-# ==========================================
-# 5. Penarikan Data Multi-Tahun (Batching)
-# ==========================================
+# 6. Eksekusi Penarikan Data (Batch 3-Tahunan)
 if st.button("📊 Ambil Data Resmi BPS", type="primary"):
     all_selected_years = [str(y) for y in range(int(th_start), int(th_end) + 1)]
-    # BPS membatasi parameter 'th' maks 3 tahun per request
     batches = [all_selected_years[i:i + 3] for i in range(0, len(all_selected_years), 3)]
 
     records = []
@@ -101,11 +120,11 @@ if st.button("📊 Ambil Data Resmi BPS", type="primary"):
 
     for idx, b in enumerate(batches):
         th_param = ";".join(b) if len(b) > 1 else b[0]
-        status_text.text(f"Mengunduh blok tahun {b[0]}–{b[-1]} dari server BPS...")
+        status_text.text(f"Mengunduh blok data tahun {b[0]}–{b[-1]}...")
         
-        url = f"https://webapi.bps.go.id/v1/api/list/model/data/lang/ind/domain/{DOMAIN}/var/{selected_var_id}/th/{th_param}/key/{BPS_APP_ID}/"
+        url = f"https://webapi.bps.go.id/v1/api/list/model/data/domain/{DOMAIN}/var/{selected_var_id}/th/{th_param}/key/{BPS_APP_ID}/"
         try:
-            res = requests.get(url, headers=HEADERS, timeout=25).json()
+            res = requests.get(url, headers=HEADERS, timeout=20).json()
             if res.get("status") == "OK" and res.get("data-availability") != "list-not-available":
                 datacontent = res.get("datacontent", {})
                 vervar = {str(item["val"]): item["label"] for item in res.get("vervar", [])}
@@ -114,7 +133,6 @@ if st.button("📊 Ambil Data Resmi BPS", type="primary"):
                 for k, val in datacontent.items():
                     if val is not None:
                         k_str = str(k)
-                        # Identifikasi rincian/kategori dan tahun
                         lbl_rincian = "Nasional"
                         for v_val, v_lbl in vervar.items():
                             if k_str.startswith(v_val):
@@ -133,7 +151,7 @@ if st.button("📊 Ambil Data Resmi BPS", type="primary"):
                                 "Rincian": lbl_rincian,
                                 "Nilai": val
                             })
-            time.sleep(0.1)  # Mencegah throttling API
+            time.sleep(0.1)
         except Exception:
             pass
 
@@ -142,17 +160,14 @@ if st.button("📊 Ambil Data Resmi BPS", type="primary"):
     status_text.empty()
     progress_bar.empty()
 
-    # Bentuk deret waktu lengkap (termasuk tahun yang kosong)
     df_grid = pd.DataFrame({"Tahun": all_selected_years})
 
     if records:
         df_raw = pd.DataFrame(records).drop_duplicates()
-        # Pivot agar kategori menjadi kolom tersendiri
         df_pivot = df_raw.pivot(index="Tahun", columns="Rincian", values="Nilai").reset_index()
         df_final = pd.merge(df_grid, df_pivot, on="Tahun", how="left").sort_values("Tahun")
 
-        st.success(f"Berhasil menarik data resmi untuk variabel: **{selected_var_title}**!")
-
+        st.success(f"Berhasil memuat data: **{selected_var_title}**")
         st.divider()
 
         # Visualisasi Grafik
@@ -166,13 +181,13 @@ if st.button("📊 Ambil Data Resmi BPS", type="primary"):
                 y=df_final[col],
                 mode="lines+markers",
                 name=col,
-                connectgaps=False,  # Memutus garis secara alami jika data kosong/None
+                connectgaps=False,
                 hovertemplate=f"Tahun %{{x}}<br>{col}: %{{y}}<extra></extra>"
             ))
 
         fig.update_layout(
             xaxis=dict(title="Tahun", tickmode="linear"),
-            yaxis=dict(title="Nilai Observasi"),
+            yaxis=dict(title="Nilai"),
             hovermode="x unified",
             margin=dict(l=20, r=20, t=40, b=20)
         )
@@ -199,17 +214,10 @@ if st.button("📊 Ambil Data Resmi BPS", type="primary"):
         )
 
         st.dataframe(df_final.fillna("-"), use_container_width=True)
-        st.caption(
-            "💡 Catatan: Tanda strip (-) atau titik grafik terputus menunjukkan bahwa pada tahun tersebut "
-            "BPS belum melaksanakan survei atau datanya tidak dialokasikan di basis data tabel dinamis BPS."
-        )
+        st.caption("💡 Tanda strip (-) atau grafik putus menandakan pada tahun tersebut survei belum tersedia.")
 
     else:
         st.warning(
-            f"Tabel variabel *'{selected_var_title}'* terdaftar di katalog BPS, "
-            f"tetapi server BPS tidak memiliki rekaman angka pada rentang {th_start}–{th_end}."
+            f"Variabel *'{selected_var_title}'* tidak memiliki rekaman angka pada rentang {th_start}–{th_end} di database digital BPS."
         )
-        st.info(
-            "Kemungkinan data ini hanya dirilis BPS dalam publikasi laporan cetak/PDF, "
-            "atau surveinya baru dimulai pada tahun yang berbeda. Silakan pilih indikator lainnya."
-        )
+        st.info("Pilih indikator atau bidang statistik lainnya yang memiliki data deret waktu.")
