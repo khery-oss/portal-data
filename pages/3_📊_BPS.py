@@ -7,8 +7,8 @@ st.set_page_config(page_title="BPS Data - IndoEcon Explorer", layout="wide")
 
 st.title("📊 Portal Data BPS (Badan Pusat Statistik)")
 st.write(
-    "Eksplorasi indikator makroekonomi, sosial, dan demografi resmi BPS dari"
-    " level **Nasional** hingga **Provinsi**."
+    "Eksplorasi indikator makroekonomi, sosial, dan demografi resmi dari"
+    " **WebAPI BPS**."
 )
 
 HEADERS = {
@@ -62,39 +62,34 @@ PROVINCES = {
     "Papua": "9400",
 }
 
-# Kurasi Indikator Utama BPS yang Teruji Stabil di WebAPI
+# Kurasi Indikator Utama BPS
 CURATED_DATASETS = {
     "Ekonomi & Makro": {
-        "Pertumbuhan Ekonomi / PDB Triwulanan (Persen)": {"var": 104, "sub": 52},
-        "Indeks Harga Konsumen / Inflasi (IHK)": {"var": 2, "sub": 3},
-        "Nilai Ekspor dan Impor": {"var": 1092, "sub": 8},
+        "Pertumbuhan Ekonomi / PDB Triwulanan (Persen)": {"var": 104},
+        "Indeks Harga Konsumen / Inflasi (IHK)": {"var": 2},
+        "Nilai Ekspor dan Impor": {"var": 1092},
     },
     "Kesejahteraan & Kemiskinan": {
-        "Persentase Penduduk Miskin (P0) Menurut Wilayah": {
-            "var": 191,
-            "sub": 23,
-        },
-        "Garis Kemiskinan (Rupiah/Kapita/Bulan)": {"var": 192, "sub": 23},
-        "Gini Ratio (Ketimpangan Pengeluaran)": {"var": 1493, "sub": 23},
+        "Persentase Penduduk Miskin (P0)": {"var": 191},
+        "Garis Kemiskinan (Rupiah/Kapita/Bulan)": {"var": 192},
+        "Gini Ratio (Ketimpangan Pengeluaran)": {"var": 1493},
     },
     "Indeks Pembangunan & Pendidikan": {
-        "Indeks Pembangunan Manusia (IPM)": {"var": 499, "sub": 26},
-        "Angka Harapan Hidup saat Lahir (AHH)": {"var": 501, "sub": 26},
-        "Rata-rata Lama Sekolah (RLS)": {"var": 502, "sub": 26},
+        "Indeks Pembangunan Manusia (IPM)": {"var": 499},
+        "Angka Harapan Hidup saat Lahir (AHH)": {"var": 501},
+        "Rata-rata Lama Sekolah (RLS)": {"var": 502},
     },
     "Ketenagakerjaan": {
-        "Tingkat Pengangguran Terbuka (TPT)": {"var": 543, "sub": 6},
-        "Tingkat Partisipasi Angkatan Kerja (TPAK)": {"var": 544, "sub": 6},
+        "Tingkat Pengangguran Terbuka (TPT)": {"var": 543},
+        "Tingkat Partisipasi Angkatan Kerja (TPAK)": {"var": 544},
     },
 }
 
-# Pilihan Wilayah
 selected_prov = st.selectbox(
     "1. Pilih Cakupan Wilayah:", list(PROVINCES.keys())
 )
 domain_code = PROVINCES[selected_prov]
 
-# Pilihan Kategori & Indikator
 col1, col2 = st.columns(2)
 with col1:
   selected_cat = st.selectbox(
@@ -108,25 +103,83 @@ with col2:
   )
   var_id = indicators_in_cat[selected_indicator]["var"]
 
-# Tombol Tarik Data
+# Filter rentang tahun wajib
+col_th1, col_th2 = st.columns(2)
+with col_th1:
+  th_mulai = st.number_input("Tahun Awal:", min_value=2010, max_value=2026, value=2018)
+with col_th2:
+  th_akhir = st.number_input("Tahun Akhir:", min_value=2010, max_value=2026, value=2024)
+
 if st.button("📊 Tampilkan Data BPS", type="primary"):
-  with st.spinner("Menghubungkan ke API BPS..."):
-    url = f"https://webapi.bps.go.id/v1/api/list/model/data/lang/ind/domain/{domain_code}/var/{var_id}/key/{BPS_APP_ID}/"
+  with st.spinner(f"Menarik data {selected_indicator}..."):
+    # Parameter th wajib menggunakan format integer:integer
+    th_param = f"{int(th_mulai)}:{int(th_akhir)}"
+    url = f"https://webapi.bps.go.id/v1/api/list/model/data/lang/ind/domain/{domain_code}/var/{var_id}/th/{th_param}/key/{BPS_APP_ID}/"
 
     try:
       r = requests.get(url, headers=HEADERS, timeout=25)
+      res = r.json()
 
-      st.markdown("### 🔍 Hasil Diagnostik API BPS")
-      st.write(f"**HTTP Status Code:** `{r.status_code}`")
-      st.write(f"**URL yang dipanggil:** `{url.replace(BPS_APP_ID, 'KUNCI_DIRAHASIAKAN')}`")
+      if res.get("status") == "OK":
+        data_content = res.get("datacontent", {})
+        vervar = {
+            str(item["val"]): item["label"] for item in res.get("vervar", [])
+        }
+        tahun_dict = {
+            str(item["val"]): item["label"] for item in res.get("tahun", [])
+        }
 
-      try:
-        res_json = r.json()
-        st.write("**Respon Asli dari Server BPS:**")
-        st.json(res_json)
-      except Exception:
-        st.write("**Respon Teks Mentah (Bukan JSON):**")
-        st.code(r.text)
+        records = []
+        for key, val in data_content.items():
+          if val is not None:
+            k_str = str(key)
+            wilayah_nama = selected_prov
+            tahun_label = "-"
 
+            for v_code, v_label in vervar.items():
+              if k_str.startswith(v_code):
+                wilayah_nama = v_label
+                break
+
+            for t_code, t_label in tahun_dict.items():
+              if t_code in k_str:
+                tahun_label = t_label
+                break
+
+            records.append({
+                "Wilayah / Rincian": wilayah_nama,
+                "Tahun": tahun_label,
+                "Nilai": val,
+            })
+
+        df = pd.DataFrame(records)
+
+        if not df.empty:
+          st.divider()
+          st.subheader(f"📈 {selected_indicator}")
+          st.caption(f"Cakupan: {selected_prov} | Rentang: {th_param}")
+
+          c1, c2 = st.columns(2)
+          c1.download_button(
+              "📥 Unduh CSV",
+              df.to_csv(index=False).encode("utf-8"),
+              f"bps_{var_id}.csv",
+              "text/csv",
+          )
+          buf = io.BytesIO()
+          with pd.ExcelWriter(buf, engine="openpyxl") as writer:
+            df.to_excel(writer, index=False, sheet_name="Data BPS")
+          c2.download_button(
+              "📊 Unduh Excel (.xlsx)",
+              buf.getvalue(),
+              f"bps_{var_id}.xlsx",
+              "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+          )
+
+          st.dataframe(df, use_container_width=True)
+        else:
+          st.info("Data tercatat, namun tidak ada nilai angka pada rentang tahun tersebut.")
+      else:
+        st.warning(f"Respon BPS: {res.get('message', res.get('status'))}")
     except Exception as e:
-      st.error(f"Koneksi gagal ke server BPS: {e}")
+      st.error(f"Terjadi kesalahan saat memproses data: {e}")
