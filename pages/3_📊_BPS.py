@@ -148,126 +148,35 @@ if int(th_start) > int(th_end):
     st.stop()
 
 # ==============================================================================
-# 5. Penarikan Data Instan Langsung dari WebAPI BPS
+# 5. Penarikan Data & Diagnostik Endpoint BPS
 # ==============================================================================
 if st.button("📊 Muat Data Resmi BPS", type="primary"):
-    with st.spinner(f"Mengambil data resmi untuk {selected_var_label}..."):
-        # Panggil endpoint data tanpa memecah th agar BPS mengembalikan seluruh seri waktu resminya
-        data_url = f"https://webapi.bps.go.id/v1/api/list/model/data/domain/{DOMAIN}/var/{selected_var_id}/key/{api_key}/"
-        
-        try:
-            r = requests.get(data_url, headers=HEADERS, timeout=25)
-            res = r.json()
-        except Exception as e:
-            st.error(f"Gagal menghubungi server BPS: {e}")
-            st.stop()
+    data_url = f"https://webapi.bps.go.id/v1/api/list/model/data/domain/{DOMAIN}/var/{selected_var_id}/key/{api_key}/"
+    
+    st.write("---")
+    st.write(f"🌐 **URL Request ke BPS:** `{data_url.replace(api_key, 'HIDDEN_KEY')}`")
+    
+    try:
+        r = requests.get(data_url, headers=HEADERS, timeout=25)
+        st.write(f"📡 **HTTP Status Code:** `{r.status_code}`")
+        res = r.json()
+    except Exception as e:
+        st.error(f"Koneksi HTTP Error: {e}")
+        st.stop()
 
-    if res.get("status") == "OK" and res.get("data-availability") != "list-not-available":
-        datacontent = res.get("datacontent", {})
-        vervar = {str(item["val"]): str(item["label"]) for item in res.get("vervar", [])}
-        tahun_dict = {str(item["val"]): str(item["label"]) for item in res.get("tahun", [])}
+    with st.expander("🔍 Lihat Respons Mentah JSON dari BPS (Diagnostik)", expanded=True):
+        st.json(res)
 
-        records = []
-        for cell_key, val in datacontent.items():
-            if val is not None:
-                k_str = str(cell_key)
-
-                # Ekstraksi label rincian (vervar)
-                rincian_lbl = "Nasional"
-                for v_val, v_lbl in vervar.items():
-                    if k_str.startswith(v_val):
-                        rincian_lbl = v_lbl
-                        break
-
-                # Ekstraksi label tahun
-                tahun_lbl = None
-                for t_val, t_lbl in tahun_dict.items():
-                    if t_val in k_str:
-                        tahun_lbl = t_lbl
-                        break
-
-                # Bersihkan label tahun (ambil 4 digit angka jika formatnya seperti "2020 Semester 1")
-                th_clean = "".join(filter(str.isdigit, str(tahun_lbl)))[:4] if tahun_lbl else None
-
-                if th_clean and int(th_start) <= int(th_clean) <= int(th_end):
-                    try:
-                        num_val = float(str(val).replace(",", ".").strip())
-                    except ValueError:
-                        num_val = val
-
-                    records.append({
-                        "Tahun": th_clean,
-                        "Kategori / Rincian": rincian_lbl,
-                        "Nilai": num_val
-                    })
-
-        if records:
-            df_raw = pd.DataFrame(records).drop_duplicates()
-            df_pivot = df_raw.pivot_table(index="Tahun", columns="Kategori / Rincian", values="Nilai", aggfunc="first").reset_index()
-
-            # Buat grid lengkap sesuai filter tahun user
-            selected_years_grid = [str(y) for y in range(int(th_start), int(th_end) + 1)]
-            df_grid = pd.DataFrame({"Tahun": selected_years_grid})
-            df_final = pd.merge(df_grid, df_pivot, on="Tahun", how="left").sort_values("Tahun")
-
-            st.success(f"Data resmi berhasil dimuat: **{selected_var_label}**")
-            if selected_var_info["unit"] != "Tidak Ada Satuan":
-                st.caption(f"Satuan Resmi BPS: **{selected_var_info['unit']}**")
-
-            st.divider()
-
-            # Visualisasi Grafik
-            st.subheader(f"📈 Tren Deret Waktu: {selected_var_label}")
-            fig = go.Figure()
-
-            value_cols = [c for c in df_final.columns if c != "Tahun"]
-            for col in value_cols:
-                fig.add_trace(go.Scatter(
-                    x=df_final["Tahun"],
-                    y=df_final[col],
-                    mode="lines+markers",
-                    name=col,
-                    connectgaps=False,
-                    hovertemplate=f"Tahun %{{x}}<br>{col}: %{{y}}<extra></extra>"
-                ))
-
-            fig.update_layout(
-                xaxis=dict(title="Tahun", tickmode="linear"),
-                yaxis=dict(title=selected_var_info["unit"] if selected_var_info["unit"] != "Tidak Ada Satuan" else "Nilai"),
-                hovermode="x unified",
-                margin=dict(l=20, r=20, t=40, b=20)
-            )
-            st.plotly_chart(fig, use_container_width=True)
-
-            # Tabel Observasi & Ekspor
-            st.subheader("📋 Tabel Data Observasi")
-            col_d1, col_d2 = st.columns(2)
-            col_d1.download_button(
-                "📥 Unduh CSV",
-                df_final.to_csv(index=False).encode("utf-8"),
-                f"BPS_{selected_var_id}_{th_start}_{th_end}.csv",
-                "text/csv"
-            )
-
-            buf = io.BytesIO()
-            with pd.ExcelWriter(buf, engine="openpyxl") as writer:
-                df_final.to_excel(writer, index=False, sheet_name="Data BPS")
-            col_d2.download_button(
-                "📊 Unduh Excel (.xlsx)",
-                buf.getvalue(),
-                f"BPS_{selected_var_id}_{th_start}_{th_end}.xlsx",
-                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-            )
-
-            st.dataframe(df_final.fillna("-"), use_container_width=True)
-            st.caption("💡 Tanda strip (-) menandakan bahwa pada tahun tersebut BPS belum merilis rekaman survei di basis data digital.")
-
-        else:
-            st.warning(
-                f"Tabel indikator *'{selected_var_label}'* tercatat di BPS, "
-                f"tetapi tidak ada rekaman angka pada rentang {th_start}–{th_end}."
-            )
-    else:
-        st.warning(
-            f"Server BPS merespons bahwa tabel *'{selected_var_label}'* belum memiliki data angka yang dialokasikan di API."
+    # Evaluasi status respons
+    status_bps = res.get("status")
+    avail = res.get("data-availability")
+    
+    if status_bps != "OK" or avail == "list-not-available":
+        st.warning(f"⚠️ Server BPS mengembalikan status: `{status_bps}` dengan ketersediaan data: `{avail}`.")
+        st.info(
+            "Jika statusnya 'list-not-available', endpoint tanpa parameter tahun ditolak oleh tabel variabel ini. "
+            "Cek apakah di dalam JSON terdapat petunjuk parameter yang wajib disertakan."
         )
+    else:
+        datacontent = res.get("datacontent", {})
+        st.success(f"Data ditemukan! Total sel angka dalam tabel: {len(datacontent)}")
