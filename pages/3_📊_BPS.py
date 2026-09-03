@@ -1,4 +1,5 @@
 import io
+import time
 import pandas as pd
 import requests
 import streamlit as st
@@ -7,7 +8,7 @@ st.set_page_config(page_title="BPS Data - IndoEcon Explorer", layout="wide")
 
 st.title("📊 Indikator Utama BPS")
 st.write(
-    "Data resmi indikator makroekonomi dan sosial pembangunan dari **WebAPI"
+    "Data indikator makroekonomi dan sosial resmi langsung dari **WebAPI"
     " BPS**."
 )
 
@@ -23,7 +24,7 @@ else:
   st.error("⚠️ Masukkan `BPS_APP_ID` di Streamlit Secrets terlebih dahulu.")
   st.stop()
 
-# Daftar domain resmi BPS
+# Cakupan Wilayah
 PROVINCES = {
     "Nasional / Seluruh Indonesia": "0000",
     "Aceh": "1100",
@@ -62,7 +63,7 @@ PROVINCES = {
     "Papua": "9400",
 }
 
-# Indikator strategis yang aktif di WebAPI BPS
+# Indikator Terkurasi
 KATALOG_INDIKATOR = {
     "Kesejahteraan & Kemiskinan": {
         "Gini Ratio (Ketimpangan Pengeluaran)": 1493,
@@ -71,16 +72,16 @@ KATALOG_INDIKATOR = {
     },
     "Indeks Pembangunan & Pendidikan": {
         "Indeks Pembangunan Manusia (IPM)": 499,
-        "Angka Harapan Hidup (AHH) [Tahun]": 501,
-        "Rata-rata Lama Sekolah (RLS) [Tahun]": 502,
+        "Angka Harapan Hidup saat Lahir (AHH)": 501,
+        "Rata-rata Lama Sekolah (RLS)": 502,
     },
     "Ketenagakerjaan": {
         "Tingkat Pengangguran Terbuka (TPT) [%]": 543,
         "Tingkat Partisipasi Angkatan Kerja (TPAK) [%]": 544,
     },
     "Makroekonomi": {
-        "Indeks Harga Konsumen / Inflasi (IHK)": 2,
         "Laju Pertumbuhan PDB [%]": 104,
+        "Indeks Harga Konsumen (IHK)": 2,
     },
 }
 
@@ -102,94 +103,90 @@ with col2:
   )
   var_id = indikator_dict[indikator_terpilih]
 
-if st.button("📊 Tampilkan Data BPS", type="primary"):
-  with st.spinner(f"Menarik data tabel {indikator_terpilih}..."):
-    # Penarikan langsung tanpa parameter th manual agar server BPS menyajikan data default yang valid
-    url = f"https://webapi.bps.go.id/v1/api/list/model/data/lang/ind/domain/{domain_code}/var/{var_id}/key/{BPS_APP_ID}/"
+# Tombol Eksekusi
+if st.button("📊 Tampilkan Seluruh Data Tersedia", type="primary"):
+  all_records = []
 
-    try:
-      r = requests.get(url, headers=HEADERS, timeout=25)
-      res = r.json()
+  # Rentang batch 3 tahunan dari masa lalu ke terkini
+  year_batches = ["2018:2020", "2021:2023", "2024:2025"]
 
-      if res.get("status") == "OK":
-        data_content = res.get("datacontent", {})
+  with st.spinner(
+      f"Mengumpulkan seluruh rentang riwayat data {indikator_terpilih}..."
+  ):
+    for batch in year_batches:
+      url = f"https://webapi.bps.go.id/v1/api/list/model/data/lang/ind/domain/{domain_code}/var/{var_id}/th/{batch}/key/{BPS_APP_ID}/"
+      try:
+        r = requests.get(url, headers=HEADERS, timeout=20)
+        res = r.json()
 
-        # Daftar label metadata
-        vervar_map = {
-            str(item["val"]): item["label"] for item in res.get("vervar", [])
-        }
-        tahun_map = {
-            str(item["val"]): item["label"] for item in res.get("tahun", [])
-        }
-        turvar_map = {
-            str(item["val"]): item["label"] for item in res.get("turvar", [])
-        }
-        turtahun_map = {
-            str(item["val"]): item["label"] for item in res.get("turtahun", [])
-        }
+        if res.get("status") == "OK":
+          data_content = res.get("datacontent", {})
+          vervar_map = {
+              str(item["val"]): item["label"] for item in res.get("vervar", [])
+          }
+          tahun_map = {
+              str(item["val"]): item["label"] for item in res.get("tahun", [])
+          }
 
-        records = []
-        for key, val in data_content.items():
-          if val is not None:
-            k_str = str(key)
+          for key, val in data_content.items():
+            if val is not None:
+              k_str = str(key)
+              wilayah_nama = selected_prov
+              tahun_label = batch
 
-            # Ekstraksi label vervar (wilayah / kategori)
-            nama_wilayah = selected_prov
-            for v_val, v_lbl in vervar_map.items():
-              if k_str.startswith(v_val):
-                nama_wilayah = v_lbl
-                break
+              for v_val, v_lbl in vervar_map.items():
+                if k_str.startswith(v_val):
+                  wilayah_nama = v_lbl
+                  break
 
-            # Ekstraksi label tahun
-            label_tahun = "-"
-            for t_val, t_lbl in tahun_map.items():
-              if t_val in k_str:
-                label_tahun = t_lbl
-                break
+              for t_val, t_lbl in tahun_map.items():
+                if t_val in k_str:
+                  tahun_label = t_lbl
+                  break
 
-            records.append({
-                "Wilayah / Rincian": nama_wilayah,
-                "Tahun / Periode": label_tahun,
-                "Nilai": val,
-            })
+              all_records.append({
+                  "Wilayah / Rincian": wilayah_nama,
+                  "Tahun / Periode": tahun_label,
+                  "Nilai": val,
+              })
+        time.sleep(0.1)
+      except Exception:
+        continue
 
-        df = pd.DataFrame(records)
+  df = pd.DataFrame(all_records)
 
-        if not df.empty:
-          st.divider()
-          st.subheader(f"📈 {indikator_terpilih}")
-          st.caption(f"Cakupan: {selected_prov} | Sumber: WebAPI BPS")
+  if not df.empty:
+    # Hapus duplikasi jika ada observasi yang bertumpuk
+    df = df.drop_duplicates().sort_values(
+        by=["Wilayah / Rincian", "Tahun / Periode"], ascending=[True, False]
+    )
 
-          col_dl1, col_dl2 = st.columns(2)
-          col_dl1.download_button(
-              "📥 Unduh CSV",
-              df.to_csv(index=False).encode("utf-8"),
-              f"bps_{var_id}.csv",
-              "text/csv",
-          )
+    st.divider()
+    st.subheader(f"📈 {indikator_terpilih}")
+    st.caption(f"Cakupan: {selected_prov} | Sumber: WebAPI BPS")
 
-          buf = io.BytesIO()
-          with pd.ExcelWriter(buf, engine="openpyxl") as writer:
-            df.to_excel(writer, index=False, sheet_name="Data BPS")
-          col_dl2.download_button(
-              "📊 Unduh Excel (.xlsx)",
-              buf.getvalue(),
-              f"bps_{var_id}.xlsx",
-              "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-          )
+    c1, c2 = st.columns(2)
+    c1.download_button(
+        "📥 Unduh CSV",
+        df.to_csv(index=False).encode("utf-8"),
+        f"bps_{var_id}_full.csv",
+        "text/csv",
+    )
 
-          st.dataframe(df, use_container_width=True)
-        else:
-          st.warning(
-              "Respons diterima dari BPS, tetapi data observasi kosong. Coba"
-              " ganti cakupan wilayah."
-          )
+    buf = io.BytesIO()
+    with pd.ExcelWriter(buf, engine="openpyxl") as writer:
+      df.to_excel(writer, index=False, sheet_name="Data BPS")
+    c2.download_button(
+        "📊 Unduh Excel (.xlsx)",
+        buf.getvalue(),
+        f"bps_{var_id}_full.xlsx",
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    )
 
-      elif res.get("status") == "Error":
-        # Jika server tetap meminta parameter tahun internal
-        st.warning(f"Respon BPS: {res.get('message', 'Parameter tidak sesuai')}")
-        with st.expander("Detail Respons Teknis"):
-          st.json(res)
-
-    except Exception as e:
-      st.error(f"Gagal memproses data: {e}")
+    st.dataframe(df, use_container_width=True)
+  else:
+    st.warning(
+        "Data untuk indikator ini belum dialokasikan di API domain"
+        f" {selected_prov}. Silakan coba indikator lain atau pilih domain"
+        " Nasional."
+    )
