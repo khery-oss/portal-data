@@ -1,12 +1,12 @@
 import streamlit as st
 
 st.set_page_config(
-    page_title="Portal Data Terpadu Indonesia",
+    page_title="IndoEcon Data Explore",
     layout="wide",
     initial_sidebar_state="expanded"
 )
 
-st.title("🌐 Portal Data Terpadu Indonesia")
+st.title("IndoEcon Data Explore")
 st.write("""
 Selamat datang di repositori eksplorasi data Indonesia, khususnya ekonomi, pembangunan, dan finansial.
 Pilih sumber data yang ingin diakses melalui menu navigasi di bilah sisi (**sidebar**) sebelah kiri:
