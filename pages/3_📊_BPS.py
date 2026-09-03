@@ -82,7 +82,8 @@ def fetch_bps_data(var_id, start_year, end_year):
     # Aturan Kritis: th_id = tahun - 1900
     th_start = start_year - 1900
     th_end = end_year - 1900
-    th_param = f"{th_start}:{th_end}"
+    # Membuat list string dari th_start sampai th_end yang dipisah koma
+th_param = ",".join([str(y) for y in range(th_start, th_end + 1)])
     
     url = f"https://webapi.bps.go.id/v1/api/list/model/data/lang/ind/domain/{DOMAIN}/var/{var_id}/th/{th_param}/key/{API_KEY}/"
     
