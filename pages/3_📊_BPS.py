@@ -21,69 +21,13 @@ if not API_KEY:
 # ==========================================
 
 @st.cache_data(ttl=3600, show_spinner=False)
-def fetch_bps_subjects():
-    """Mengambil katalog subjek BPS dengan iterasi pagination dinamis."""
-    subjects = []
-    base_url = f"https://webapi.bps.go.id/v1/api/list/model/subject/domain/{DOMAIN}/key/{API_KEY}/page/"
-    
-    try:
-        # Panggil halaman 1 untuk mengetahui total halaman
-        res = requests.get(base_url + "1/").json()
-        if res.get("data-availability") == "available":
-            data_arr = res.get("data", [])
-            
-            # Pastikan panjang array lebih dari 1 sebelum mengakses indeks [1]
-            if len(data_arr) > 1:
-                subjects.extend(data_arr[1])
-                
-            # Ambil total pages dari metadata di indeks [0]
-            pages = data_arr[0].get("pages", 1) if len(data_arr) > 0 else 1
-            
-            # Iterasi sisa halaman
-            for p in range(2, pages + 1):
-                res_p = requests.get(base_url + f"{p}/").json()
-                if res_p.get("data-availability") == "available":
-                    data_arr_p = res_p.get("data", [])
-                    if len(data_arr_p) > 1:
-                        subjects.extend(data_arr_p[1])
-        else:
-            st.error(f"Error API Subjek: {res.get('message', 'Unknown Error')}")
-    except Exception as e:
-        st.error(f"Koneksi gagal: {e}")
-        
-    return subjects
-
-@st.cache_data(ttl=3600, show_spinner=False)
-def fetch_bps_variables(sub_id, max_pages=5):
-    """Mengambil katalog variabel berdasarkan subjek dengan batasan halaman (safe limit)."""
-    variables = []
-    base_url = f"https://webapi.bps.go.id/v1/api/list/model/var/domain/{DOMAIN}/subject/{sub_id}/key/{API_KEY}/page/"
-    
-    try:
-        for p in range(1, max_pages + 1):
-            res = requests.get(base_url + f"{p}/").json()
-            if res.get("data-availability") == "available":
-                # Data metadata BPS di model/var diletakkan pada index 1 array 'data'
-                var_data = res.get("data", [])
-                if len(var_data) > 1:
-                    variables.extend(var_data[1])
-            else:
-                break # Berhenti jika halaman sudah kosong atau tidak tersedia
-    except Exception as e:
-        st.error(f"Koneksi gagal: {e}")
-        
-    return variables
-
 def fetch_bps_data(var_id, start_year, end_year):
     """
-    Mengambil data deret waktu murni dengan aturan parameter th BPS (Tahun - 1900).
-    Melakukan flattening dari struktur multidimensi (datacontent).
+    Mengambil data deret waktu murni dengan penanganan struktur respons BPS yang fleksibel.
     """
-    # Aturan Kritis: th_id = tahun - 1900
     th_start = start_year - 1900
     th_end = end_year - 1900
-    # Membuat list string dari th_start sampai th_end yang dipisah koma
-    th_param = ",".join([str(y) for y in range(th_start, th_end + 1)])
+    th_param = f"{th_start}:{th_end}"
     
     url = f"https://webapi.bps.go.id/v1/api/list/model/data/lang/ind/domain/{DOMAIN}/var/{var_id}/th/{th_param}/key/{API_KEY}/"
     
@@ -94,8 +38,62 @@ def fetch_bps_data(var_id, start_year, end_year):
         
     data_json = res.json()
     
-    if data_json.get("data-availability") != "list-available":
+    # Periksa ketersediaan data secara longgar
+    availability = data_json.get("data-availability")
+    if availability not in ["available", "list-available"]:
         st.warning(f"Respon BPS: {data_json.get('message', 'Data tidak tersedia untuk parameter yang diminta.')}")
+        return pd.DataFrame()
+
+    try:
+        raw_data = data_json.get("data", [])
+        if len(raw_data) < 2:
+            st.warning("Format struktur data BPS tidak lengkap untuk variabel ini.")
+            return pd.DataFrame()
+
+        datacontent = raw_data[0].get("datacontent", {})
+        metadata = raw_data[1]
+        
+        vervar_list = metadata.get("vervar", [])
+        turvar_list = metadata.get("turvar", [])
+        tahun_list = metadata.get("tahun", [])
+        turth_list = metadata.get("turth", [])
+        
+        records = []
+        
+        # Jika dimensi vervar atau turvar kosong, berikan fallback list dummy agar iterasi tetap berjalan
+        vervar_iter = vervar_list if vervar_list else [{'val': '', 'label': 'Nasional'}]
+        turvar_iter = turvar_list if turvar_list else [{'val': '', 'label': 'Total'}]
+        turth_iter = turth_list if turth_list else [{'val': '', 'label': 'Tahunan'}]
+        
+        for v_var in vervar_iter:
+            for t_var in turvar_iter:
+                for th in tahun_list:
+                    for t_th in turth_iter:
+                        # Susun key dinamis berdasarkan komponen yang ada
+                        v_val = v_var.get('val', '')
+                        t_val = t_var.get('val', '')
+                        th_val = th.get('val', '')
+                        tth_val = t_th.get('val', '')
+                        
+                        komposit_key = f"{var_id}{t_val}{th_val}{tth_val}{v_val}"
+                        
+                        val = datacontent.get(komposit_key, None)
+                        
+                        records.append({
+                            "Tahun": int(th['label']),
+                            "Periode": t_th.get('label', 'Tahunan'),
+                            "Kategori (Vervar)": v_var.get('label', 'Nasional'),
+                            "Rincian (Turvar)": t_var.get('label', 'Total'),
+                            "Nilai": val
+                        })
+                        
+        df = pd.DataFrame(records)
+        df["Nilai"] = pd.to_numeric(df["Nilai"], errors="coerce")
+        df = df.sort_values(by=["Tahun"])
+        return df
+
+    except Exception as e:
+        st.error(f"Gagal memparsing struktur JSON BPS: {e}")
         return pd.DataFrame()
 
     try:
