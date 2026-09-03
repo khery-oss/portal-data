@@ -185,22 +185,28 @@ DATA_BPS = {
     }
 }
 
-# Fungsi Generator Deret Waktu Otentik Wilayah
+# Fungsi Generator Deret Waktu Otentik Wilayah (Dipastikan Selalu Sinkron N_YEARS)
 def build_regional_series(indicator_name, level, prov, city):
     meta = DATA_BPS[indicator_name]
-    nat = meta["national"]
+    raw_nat = meta["national"]
 
-    # Jika memilih Kabupaten/Kota tetapi BPS tidak menyurvei indikator ini di tingkat Kab/Kota
+    # Selaraskan panjang data nasional tepat N_YEARS (81 elemen)
+    if len(raw_nat) < N_YEARS:
+        nat = [None] * (N_YEARS - len(raw_nat)) + raw_nat
+    else:
+        nat = raw_nat[-N_YEARS:]
+
+    # Jika indikator tidak tersedia di level Kab/Kota
     if level == "Kabupaten / Kota" and not meta.get("allow_city", True):
         return [None] * N_YEARS, False
 
     if level == "Nasional":
         return nat, True
 
-    # Ambil baseline provinsi
+    # Baseline provinsi
     factor = meta["prov_factors"].get(prov, 0.98)
 
-    # Karakteristik struktural data BPS untuk tingkat Kabupaten vs Kota
+    # Karakteristik struktural Kota vs Kabupaten
     if level == "Kabupaten / Kota":
         is_urban = "Kota" in city
         if "Kemiskinan" in indicator_name or "Pengangguran" in indicator_name:
