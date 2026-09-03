@@ -4,7 +4,7 @@ import requests
 import io
 
 st.set_page_config(page_title="World Bank - Portal Data", layout="wide")
-st.title("🏛️ Database Lengkap World Bank - Indonesia")
+st.title("🌐 Database Lengkap World Bank - Indonesia")
 
 HEADERS = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"}
 
