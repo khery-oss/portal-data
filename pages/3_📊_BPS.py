@@ -5,10 +5,10 @@ import streamlit as st
 
 st.set_page_config(page_title="BPS Data - IndoEcon Explorer", layout="wide")
 
-st.title("📊 Portal Data BPS (Badan Pusat Statistik)")
+st.title("📊 Indikator Utama BPS")
 st.write(
-    "Eksplorasi indikator makroekonomi, sosial, dan ketenagakerjaan resmi dari"
-    " **WebAPI BPS**."
+    "Data resmi indikator makroekonomi dan sosial pembangunan dari **WebAPI"
+    " BPS**."
 )
 
 HEADERS = {
@@ -23,7 +23,7 @@ else:
   st.error("⚠️ Masukkan `BPS_APP_ID` di Streamlit Secrets terlebih dahulu.")
   st.stop()
 
-# Daftar Domain Wilayah
+# Daftar domain provinsi resmi
 PROVINCES = {
     "Nasional / Seluruh Indonesia": "0000",
     "Aceh": "1100",
@@ -62,91 +62,65 @@ PROVINCES = {
     "Papua": "9400",
 }
 
-selected_prov = st.selectbox("1. Cakupan Wilayah:", list(PROVINCES.keys()))
+# Katalog indikator terpilih yang teruji valid di WebAPI BPS
+KATALOG_INDIKATOR = {
+    "Kesejahteraan & Kemiskinan": {
+        "Persentase Penduduk Miskin (P0) [%]": 191,
+        "Garis Kemiskinan (Rupiah/Kapita/Bulan)": 192,
+        "Gini Ratio (Ketimpangan Pengeluaran)": 1493,
+    },
+    "Indeks Pembangunan & Pendidikan": {
+        "Indeks Pembangunan Manusia (IPM)": 499,
+        "Angka Harapan Hidup saat Lahir (AHH) [Tahun]": 501,
+        "Rata-rata Lama Sekolah (RLS) [Tahun]": 502,
+        "Harapan Lama Sekolah (HLS) [Tahun]": 503,
+    },
+    "Ketenagakerjaan": {
+        "Tingkat Pengangguran Terbuka (TPT) [%]": 543,
+        "Tingkat Partisipasi Angkatan Kerja (TPAK) [%]": 544,
+    },
+    "Pertumbuhan & Inflasi": {
+        "Indeks Harga Konsumen / Inflasi (IHK Tahunan)": 2,
+        "Laju Pertumbuhan Produk Domestik Bruto (PDB) [%]": 104,
+    },
+}
+
+# 1. Pilihan Wilayah
+selected_prov = st.selectbox(
+    "1. Pilih Cakupan Wilayah:", list(PROVINCES.keys())
+)
 domain_code = PROVINCES[selected_prov]
 
-
-# Ambil Seluruh Subjek Resmi dari API
-@st.cache_data(ttl=86400)
-def get_all_subjects(domain):
-  url = f"https://webapi.bps.go.id/v1/api/list/model/subject/domain/{domain}/key/{BPS_APP_ID}/"
-  try:
-    r = requests.get(url, headers=HEADERS, timeout=15)
-    data = r.json()
-    if data.get("status") == "OK" and len(data.get("data", [])) > 1:
-      return {item["title"]: item["sub_id"] for item in data["data"][1]}
-  except Exception:
-    pass
-  return {}
-
-
-# Ambil Seluruh Variabel / Indikator berdasarkan Subjek
-@st.cache_data(ttl=86400)
-def get_variables_by_subject(domain, sub_id):
-  url = f"https://webapi.bps.go.id/v1/api/list/model/var/domain/{domain}/sub/{sub_id}/key/{BPS_APP_ID}/"
-  try:
-    r = requests.get(url, headers=HEADERS, timeout=15)
-    data = r.json()
-    if data.get("status") == "OK" and len(data.get("data", [])) > 1:
-      return {item["title"]: item["var_id"] for item in data["data"][1]}
-  except Exception:
-    pass
-  return {}
-
-
-subjects = get_all_subjects(domain_code)
-
-if not subjects:
-  st.warning(
-      f"Tidak dapat memuat subjek data untuk wilayah {selected_prov}. Coba"
-      " muat ulang beberapa saat lagi."
-  )
-  st.stop()
-
-col_s1, col_s2 = st.columns(2)
-
-with col_s1:
-  selected_subject_name = st.selectbox(
-      "2. Subjek / Topik Data:", list(subjects.keys())
-  )
-  sub_id = subjects[selected_subject_name]
-
-variables_dict = get_variables_by_subject(domain_code, sub_id)
-
-with col_s2:
-  if variables_dict:
-    selected_var_name = st.selectbox(
-        "3. Indikator / Variabel Data:", list(variables_dict.keys())
-    )
-    var_id = variables_dict[selected_var_name]
-  else:
-    st.info("Tidak ada indikator dinamis pada subjek ini.")
-    st.stop()
-
-# Pembatasan Maksimal 3 Tahun Sesuai Kuota BPS
-col_th1, col_th2 = st.columns(2)
-with col_th1:
-  th_awal = st.number_input(
-      "Tahun Awal:", min_value=2015, max_value=2025, value=2022
-  )
-with col_th2:
-  # Batasi tahun akhir maksimal 2 tahun setelah tahun awal (total 3 tahun)
-  max_th_akhir = min(th_awal + 2, 2025)
-  th_akhir = st.number_input(
-      "Tahun Akhir (Maksimal 3 tahun dari tahun awal):",
-      min_value=th_awal,
-      max_value=max_th_akhir,
-      value=max_th_akhir,
+# 2. Pilihan Kategori dan Indikator
+col1, col2 = st.columns(2)
+with col1:
+  kategori_terpilih = st.selectbox(
+      "2. Pilih Kategori Data:", list(KATALOG_INDIKATOR.keys())
   )
 
-st.caption(
-    f"Rentang penarikan: **{th_awal} - {th_akhir}** (Batasan kuota WebAPI BPS:"
-    " maks 3 tahun per request)."
+with col2:
+  indikator_dict = KATALOG_INDIKATOR[kategori_terpilih]
+  indikator_terpilih = st.selectbox(
+      "3. Pilih Indikator:", list(indikator_dict.keys())
+  )
+  var_id = indikator_dict[indikator_terpilih]
+
+# 3. Pilihan Rentang Tahun (Dibatasi 3 Tahun agar Memenuhi Aturan BPS)
+rentang_tahun_pilihan = {
+    "2022 - 2024 (Data Terbaru)": "2022:2024",
+    "2021 - 2023": "2021:2023",
+    "2018 - 2020": "2018:2020",
+    "2015 - 2017": "2015:2017",
+}
+
+selected_rentang_label = st.selectbox(
+    "4. Periode Tahun (Maksimal 3 tahun per request):",
+    list(rentang_tahun_pilihan.keys()),
 )
+th_param = rentang_tahun_pilihan[selected_rentang_label]
 
 if st.button("📊 Tampilkan Data BPS", type="primary"):
-  with st.spinner(f"Menarik data {selected_var_name}..."):
-    th_param = f"{int(th_awal)}:{int(th_akhir)}"
+  with st.spinner(f"Mengambil data {indikator_terpilih}..."):
     url = f"https://webapi.bps.go.id/v1/api/list/model/data/lang/ind/domain/{domain_code}/var/{var_id}/th/{th_param}/key/{BPS_APP_ID}/"
 
     try:
@@ -166,22 +140,24 @@ if st.button("📊 Tampilkan Data BPS", type="primary"):
         for key, val in data_content.items():
           if val is not None:
             k_str = str(key)
-            wilayah_label = selected_prov
-            periode_label = "-"
+            wilayah_nama = selected_prov
+            tahun_nama = "-"
 
+            # Cocokkan kode vervar untuk nama wilayah/rincian
             for v_code, v_label in vervar.items():
               if k_str.startswith(v_code):
-                wilayah_label = v_label
+                wilayah_nama = v_label
                 break
 
+            # Cocokkan kode tahun
             for t_code, t_label in tahun_dict.items():
               if t_code in k_str:
-                periode_label = t_label
+                tahun_nama = t_label
                 break
 
             records.append({
-                "Rincian / Wilayah": wilayah_label,
-                "Periode / Tahun": periode_label,
+                "Wilayah / Rincian": wilayah_nama,
+                "Tahun": tahun_nama,
                 "Nilai": val,
             })
 
@@ -189,9 +165,12 @@ if st.button("📊 Tampilkan Data BPS", type="primary"):
 
         if not df.empty:
           st.divider()
-          st.subheader(f"📈 {selected_var_name}")
-          st.caption(f"Cakupan: {selected_prov} | Periode: {th_param}")
+          st.subheader(f"📈 {indikator_terpilih}")
+          st.caption(
+              f"Wilayah: {selected_prov} | Periode: {selected_rentang_label}"
+          )
 
+          # Tombol Unduh
           c1, c2 = st.columns(2)
           c1.download_button(
               "📥 Unduh CSV",
@@ -211,11 +190,11 @@ if st.button("📊 Tampilkan Data BPS", type="primary"):
 
           st.dataframe(df, use_container_width=True)
         else:
-          st.info(
-              "Data tercatat di katalog, tetapi belum ada observasi angka pada"
-              f" rentang tahun {th_param}."
+          st.warning(
+              "Observasi angka belum tersedia pada kombinasi wilayah dan rentang"
+              " tahun ini."
           )
       else:
-        st.warning(f"Respon BPS: {res.get('message', res.get('status'))}")
+        st.warning(f"BPS mengembalikan pesan: {res.get('message', 'Gagal memuat data')}")
     except Exception as e:
-      st.error(f"Terjadi kesalahan saat menghubungi server BPS: {e}")
+      st.error(f"Terjadi kesalahan saat memanggil server: {e}")
