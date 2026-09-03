@@ -171,14 +171,15 @@ if variables:
     selected_var = st.selectbox("4. Pilih Indikator:", list(variables.keys()))
     var_id = variables[selected_var]
 
-  if st.button("📊 Tampilkan Data", type="primary"):
+if st.button("📊 Tampilkan Data", type="primary"):
     with st.spinner(f"Menarik data {selected_var} untuk {wilayah_label}..."):
-      data_url = f"https://webapi.bps.go.id/v1/api/list/model/data/domain/{target_domain}/var/{var_id}/key/{BPS_APP_ID}/"
+      # Menambahkan format penarikan data dinamis standar BPS
+      data_url = f"https://webapi.bps.go.id/v1/api/list/model/data/lang/ind/domain/{target_domain}/var/{var_id}/key/{BPS_APP_ID}/"
       try:
-        r_data = requests.get(data_url, headers=HEADERS, timeout=20)
+        r_data = requests.get(data_url, headers=HEADERS, timeout=25)
         res_data = r_data.json()
 
-        if res_data.get("status") == "OK":
+        if res_data.get("status") == "OK" and res_data.get("data-availability") != "list-not-available":
           data_content = res_data.get("datacontent", {})
 
           if data_content:
@@ -187,7 +188,7 @@ if variables:
             st.markdown(f"**Wilayah:** {wilayah_label} | **Subjek:** {selected_subject}")
 
             rows = [
-                {"ID Observasi": k, "Nilai": v}
+                {"ID Observasi": str(k), "Nilai": v}
                 for k, v in data_content.items()
                 if v is not None
             ]
@@ -216,10 +217,11 @@ if variables:
             with st.expander("🔍 Metadata Respons BPS"):
               st.json(res_data)
           else:
-            st.info("Observasi angka belum tersedia pada server BPS untuk kombinasi ini.")
+            st.info("Indikator ini tercatat di katalog, tetapi belum ada baris data angka yang dipublikasikan di WebAPI.")
         else:
-          st.error("Gagal menarik data. Periksa izin akses atau limit kuota App ID.")
+          pesan_bps = res_data.get("data-availability", res_data.get("status", "Respon tidak dikenal"))
+          st.warning(f"Data tidak tersedia dari server BPS untuk variabel ini (Respon BPS: `{pesan_bps}`). Coba pilih indikator lain di bawah subjek ini.")
       except Exception as e:
-        st.error(f"Terjadi kesalahan koneksi: {e}")
+        st.error(f"Terjadi kesalahan teknis: {e}")
 else:
   st.info(f"Belum ada indikator tabel dinamis untuk subjek '{selected_subject}' di domain ini.")
