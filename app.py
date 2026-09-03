@@ -25,7 +25,7 @@ HEADERS = {
 def load_all_indicators():
   indicators = []
   # Ambil indikator WDI utama langsung dari World Bank
-  url = "https://api.worldbank.org/v2/indicator?source=2&format=json&per_page=3000"
+  url = "https://api.worldbank.org/v2/indicator?format=json&per_page=3000"
   try:
     res = requests.get(url, headers=HEADERS, timeout=20)
     data = res.json()
