@@ -18,60 +18,33 @@ HEADERS = {
 }
 
 if "BPS_APP_ID" in st.secrets:
-    BPS_APP_ID = st.secrets["BPS_APP_ID"]
-else:
-    st.error("⚠️ Masukkan `BPS_APP_ID` di Streamlit Secrets terlebih dahulu.")
+    # Cek ketersediaan Secrets
+BPS_APP_ID = st.secrets.get("BPS_APP_ID") or st.secrets.get("BPS_API_KEY")
+
+if not BPS_APP_ID:
+    st.error("⚠️ Key BPS belum ditemukan di Streamlit Secrets. Pastikan tertulis `BPS_APP_ID = 'isi_key'`.")
     st.stop()
 
-DOMAIN = "0000"  # Agregat Nasional
+DOMAIN = "0000"
 
-# ==========================================
-# 1. Ambil Seluruh Subjek Resmi dari BPS
-# ==========================================
 @st.cache_data(ttl=86400)
 def get_bps_subjects():
-    url = f"https://webapi.bps.go.id/v1/api/list/model/sub/lang/ind/domain/{DOMAIN}/key/{BPS_APP_ID}/"
+    # URL resmi katalog subjek BPS
+    url = f"https://webapi.bps.go.id/v1/api/list/model/sub/domain/{DOMAIN}/key/{BPS_APP_ID}/"
     try:
-        r = requests.get(url, headers=HEADERS, timeout=20)
+        r = requests.get(url, headers=HEADERS, timeout=15)
         res = r.json()
         if res.get("status") == "OK" and len(res.get("data", [])) > 1:
-            return {item["title"]: str(item["sub_id"]) for item in res["data"][1]}
-    except Exception:
-        pass
-    return {}
+            return {item["title"]: str(item["sub_id"]) for item in res["data"][1]}, None
+        else:
+            return {}, f"Respon BPS: {res.get('status')} - {res.get('data-availability', 'Gagal memuat data')}"
+    except Exception as e:
+        return {}, f"Koneksi gagal: {str(e)}"
 
-# ==========================================
-# 2. Ambil Seluruh Variabel Berdasarkan Subjek
-# ==========================================
-@st.cache_data(ttl=43200)
-def get_variables_by_subject(sub_id):
-    # Tarik seluruh halaman variabel di bawah subjek ini
-    all_vars = {}
-    page = 1
-    while True:
-        url = f"https://webapi.bps.go.id/v1/api/list/model/var/lang/ind/domain/{DOMAIN}/sub/{sub_id}/page/{page}/key/{BPS_APP_ID}/"
-        try:
-            r = requests.get(url, headers=HEADERS, timeout=20)
-            res = r.json()
-            if res.get("status") == "OK" and len(res.get("data", [])) > 1:
-                items = res["data"][1]
-                for it in items:
-                    all_vars[f"{it['title']} (ID: {it['var_id']})"] = str(it["var_id"])
-                
-                total_pages = res["data"][0].get("pages", 1)
-                if page >= total_pages or page >= 5:  # Batasi maks 5 halaman agar loading cepat
-                    break
-                page += 1
-            else:
-                break
-        except Exception:
-            break
-    return all_vars
-
-subjects = get_bps_subjects()
+subjects, err_msg = get_bps_subjects()
 
 if not subjects:
-    st.error("Gagal terhubung ke katalog subjek WebAPI BPS. Periksa App ID atau koneksi server BPS.")
+    st.error(f"Gagal terhubung ke katalog WebAPI BPS. Detail: {err_msg}")
     st.stop()
 
 # ==========================================
