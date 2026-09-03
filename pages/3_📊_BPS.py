@@ -56,21 +56,28 @@ def fetch_all_bps_subjects():
     return subjects
 
 # ==============================================================================
-# 2. Mengambil Seluruh Variabel Indikator di Bawah Subjek Terpilih
+# 2. Mengambil Variabel Indikator Resmi BPS (Cepat & Anti-Looping)
 # ==============================================================================
 @st.cache_data(ttl=43200)
 def fetch_variables_by_subject(sub_id):
     variables = {}
     page = 1
-    while True:
-        url = f"https://webapi.bps.go.id/v1/api/list/model/var/domain/{DOMAIN}/sub/{sub_id}/page/{page}/key/{api_key}/"
+    max_pages = 5  # Batasi maksimal 5 halaman (50 variabel teratas) agar loading instan
+    
+    while page <= max_pages:
+        # Gunakan parameter resmi 'subject' bukan 'sub'
+        url = f"https://webapi.bps.go.id/v1/api/list/model/var/domain/{DOMAIN}/subject/{sub_id}/page/{page}/key/{api_key}/"
         try:
-            r = requests.get(url, headers=HEADERS, timeout=20)
+            r = requests.get(url, headers=HEADERS, timeout=10)
             res = r.json()
+            
             if res.get("status") == "OK" and len(res.get("data", [])) > 1:
                 items = res["data"][1]
+                if not items:
+                    break
+                    
                 for it in items:
-                    v_title = it.get("title", "")
+                    v_title = it.get("title", "").strip()
                     v_id = it.get("var_id")
                     v_unit = it.get("unit", "Tidak Ada Satuan")
                     v_notes = it.get("notes", "")
@@ -80,6 +87,7 @@ def fetch_variables_by_subject(sub_id):
                         "notes": v_notes
                     }
                 
+                # Cek total halaman resmi dari BPS
                 total_pages = res["data"][0].get("pages", 1)
                 if page >= total_pages:
                     break
@@ -88,8 +96,8 @@ def fetch_variables_by_subject(sub_id):
                 break
         except Exception:
             break
+            
     return variables
-
 with st.spinner("Menghubungkan ke katalog resmi BPS..."):
     all_subjects = fetch_all_bps_subjects()
 
