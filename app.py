@@ -8,7 +8,7 @@ st.set_page_config(page_title="Pencari Data World Bank Indonesia", layout="wide"
 st.title("🇮🇩 World Bank Data Explorer - Indonesia")
 st.write("Akses dan unduh data time-series resmi langsung dari **World Bank Open Data**.")
 
-# Kamus Indikator Utama (Satu baris per entri agar bebas dari syntax error)
+# Kamus Indikator Utama WDI
 POPULAR_INDICATORS = {
     "Inflasi, IHK / Consumer Prices (annual %) [FP.CPI.TOTL.ZG]": "FP.CPI.TOTL.ZG",
     "Pertumbuhan PDB Riil / GDP Growth (annual %) [NY.GDP.MKTP.KD.ZG]": "NY.GDP.MKTP.KD.ZG",
@@ -24,7 +24,6 @@ POPULAR_INDICATORS = {
     "Penerimaan Pajak / Tax Revenue (% PDB) [GC.TAX.TOTL.GD.ZS]": "GC.TAX.TOTL.GD.ZS"
 }
 
-# Mode Pemilihan
 mode = st.radio(
     "Pilih Metode Pencarian Data:",
     ["Daftar Indikator Utama (Direkomendasikan)", "Ketik Kode Indikator Manual"],
@@ -32,42 +31,55 @@ mode = st.radio(
 )
 
 kode_terpilih = None
-nama_tampilan = ""
+nama_pilihan = ""
 
 if mode == "Daftar Indikator Utama (Direkomendasikan)":
-    nama_tampilan = st.selectbox("Pilih Indikator:", list(POPULAR_INDICATORS.keys()))
-    kode_terpilih = POPULAR_INDICATORS[nama_tampilan]
+    nama_pilihan = st.selectbox("Pilih Indikator:", list(POPULAR_INDICATORS.keys()))
+    kode_terpilih = POPULAR_INDICATORS[nama_pilihan]
 else:
-    st.info("Kamu bisa memasukkan kode indikator resmi World Bank apa saja (contoh: FP.CPI.TOTL.ZG, NY.GDP.MKTP.KD.ZG, dsb).")
+    st.info("Masukkan kode indikator resmi World Bank (contoh: FP.CPI.TOTL.ZG, NY.GDP.MKTP.KD.ZG, dsb).")
     kode_manual = st.text_input("Masukkan Kode Indikator:", value="FP.CPI.TOTL.ZG").strip()
     if kode_manual:
         kode_terpilih = kode_manual
-        nama_tampilan = f"Indikator [{kode_terpilih}]"
+        nama_pilihan = f"Indikator [{kode_terpilih}]"
 
-# Tombol Eksekusi
 if kode_terpilih and st.button("📊 Tampilkan Data", type="primary"):
-    with st.spinner(f"Menghubungi World Bank API untuk kode {kode_terpilih}..."):
-        data_url = f"https://api.worldbank.org/v2/country/IDN/indicator/{kode_terpilih}?format=json&per_page=120"
+    with st.spinner(f"Mengambil data resmi untuk kode {kode_terpilih}..."):
+        # URL API World Bank
+        data_url = f"https://api.worldbank.org/v2/country/IDN/indicator/{kode_terpilih}?format=json&per_page=200"
+        
+        headers = {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+        }
         
         try:
-            r = requests.get(data_url, timeout=15)
+            r = requests.get(data_url, headers=headers, timeout=15)
             data_json = r.json()
             
-            records = []
-            if len(data_json) > 1 and data_json[1]:
-                indicator_name_api = data_json[1][0]["indicator"]["value"]
+            # Cek apakah response valid dari World Bank
+            if isinstance(data_json, list) and len(data_json) >= 2 and data_json[1]:
+                records = []
+                nama_resmi = nama_pilihan
+                
                 for item in data_json[1]:
                     thn = item.get("date")
                     val = item.get("value")
+                    # Simpan nama indikator dari API jika tersedia
+                    if "indicator" in item and "value" in item["indicator"]:
+                        nama_resmi = item["indicator"]["value"]
+                        
                     if val is not None:
-                        records.append({"Tahun": int(thn), "Nilai": float(val)})
+                        try:
+                            records.append({"Tahun": int(thn), "Nilai": round(float(val), 2)})
+                        except (ValueError, TypeError):
+                            continue
                 
-                if records:
+                if len(records) > 0:
                     df = pd.DataFrame(records).sort_values(by="Tahun", ascending=True)
                     link_resmi = f"https://data.worldbank.org/indicator/{kode_terpilih}?locations=ID"
                     
                     st.divider()
-                    st.success(f"✅ Berhasil mengambil data: **{indicator_name_api}**")
+                    st.success(f"✅ Berhasil memuat data: **{nama_resmi}**")
                     st.markdown(f"🔗 **Sumber Primer:** [Buka Halaman Resmi World Bank DataBank]({link_resmi})")
                     
                     # Tombol Download
@@ -90,16 +102,16 @@ if kode_terpilih and st.button("📊 Tampilkan Data", type="primary"):
                         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
                     )
                     
-                    # Visualisasi
+                    # Visualisasi Grafik
                     st.subheader("📈 Tren Historis")
                     st.line_chart(df.set_index("Tahun")["Nilai"])
                     
-                    # Tabel
-                    with st.expander("📋 Tabel Angka Lengkap"):
+                    # Tabel Lengkap
+                    with st.expander("📋 Lihat Tabel Angka Lengkap"):
                         st.dataframe(df.sort_values(by="Tahun", ascending=False), use_container_width=True)
                 else:
-                    st.warning(f"Indikator '{kode_terpilih}' terdaftar, tetapi tidak memiliki data untuk Indonesia.")
+                    st.warning(f"Indikator '{kode_terpilih}' ada di sistem, tetapi tidak memiliki nilai angka untuk Indonesia.")
             else:
-                st.error(f"Kode '{kode_terpilih}' tidak ditemukan di sistem World Bank.")
+                st.error("Gagal menerima data dari World Bank atau kode indikator tidak ditemukan.")
         except Exception as e:
-            st.error(f"Terjadi kesalahan saat memanggil data: {e}")
+            st.error(f"Terjadi kesalahan koneksi: {e}")
