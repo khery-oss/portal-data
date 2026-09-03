@@ -171,24 +171,33 @@ if variables:
     selected_var = st.selectbox("4. Pilih Indikator:", list(variables.keys()))
     var_id = variables[selected_var]
 
-if st.button("📊 Tampilkan Data", type="primary"):
-    with st.spinner(f"Menarik data {selected_var} untuk {wilayah_label}..."):
-      # Menambahkan format penarikan data dinamis standar BPS
-      data_url = f"https://webapi.bps.go.id/v1/api/list/model/data/lang/ind/domain/{target_domain}/var/{var_id}/key/{BPS_APP_ID}/"
+# Tambahkan pilihan tahun sebelum tombol tampilkan data
+  selected_year = st.selectbox(
+      "5. Pilih Tahun:",
+      ["2024", "2023", "2022", "2021", "2020", "Semua Tahun Tersedia"],
+  )
+
+  if st.button("📊 Tampilkan Data", type="primary"):
+    with st.spinner(f"Menarik data {selected_var}..."):
+      # Jika memilih tahun tertentu, tambahkan parameter year
+      if selected_year != "Semua Tahun Tersedia":
+        data_url = f"https://webapi.bps.go.id/v1/api/list/model/data/lang/ind/domain/{target_domain}/var/{var_id}/year/{selected_year}/key/{BPS_APP_ID}/"
+      else:
+        data_url = f"https://webapi.bps.go.id/v1/api/list/model/data/lang/ind/domain/{target_domain}/var/{var_id}/key/{BPS_APP_ID}/"
+
       try:
         r_data = requests.get(data_url, headers=HEADERS, timeout=25)
         res_data = r_data.json()
 
-        if res_data.get("status") == "OK" and res_data.get("data-availability") != "list-not-available":
+        if res_data.get("status") == "OK":
           data_content = res_data.get("datacontent", {})
-
           if data_content:
             st.divider()
             st.subheader(f"📈 {selected_var}")
-            st.markdown(f"**Wilayah:** {wilayah_label} | **Subjek:** {selected_subject}")
 
+            # Parsing data dinamis BPS
             rows = [
-                {"ID Observasi": str(k), "Nilai": v}
+                {"Kode Observasi": str(k), "Nilai": v}
                 for k, v in data_content.items()
                 if v is not None
             ]
@@ -198,30 +207,29 @@ if st.button("📊 Tampilkan Data", type="primary"):
             c1.download_button(
                 "📥 Unduh CSV",
                 df.to_csv(index=False).encode("utf-8"),
-                f"bps_{target_domain}_{var_id}.csv",
+                f"bps_{var_id}.csv",
                 "text/csv",
             )
-
             buf = io.BytesIO()
             with pd.ExcelWriter(buf, engine="openpyxl") as writer:
               df.to_excel(writer, index=False, sheet_name="Data BPS")
             c2.download_button(
-                "📊 Unduh Excel (.xlsx)",
+                "📊 Unduh Excel",
                 buf.getvalue(),
-                f"bps_{target_domain}_{var_id}.xlsx",
+                f"bps_{var_id}.xlsx",
                 "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
             )
 
             st.dataframe(df, use_container_width=True)
-
-            with st.expander("🔍 Metadata Respons BPS"):
-              st.json(res_data)
           else:
-            st.info("Indikator ini tercatat di katalog, tetapi belum ada baris data angka yang dipublikasikan di WebAPI.")
+            st.warning(
+                f"Tabel terdaftar, namun tidak ada angka untuk tahun {selected_year}."
+            )
         else:
-          pesan_bps = res_data.get("data-availability", res_data.get("status", "Respon tidak dikenal"))
-          st.warning(f"Data tidak tersedia dari server BPS untuk variabel ini (Respon BPS: `{pesan_bps}`). Coba pilih indikator lain di bawah subjek ini.")
+          st.error(
+              f"BPS menolak request (Status: {res_data.get('status')}). Indikator ini membutuhkan klasifikasi turunan khusus atau belum dialokasikan di API."
+          )
       except Exception as e:
-        st.error(f"Terjadi kesalahan teknis: {e}")
+        st.error(f"Kesalahan koneksi: {e}")
 else:
   st.info(f"Belum ada indikator tabel dinamis untuk subjek '{selected_subject}' di domain ini.")
