@@ -7,7 +7,7 @@ st.set_page_config(
     page_title="World Bank Data Explorer - Indonesia", layout="wide"
 )
 
-st.title("🇮🇩 World Bank Open Data Explorer - Indonesia")
+st.title("World Bank Open Data Explorer - Indonesia")
 st.write(
     "Cari indikator apa saja langsung dari ribuan database resmi **World"
     " Bank** secara otomatis."
