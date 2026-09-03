@@ -30,15 +30,22 @@ def fetch_bps_subjects():
         # Panggil halaman 1 untuk mengetahui total halaman
         res = requests.get(base_url + "1/").json()
         if res.get("data-availability") == "available":
-            subjects.extend(res.get("data", [][1]))
-            total_pages = res.get("data-availability") # BPS API sometimes puts info in pages
-            pages = res.get("pages", 1)
+            data_arr = res.get("data", [])
+            
+            # Pastikan panjang array lebih dari 1 sebelum mengakses indeks [1]
+            if len(data_arr) > 1:
+                subjects.extend(data_arr[1])
+                
+            # Ambil total pages dari metadata di indeks [0]
+            pages = data_arr[0].get("pages", 1) if len(data_arr) > 0 else 1
             
             # Iterasi sisa halaman
             for p in range(2, pages + 1):
                 res_p = requests.get(base_url + f"{p}/").json()
                 if res_p.get("data-availability") == "available":
-                    subjects.extend(res_p.get("data", [][1]))
+                    data_arr_p = res_p.get("data", [])
+                    if len(data_arr_p) > 1:
+                        subjects.extend(data_arr_p[1])
         else:
             st.error(f"Error API Subjek: {res.get('message', 'Unknown Error')}")
     except Exception as e:
