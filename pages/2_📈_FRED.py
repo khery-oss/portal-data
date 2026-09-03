@@ -7,7 +7,7 @@ st.set_page_config(page_title="FRED - Portal Data", layout="wide")
 st.title("📈 Federal Reserve Economic Data (FRED)")
 
 HEADERS = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"}
-FRED_API_KEY = "9564eb2b869b421ac4119dd8eb5f63f9"
+FRED_API_KEY = st.secrets["FRED_API_KEY"]
 
 query_fred = st.text_input(
     "🔍 Cari indikator FRED (misal: 'Indonesia interest rate', 'Indonesia exchange rate', 'Indonesia M2'):",
