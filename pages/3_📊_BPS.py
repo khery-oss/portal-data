@@ -6,10 +6,10 @@ import streamlit as st
 
 st.set_page_config(page_title="BPS Data Explorer - Live Catalog", layout="wide")
 
-st.title("📊 Portal Data BPS Nasional (Live Catalog BPS)")
+st.title("📊 Portal Data BPS Nasional (Live WebAPI)")
 st.write(
-    "Eksplorasi langsung seluruh katalog data resmi **Badan Pusat Statistik (BPS)** tingkat Nasional "
-    "secara dinamis dari server WebAPI BPS."
+    "Eksplorasi seluruh indikator resmi **Badan Pusat Statistik (BPS)** tingkat Nasional "
+    "secara *real-time* langsung dari server WebAPI BPS."
 )
 
 HEADERS = {
@@ -18,13 +18,13 @@ HEADERS = {
 
 api_key = st.secrets.get("BPS_APP_ID") or st.secrets.get("BPS_API_KEY")
 if not api_key:
-    st.error("⚠️ Key BPS belum disetel di Streamlit Secrets (`BPS_APP_ID`).")
+    st.error("⚠️ Key BPS belum ditemukan di Streamlit Secrets (`BPS_APP_ID`).")
     st.stop()
 
 DOMAIN = "0000"  # Agregat Nasional
 
 # ==============================================================================
-# 1. Mengambil Seluruh Subjek Resmi BPS (52 Subjek dari 6 Halaman)
+# 1. Mengambil Seluruh Subjek Resmi BPS (52 Subjek Dinamis)
 # ==============================================================================
 @st.cache_data(ttl=86400)
 def fetch_all_bps_subjects():
@@ -41,8 +41,7 @@ def fetch_all_bps_subjects():
                     cat_name = it.get("subcat", "Umum")
                     sub_title = it.get("title", "")
                     sub_id = it.get("sub_id")
-                    label = f"[{cat_name}] {sub_title}"
-                    subjects[label] = sub_id
+                    subjects[f"[{cat_name}] {sub_title}"] = sub_id
                 
                 total_pages = res["data"][0].get("pages", 1)
                 if page >= total_pages:
@@ -55,7 +54,7 @@ def fetch_all_bps_subjects():
     return subjects
 
 # ==============================================================================
-# 2. Mengambil Variabel Indikator Resmi BPS
+# 2. Mengambil Variabel Indikator Resmi di Bawah Subjek Terpilih
 # ==============================================================================
 @st.cache_data(ttl=43200)
 def fetch_variables_by_subject(sub_id):
@@ -91,17 +90,17 @@ def fetch_variables_by_subject(sub_id):
             break
     return variables
 
-with st.spinner("Menghubungkan ke katalog resmi BPS..."):
+with st.spinner("Menghubungkan ke katalog WebAPI BPS..."):
     all_subjects = fetch_all_bps_subjects()
 
 if not all_subjects:
-    st.error("Gagal memuat katalog subjek dari server BPS. Silakan periksa kembali beberapa saat lagi.")
+    st.error("Gagal terhubung ke katalog BPS. Pastikan koneksi atau kuota API tersedia.")
     st.stop()
 
 # ==============================================================================
 # 3. Kontrol Pemilihan Taksonomi Resmi BPS
 # ==============================================================================
-st.subheader("1. Pilih Subjek & Indikator dari Katalog BPS")
+st.subheader("1. Pilih Subjek & Indikator Resmi BPS")
 col_s, col_v = st.columns([1, 2])
 
 with col_s:
@@ -128,7 +127,7 @@ with col_v:
 # 4. Rentang Waktu Observasi
 # ==============================================================================
 st.subheader("2. Rentang Waktu Observasi")
-YEARS = [str(y) for y in range(1945, 2026)]
+YEARS = [str(y) for y in range(1970, 2026)]
 
 col_t1, col_t2 = st.columns(2)
 with col_t1:
@@ -137,16 +136,20 @@ with col_t2:
     th_end = st.selectbox("Tahun Selesai:", YEARS, index=YEARS.index("2024"))
 
 if int(th_start) > int(th_end):
-    st.error("Tahun mulai tidak boleh melebihi tahun selesai.")
+    st.error("Tahun mulai tidak boleh lebih besar dari tahun selesai.")
     st.stop()
 
 # ==============================================================================
-# 5. Penarikan Data Instan dengan Format Range Resmi BPS (th_start:th_end)
+# 5. Penarikan Data (Menggunakan Translasi th_id Resmi BPS)
 # ==============================================================================
 if st.button("📊 Muat Data Resmi BPS", type="primary"):
-    with st.spinner(f"Mengambil data resmi {selected_var_label} ({th_start}–{th_end})..."):
-        # Format resmi BPS untuk range tahun adalah th/{th_start}:{th_end}/
-        data_url = f"https://webapi.bps.go.id/v1/api/list/model/data/domain/{DOMAIN}/var/{selected_var_id}/th/{th_start}:{th_end}/key/{api_key}/"
+    # Rumus resmi ID tahun WebAPI BPS: th_id = tahun - 1900
+    th_id_start = str(int(th_start) - 1900)
+    th_id_end = str(int(th_end) - 1900)
+    th_param = f"{th_id_start}:{th_id_end}"
+
+    with st.spinner(f"Mengambil data resmi untuk {selected_var_label}..."):
+        data_url = f"https://webapi.bps.go.id/v1/api/list/model/data/domain/{DOMAIN}/var/{selected_var_id}/th/{th_param}/key/{api_key}/"
         
         try:
             r = requests.get(data_url, headers=HEADERS, timeout=25)
@@ -165,7 +168,7 @@ if st.button("📊 Muat Data Resmi BPS", type="primary"):
             if val is not None:
                 k_str = str(cell_key)
 
-                # Ekstraksi label rincian (vervar)
+                # Ekstraksi label kategori rincian
                 rincian_lbl = "Nasional"
                 for v_val, v_lbl in vervar.items():
                     if k_str.startswith(v_val):
@@ -198,7 +201,7 @@ if st.button("📊 Muat Data Resmi BPS", type="primary"):
             df_raw = pd.DataFrame(records).drop_duplicates()
             df_pivot = df_raw.pivot_table(index="Tahun", columns="Kategori / Rincian", values="Nilai", aggfunc="first").reset_index()
 
-            # Buat grid lengkap sesuai filter tahun
+            # Susun grid tahun lengkap
             selected_years_grid = [str(y) for y in range(int(th_start), int(th_end) + 1)]
             df_grid = pd.DataFrame({"Tahun": selected_years_grid})
             df_final = pd.merge(df_grid, df_pivot, on="Tahun", how="left").sort_values("Tahun")
@@ -253,12 +256,12 @@ if st.button("📊 Muat Data Resmi BPS", type="primary"):
             )
 
             st.dataframe(df_final.fillna("-"), use_container_width=True)
-            st.caption("💡 Tanda strip (-) menandakan data pada tahun tersebut tidak dialokasikan di survei resmi BPS.")
+            st.caption("💡 Tanda strip (-) menandakan bahwa data pada tahun tersebut tidak dialokasikan di basis data rilis BPS.")
 
         else:
-            st.warning(f"Tidak ditemukan angka observasi untuk rentang {th_start}–{th_end} pada tabel ini.")
+            st.warning(f"Tidak ada catatan angka untuk rentang {th_start}–{th_end} pada variabel ini.")
     else:
         st.warning(
             f"Tabel indikator *'{selected_var_label}'* terdaftar di katalog BPS, "
-            f"tetapi server BPS tidak mengembalikan data untuk rentang tahun {th_start}–{th_end}."
+            f"tetapi server BPS tidak memiliki catatan angka untuk rentang tahun {th_start}–{th_end}."
         )
