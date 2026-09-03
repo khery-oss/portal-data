@@ -3,7 +3,7 @@ import requests
 import streamlit as st
 
 st.set_page_config(page_title="BPS Test", layout="wide")
-st.title("🛠️ Pengujian Endpoint BPS")
+st.title("🛠️ Bedah Struktur Data BPS")
 
 HEADERS = {
     "User-Agent": (
@@ -12,55 +12,43 @@ HEADERS = {
 }
 BPS_APP_ID = st.secrets["BPS_APP_ID"]
 
-# Daftar indikator yang umum aktif di BPS Nasional
 TEST_VARS = {
     "Persentase Penduduk Miskin (P0)": 191,
     "Garis Kemiskinan": 192,
     "Indeks Pembangunan Manusia (IPM)": 499,
-    "Angka Harapan Hidup (AHH)": 501,
     "Tingkat Pengangguran Terbuka (TPT)": 543,
 }
 
-pilihan = st.selectbox("Pilih Indikator Uji:", list(TEST_VARS.keys()))
+pilihan = st.selectbox("Pilih Indikator:", list(TEST_VARS.keys()))
 var_id = TEST_VARS[pilihan]
 
-# Batasan resmi BPS: maksimal 3 tahun
-th_param = st.selectbox("Rentang Tahun (Maks 3 Tahun):", ["2021:2023", "2020:2022", "2018:2020"])
+th_param = st.selectbox("Pilih th:", ["2021:2023", "2020:2022", "2022;2023"])
 
-if st.button("Uji Tarik Data", type="primary"):
+if st.button("Bedah Respons BPS", type="primary"):
   url = f"https://webapi.bps.go.id/v1/api/list/model/data/lang/ind/domain/0000/var/{var_id}/th/{th_param}/key/{BPS_APP_ID}/"
 
   try:
     r = requests.get(url, headers=HEADERS, timeout=25)
     res = r.json()
 
-    if res.get("status") == "OK":
-      content = res.get("datacontent", {})
-      st.success(f"Berhasil! Server mengembalikan {len(content)} data poin.")
+    st.write(f"**HTTP Status:** `{r.status_code}` | **BPS Status:** `{res.get('status')}`")
+    st.write(f"**Jumlah Data Point:** `{len(res.get('datacontent', {}))}`")
 
-      vervar = {
-          str(item["val"]): item["label"] for item in res.get("vervar", [])
-      }
-      tahun = {str(item["val"]): item["label"] for item in res.get("tahun", [])}
+    # Tampilkan seluruh komponen metadata yang dikirim server BPS
+    col_a, col_b = st.columns(2)
+    with col_a:
+      st.markdown("**Daftar Kode Tahun (`tahun`):**")
+      st.json(res.get("tahun", []))
 
-      rows = []
-      for k, v in content.items():
-        k_str = str(k)
-        label_v = next(
-            (v_lbl for v_val, v_lbl in vervar.items() if k_str.startswith(v_val)),
-            "Nasional",
-        )
-        label_t = next(
-            (t_lbl for t_val, t_lbl in tahun.items() if t_val in k_str), "-"
-        )
-        rows.append(
-            {"Klasifikasi / Wilayah": label_v, "Tahun": label_t, "Nilai": v}
-        )
+      st.markdown("**Daftar Turunan Variabel (`turvar`):**")
+      st.json(res.get("turvar", []))
 
-      df = pd.DataFrame(rows)
-      st.dataframe(df, use_container_width=True)
-    else:
-      st.error(f"Gagal: {res.get('message', res.get('status'))}")
-      st.json(res)
+    with col_b:
+      st.markdown("**Daftar Wilayah/Klasifikasi (`vervar`):**")
+      st.json(res.get("vervar", []))
+
+      st.markdown("**Isi Data Mentah (`datacontent`):**")
+      st.json(res.get("datacontent", {}))
+
   except Exception as e:
-    st.error(f"Terjadi error: {e}")
+    st.error(f"Error: {e}")
