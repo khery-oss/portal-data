@@ -1,25 +1,31 @@
 import streamlit as st
 import requests
 
-st.title("🔍 Diagnostik Langsung WebAPI BPS")
+st.title("🔍 Diagnostik Lanjutan WebAPI BPS")
 
-# Cek Secrets
 api_key = st.secrets.get("BPS_APP_ID") or st.secrets.get("BPS_API_KEY")
-st.write(f"Key ditemukan: `{api_key[:4]}...{api_key[-4:]}`" if api_key else "❌ Key tidak ada di Secrets!")
 
 if api_key:
-    # Uji 1: Endpoint List Subjek
-    test_url = f"https://webapi.bps.go.id/v1/api/list/model/sub/domain/0000/key/{api_key}/"
-    st.write(f"Menguji URL: `{test_url.replace(api_key, 'HIDDEN_KEY')}`")
-    
     headers = {
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
     }
-    
+
+    # Uji 1: Model 'subject' (Katalog Subjek Resmi BPS)
+    url_subject = f"https://webapi.bps.go.id/v1/api/list/model/subject/domain/0000/key/{api_key}/"
+    st.subheader("1. Uji Model `subject`")
     try:
-        r = requests.get(test_url, headers=headers, timeout=15)
-        st.write(f"**HTTP Status Code:** `{r.status_code}`")
-        st.write("**Respons Mentah (Raw JSON):**")
-        st.json(r.json())
+        r1 = requests.get(url_subject, headers=headers, timeout=15)
+        st.write(f"Status: `{r1.status_code}`")
+        st.json(r1.json())
     except Exception as e:
-        st.error(f"Koneksi gagal total (Network/SSL/Timeout): {e}")
+        st.error(f"Gagal uji 1: {e}")
+
+    # Uji 2: Model 'var' (Daftar Variabel Indikator)
+    url_var = f"https://webapi.bps.go.id/v1/api/list/model/var/domain/0000/key/{api_key}/"
+    st.subheader("2. Uji Model `var`")
+    try:
+        r2 = requests.get(url_var, headers=headers, timeout=15)
+        st.write(f"Status: `{r2.status_code}`")
+        st.json(r2.json())
+    except Exception as e:
+        st.error(f"Gagal uji 2: {e}")
