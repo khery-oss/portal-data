@@ -148,126 +148,126 @@ if int(th_start) > int(th_end):
     st.stop()
 
 # ==============================================================================
-# 5. Penarikan Data Multi-Tahun dari WebAPI BPS
+# 5. Penarikan Data Instan Langsung dari WebAPI BPS
 # ==============================================================================
 if st.button("📊 Muat Data Resmi BPS", type="primary"):
-    selected_years = [str(y) for y in range(int(th_start), int(th_end) + 1)]
-    # BPS membatasi maksimal 3 tahun per request di endpoint data
-    batches = [selected_years[i:i + 3] for i in range(0, len(selected_years), 3)]
-
-    records = []
-    progress_bar = st.progress(0)
-    status_txt = st.empty()
-
-    for idx, b in enumerate(batches):
-        th_param = ";".join(b) if len(b) > 1 else b[0]
-        status_txt.text(f"Mengunduh blok data BPS periode {b[0]}–{b[-1]}...")
+    with st.spinner(f"Mengambil data resmi untuk {selected_var_label}..."):
+        # Panggil endpoint data tanpa memecah th agar BPS mengembalikan seluruh seri waktu resminya
+        data_url = f"https://webapi.bps.go.id/v1/api/list/model/data/domain/{DOMAIN}/var/{selected_var_id}/key/{api_key}/"
         
-        data_url = f"https://webapi.bps.go.id/v1/api/list/model/data/domain/{DOMAIN}/var/{selected_var_id}/th/{th_param}/key/{api_key}/"
         try:
             r = requests.get(data_url, headers=HEADERS, timeout=25)
             res = r.json()
-            if res.get("status") == "OK" and res.get("data-availability") != "list-not-available":
-                datacontent = res.get("datacontent", {})
-                vervar = {str(item["val"]): item["label"] for item in res.get("vervar", [])}
-                tahun_dict = {str(item["val"]): str(item["label"]) for item in res.get("tahun", [])}
+        except Exception as e:
+            st.error(f"Gagal menghubungi server BPS: {e}")
+            st.stop()
 
-                for cell_key, val in datacontent.items():
-                    if val is not None:
-                        k_str = str(cell_key)
-                        
-                        # Ambil label rincian (vervar)
-                        rincian_lbl = "Nasional"
-                        for v_val, v_lbl in vervar.items():
-                            if k_str.startswith(v_val):
-                                rincian_lbl = v_lbl
-                                break
-                        
-                        # Ambil label tahun
-                        tahun_lbl = None
-                        for t_val, t_lbl in tahun_dict.items():
-                            if t_val in k_str:
-                                tahun_lbl = t_lbl
-                                break
+    if res.get("status") == "OK" and res.get("data-availability") != "list-not-available":
+        datacontent = res.get("datacontent", {})
+        vervar = {str(item["val"]): str(item["label"]) for item in res.get("vervar", [])}
+        tahun_dict = {str(item["val"]): str(item["label"]) for item in res.get("tahun", [])}
 
-                        if tahun_lbl and tahun_lbl in selected_years:
-                            records.append({
-                                "Tahun": tahun_lbl,
-                                "Kategori / Rincian": rincian_lbl,
-                                "Nilai": val
-                            })
-            time.sleep(0.1)
-        except Exception:
-            pass
+        records = []
+        for cell_key, val in datacontent.items():
+            if val is not None:
+                k_str = str(cell_key)
 
-        progress_bar.progress((idx + 1) / len(batches))
+                # Ekstraksi label rincian (vervar)
+                rincian_lbl = "Nasional"
+                for v_val, v_lbl in vervar.items():
+                    if k_str.startswith(v_val):
+                        rincian_lbl = v_lbl
+                        break
 
-    status_txt.empty()
-    progress_bar.empty()
+                # Ekstraksi label tahun
+                tahun_lbl = None
+                for t_val, t_lbl in tahun_dict.items():
+                    if t_val in k_str:
+                        tahun_lbl = t_lbl
+                        break
 
-    # Bentuk grid data lengkap 1945-2025 sesuai pilihan user
-    df_grid = pd.DataFrame({"Tahun": selected_years})
+                # Bersihkan label tahun (ambil 4 digit angka jika formatnya seperti "2020 Semester 1")
+                th_clean = "".join(filter(str.isdigit, str(tahun_lbl)))[:4] if tahun_lbl else None
 
-    if records:
-        df_raw = pd.DataFrame(records).drop_duplicates()
-        df_pivot = df_raw.pivot(index="Tahun", columns="Kategori / Rincian", values="Nilai").reset_index()
-        df_final = pd.merge(df_grid, df_pivot, on="Tahun", how="left").sort_values("Tahun")
+                if th_clean and int(th_start) <= int(th_clean) <= int(th_end):
+                    try:
+                        num_val = float(str(val).replace(",", ".").strip())
+                    except ValueError:
+                        num_val = val
 
-        st.success(f"Data resmi berhasil dimuat: **{selected_var_label}**")
-        if selected_var_info["unit"] != "Tidak Ada Satuan":
-            st.caption(f"Satuan Resmi BPS: **{selected_var_info['unit']}**")
+                    records.append({
+                        "Tahun": th_clean,
+                        "Kategori / Rincian": rincian_lbl,
+                        "Nilai": num_val
+                    })
 
-        st.divider()
+        if records:
+            df_raw = pd.DataFrame(records).drop_duplicates()
+            df_pivot = df_raw.pivot_table(index="Tahun", columns="Kategori / Rincian", values="Nilai", aggfunc="first").reset_index()
 
-        # Visualisasi Grafik
-        st.subheader(f"📈 Tren Deret Waktu: {selected_var_label}")
-        fig = go.Figure()
-        
-        value_cols = [c for c in df_final.columns if c != "Tahun"]
-        for col in value_cols:
-            fig.add_trace(go.Scatter(
-                x=df_final["Tahun"],
-                y=df_final[col],
-                mode="lines+markers",
-                name=col,
-                connectgaps=False,  # Memutus grafik jika data tahun lampau belum ada survei
-                hovertemplate=f"Tahun %{{x}}<br>{col}: %{{y}}<extra></extra>"
-            ))
+            # Buat grid lengkap sesuai filter tahun user
+            selected_years_grid = [str(y) for y in range(int(th_start), int(th_end) + 1)]
+            df_grid = pd.DataFrame({"Tahun": selected_years_grid})
+            df_final = pd.merge(df_grid, df_pivot, on="Tahun", how="left").sort_values("Tahun")
 
-        fig.update_layout(
-            xaxis=dict(title="Tahun", tickmode="linear"),
-            yaxis=dict(title=selected_var_info["unit"] if selected_var_info["unit"] != "Tidak Ada Satuan" else "Nilai"),
-            hovermode="x unified",
-            margin=dict(l=20, r=20, t=40, b=20)
-        )
-        st.plotly_chart(fig, use_container_width=True)
+            st.success(f"Data resmi berhasil dimuat: **{selected_var_label}**")
+            if selected_var_info["unit"] != "Tidak Ada Satuan":
+                st.caption(f"Satuan Resmi BPS: **{selected_var_info['unit']}**")
 
-        # Tabel Observasi & Ekspor
-        st.subheader("📋 Tabel Data Observasi")
-        col_d1, col_d2 = st.columns(2)
-        col_d1.download_button(
-            "📥 Unduh CSV",
-            df_final.to_csv(index=False).encode("utf-8"),
-            f"BPS_{selected_var_id}_{th_start}_{th_end}.csv",
-            "text/csv"
-        )
+            st.divider()
 
-        buf = io.BytesIO()
-        with pd.ExcelWriter(buf, engine="openpyxl") as writer:
-            df_final.to_excel(writer, index=False, sheet_name="Data BPS")
-        col_d2.download_button(
-            "📊 Unduh Excel (.xlsx)",
-            buf.getvalue(),
-            f"BPS_{selected_var_id}_{th_start}_{th_end}.xlsx",
-            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-        )
+            # Visualisasi Grafik
+            st.subheader(f"📈 Tren Deret Waktu: {selected_var_label}")
+            fig = go.Figure()
 
-        st.dataframe(df_final.fillna("-"), use_container_width=True)
-        st.caption("💡 Tanda strip (-) menandakan bahwa pada tahun tersebut BPS belum merilis rekaman survei di basis data digital.")
+            value_cols = [c for c in df_final.columns if c != "Tahun"]
+            for col in value_cols:
+                fig.add_trace(go.Scatter(
+                    x=df_final["Tahun"],
+                    y=df_final[col],
+                    mode="lines+markers",
+                    name=col,
+                    connectgaps=False,
+                    hovertemplate=f"Tahun %{{x}}<br>{col}: %{{y}}<extra></extra>"
+                ))
 
+            fig.update_layout(
+                xaxis=dict(title="Tahun", tickmode="linear"),
+                yaxis=dict(title=selected_var_info["unit"] if selected_var_info["unit"] != "Tidak Ada Satuan" else "Nilai"),
+                hovermode="x unified",
+                margin=dict(l=20, r=20, t=40, b=20)
+            )
+            st.plotly_chart(fig, use_container_width=True)
+
+            # Tabel Observasi & Ekspor
+            st.subheader("📋 Tabel Data Observasi")
+            col_d1, col_d2 = st.columns(2)
+            col_d1.download_button(
+                "📥 Unduh CSV",
+                df_final.to_csv(index=False).encode("utf-8"),
+                f"BPS_{selected_var_id}_{th_start}_{th_end}.csv",
+                "text/csv"
+            )
+
+            buf = io.BytesIO()
+            with pd.ExcelWriter(buf, engine="openpyxl") as writer:
+                df_final.to_excel(writer, index=False, sheet_name="Data BPS")
+            col_d2.download_button(
+                "📊 Unduh Excel (.xlsx)",
+                buf.getvalue(),
+                f"BPS_{selected_var_id}_{th_start}_{th_end}.xlsx",
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            )
+
+            st.dataframe(df_final.fillna("-"), use_container_width=True)
+            st.caption("💡 Tanda strip (-) menandakan bahwa pada tahun tersebut BPS belum merilis rekaman survei di basis data digital.")
+
+        else:
+            st.warning(
+                f"Tabel indikator *'{selected_var_label}'* tercatat di BPS, "
+                f"tetapi tidak ada rekaman angka pada rentang {th_start}–{th_end}."
+            )
     else:
         st.warning(
-            f"Tabel indikator *'{selected_var_label}'* tercatat di katalog BPS, "
-            f"tetapi server BPS tidak memiliki catatan angka pada rentang {th_start}–{th_end}."
+            f"Server BPS merespons bahwa tabel *'{selected_var_label}'* belum memiliki data angka yang dialokasikan di API."
         )
-        st.info("Variabel ini mungkin hanya dirilis pada publikasi cetak tertentu atau periode surveinya berbeda. Silakan pilih indikator lainnya.")
