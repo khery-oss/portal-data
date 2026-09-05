@@ -5,23 +5,20 @@ import streamlit as st
 
 st.set_page_config(page_title="OECD Data Explorer - Indonesia", layout="wide")
 
-st.title("🌐 Portal Data OECD (Fokus Indonesia)")
+st.title("🌐 Portal Data OECD (Indonesia)")
 st.write(
-    "Eksplorasi indikator makroekonomi, fiskal, ketenagakerjaan, dan pembangunan Indonesia "
-    "berdasarkan publikasi dan basis data resmi **OECD (Organization for Economic Co-operation and Development)**."
+    "Exploration of macroeconomic, fiscal, labor, and development indicators for **Indonesia** "
+    "based on official publications and databases of the **OECD (Organization for Economic Co-operation and Development)**."
 )
 
-# ==============================================================================
-# KATALOG INDIKATOR LENGKAP OECD UNTUK INDONESIA
-# Dilengkapi definisi metodologis resmi, satuan, data historis penuh, dan tautan resmi OECD
-# ==============================================================================
+# KATALOG INDIKATOR RESMI OECD DENGAN DEFINISI BAHASA INGGRIS ASLI
 OECD_CATALOG = {
-    # --- Kelompok 1: Pertumbuhan Ekonomi & Output (PDB) ---
-    "Real GDP Growth Rate (Laju Pertumbuhan PDB Riil)": {
-        "kategori": "1. Pertumbuhan Ekonomi & PDB",
+    # --- Kelompok 1: Economic Growth & Output (GDP) ---
+    "Real GDP Growth Rate": {
+        "kategori": "1. Economic Growth & Output",
         "unit": "%",
         "oecd_code": "QNA / B1_GE",
-        "desc": "Perubahan tahunan Produk Domestik Bruto riil atas dasar harga konstan yang mencerminkan laju ekspansi atau kontraksi ekonomi agregat riil.",
+        "desc": "Annual growth rate of real Gross Domestic Product based on constant prices, reflecting the rate of economic expansion or contraction.",
         "source_url": "https://data-explorer.oecd.org/vis?df[ds]=DisseminateFinalDMZ&df[id]=DSD_NAMAIN1%40DF_TABLE1&df[ag]=OECD.SDD.NAD",
         "data": {
             "1995": 8.22, "1996": 7.82, "1997": 4.70, "1998": -13.13, "1999": 0.79,
@@ -32,11 +29,11 @@ OECD_CATALOG = {
             "2020": -2.07, "2021": 3.69, "2022": 5.31, "2023": 5.05, "2024": 5.03
         }
     },
-    "Gross Domestic Product per Capita (PDB per Kapita USD PPP)": {
-        "kategori": "1. Pertumbuhan Ekonomi & PDB",
-        "unit": "USD PPP Kontemporer",
+    "Gross Domestic Product per Capita (PPP)": {
+        "kategori": "1. Economic Growth & Output",
+        "unit": "Current USD PPP",
         "oecd_code": "SNA / B1_GE_PERCAP",
-        "desc": "Produk Domestik Bruto dibagi jumlah penduduk rata-rata, dikonversi menggunakan paritas daya beli (Purchasing Power Parity) internasional standar OECD.",
+        "desc": "Gross Domestic Product divided by total mid-year population, converted to international dollars using Purchasing Power Parity (PPP) rates.",
         "source_url": "https://data-explorer.oecd.org/vis?df[ds]=DisseminateFinalDMZ&df[id]=DSD_PDBI%40DF_PDBI_LV&df[ag]=OECD.SDD.NAD",
         "data": {
             "2000": 4320, "2001": 4540, "2002": 4810, "2003": 5120, "2004": 5510,
@@ -46,11 +43,11 @@ OECD_CATALOG = {
             "2020": 13980, "2021": 14750, "2022": 15820, "2023": 16680, "2024": 17450
         }
     },
-    "Gross Fixed Capital Formation (Pembentukan Modal Tetap Bruto / Investasi)": {
-        "kategori": "1. Pertumbuhan Ekonomi & PDB",
-        "unit": "% dari PDB",
+    "Gross Fixed Capital Formation (Investment)": {
+        "kategori": "1. Economic Growth & Output",
+        "unit": "% of GDP",
         "oecd_code": "SNA / P51G_PDB",
-        "desc": "Porsi total belanja investasi modal fisik (infrastruktur, mesin, fasilitas pabrik) terhadap total Produk Domestik Bruto tahunan.",
+        "desc": "Total outlays on additions to the fixed assets of the economy plus net changes in the level of inventories, expressed as a percentage of GDP.",
         "source_url": "https://data-explorer.oecd.org/vis?df[ds]=DisseminateFinalDMZ&df[id]=DSD_NAMAIN1%40DF_TABLE1&df[ag]=OECD.SDD.NAD",
         "data": {
             "2000": 22.3, "2002": 21.4, "2004": 24.1, "2006": 25.4, "2008": 27.8,
@@ -60,12 +57,12 @@ OECD_CATALOG = {
         }
     },
 
-    # --- Kelompok 2: Inflasi, Moneter & Nilai Tukar ---
-    "Consumer Price Index Inflation (Tingkat Inflasi IHK Tahunan)": {
-        "kategori": "2. Inflasi & Nilai Tukar",
+    # --- Kelompok 2: Prices, Inflation & Exchange Rates ---
+    "Consumer Price Index Inflation (Annual)": {
+        "kategori": "2. Prices & Inflation",
         "unit": "%",
         "oecd_code": "PRICES_CPI / CPI_TOT",
-        "desc": "Laju inflasi umum gabungan nasional berdasarkan perubahan tahunan Indeks Harga Konsumen (Headline CPI) agregat keranjang konsumsi barang dan jasa.",
+        "desc": "Rate of change in the Consumer Price Index (CPI), reflecting the annual change in the cost of a specified basket of consumer goods and services.",
         "source_url": "https://data-explorer.oecd.org/vis?df[ds]=DisseminateFinalDMZ&df[id]=DSD_PRICES%40DF_PRICES_ALL&df[ag]=OECD.SDD.TPS",
         "data": {
             "1995": 9.43, "1996": 7.97, "1997": 6.23, "1998": 58.39, "1999": 20.49,
@@ -76,11 +73,11 @@ OECD_CATALOG = {
             "2020": 2.03, "2021": 1.56, "2022": 4.21, "2023": 3.67, "2024": 2.61
         }
     },
-    "Nominal Exchange Rate (Nilai Tukar Rupiah terhadap USD)": {
-        "kategori": "2. Inflasi & Nilai Tukar",
-        "unit": "IDR per USD (Rata-rata)",
+    "Nominal Exchange Rate (IDR per USD)": {
+        "kategori": "2. Prices & Inflation",
+        "unit": "IDR per USD (Average)",
         "oecd_code": "SNA_EXCH / XR_USD",
-        "desc": "Nilai tukar nominal rata-rata Rupiah Indonesia terhadap satu Dolar Amerika Serikat dalam transaksi pasar devisa spot tahunan.",
+        "desc": "Annual average exchange rate of the Indonesian Rupiah against the United States Dollar based on official market transactions.",
         "source_url": "https://data-explorer.oecd.org/vis?df[ds]=DisseminateFinalDMZ&df[id]=DSD_EXCH%40DF_EXCH_RATES&df[ag]=OECD.SDD.NAD",
         "data": {
             "1995": 2249, "1996": 2342, "1997": 2909, "1998": 10014, "1999": 7855,
@@ -91,12 +88,12 @@ OECD_CATALOG = {
         }
     },
 
-    # --- Kelompok 3: Ketenagakerjaan & Angkatan Kerja ---
-    "Harmonised Unemployment Rate (Tingkat Pengangguran Terbuka)": {
-        "kategori": "3. Ketenagakerjaan",
-        "unit": "% dari Angkatan Kerja",
+    # --- Kelompok 3: Labor Market & Employment ---
+    "Harmonised Unemployment Rate": {
+        "kategori": "3. Labor Market",
+        "unit": "% of Labor Force",
         "oecd_code": "LFS_HUR / HUR_TOT",
-        "desc": "Proporsi angkatan kerja usia kerja standar yang tidak memiliki pekerjaan, tersedia untuk bekerja, dan sedang aktif mencari pekerjaan menurut standar ILO/OECD.",
+        "desc": "Unemployed persons as a percentage of the labor force, standardized according to ILO guidelines to ensure international comparability.",
         "source_url": "https://data-explorer.oecd.org/vis?df[ds]=DisseminateFinalDMZ&df[id]=DSD_LFS%40DF_HUR&df[ag]=OECD.ELS.SAE",
         "data": {
             "2000": 6.08, "2002": 9.06, "2004": 9.86, "2005": 11.24, "2006": 10.28,
@@ -106,11 +103,11 @@ OECD_CATALOG = {
             "2022": 5.86, "2023": 5.32, "2024": 4.82
         }
     },
-    "Labor Force Participation Rate (Tingkat Partisipasi Angkatan Kerja / TPAK)": {
-        "kategori": "3. Ketenagakerjaan",
-        "unit": "% dari Populasi 15+",
+    "Labor Force Participation Rate": {
+        "kategori": "3. Labor Market",
+        "unit": "% of Population 15+",
         "oecd_code": "LFS_POP / LFPR_TOT",
-        "desc": "Rasio antara jumlah angkatan kerja aktif (bekerja maupun mencari kerja) terhadap total penduduk usia produktif (15 tahun ke atas).",
+        "desc": "Ratio of the labor force to the working-age population (aged 15 and over), expressing the proportion of the population active in the labor market.",
         "source_url": "https://data-explorer.oecd.org/vis?df[ds]=DisseminateFinalDMZ&df[id]=DSD_LFS%40DF_LFPR&df[ag]=OECD.ELS.SAE",
         "data": {
             "2000": 67.8, "2002": 67.8, "2004": 67.5, "2006": 66.2, "2008": 67.2,
@@ -120,12 +117,12 @@ OECD_CATALOG = {
         }
     },
 
-    # --- Kelompok 4: Keuangan Pemerintah & Sektor Fiskal ---
-    "General Government Gross Debt (Rasio Utang Pemerintah terhadap PDB)": {
-        "kategori": "4. Fiskal & Keuangan Publik",
-        "unit": "% dari PDB",
+    # --- Kelompok 4: Public Finance & Fiscal Sector ---
+    "General Government Gross Debt (% of GDP)": {
+        "kategori": "4. Public Finance",
+        "unit": "% of GDP",
         "oecd_code": "GOV_DEBT / GG_DEBT",
-        "desc": "Total kewajiban utang bruto pemerintah pusat dan daerah (mencakup surat utang dan pinjaman) diukur sebagai persentase dari PDB nominal tahunan.",
+        "desc": "Total nominal gross debt of the general government sector (central and local governments) as a percentage of GDP.",
         "source_url": "https://data-explorer.oecd.org/vis?df[ds]=DisseminateFinalDMZ&df[id]=DSD_GOV%40DF_GOV_DEBT&df[ag]=OECD.GOV",
         "data": {
             "2000": 87.4, "2002": 62.3, "2004": 51.3, "2006": 39.0, "2008": 30.3,
@@ -134,11 +131,11 @@ OECD_CATALOG = {
             "2020": 39.7, "2021": 40.7, "2022": 39.6, "2023": 39.1, "2024": 38.5
         }
     },
-    "Tax Revenue to GDP Ratio (Rasio Penerimaan Pajak / Tax Ratio)": {
-        "kategori": "4. Fiskal & Keuangan Publik",
-        "unit": "% dari PDB",
+    "Tax Revenue to GDP Ratio": {
+        "kategori": "4. Public Finance",
+        "unit": "% of GDP",
         "oecd_code": "REV_TAX / TAX_PDB",
-        "desc": "Total penerimaan perpajakan (pajak penghasilan, PPN, bea cukai) diukur relatif terhadap ukuran Produk Domestik Bruto menurut standar Revenue Statistics OECD.",
+        "desc": "Total tax revenues collected by the government relative to the size of the economy, measured as a percentage of GDP.",
         "source_url": "https://data-explorer.oecd.org/vis?df[ds]=DisseminateFinalDMZ&df[id]=DSD_REV%40DF_REVENUE&df[ag]=OECD.CTP",
         "data": {
             "2000": 11.2, "2002": 12.1, "2004": 12.5, "2006": 12.3, "2008": 13.0,
@@ -148,12 +145,12 @@ OECD_CATALOG = {
         }
     },
 
-    # --- Kelompok 5: Perdagangan Internasional & Neraca Eksternal ---
-    "Current Account Balance (% of GDP) (Neraca Transaksi Berjalan)": {
-        "kategori": "5. Perdagangan & Sektor Eksternal",
-        "unit": "% dari PDB",
+    # --- Kelompok 5: International Trade & External Sector ---
+    "Current Account Balance (% of GDP)": {
+        "kategori": "5. International Trade",
+        "unit": "% of GDP",
         "oecd_code": "BOP / CAB_PDB",
-        "desc": "Selisih bersih antara ekspor barang/jasa dan penerimaan primer/sekunder terhadap impor dan pembayaran ke luar negeri sebagai proporsi dari PDB.",
+        "desc": "Sum of net exports of goods and services, net primary income, and net secondary income, expressed as a percentage of GDP.",
         "source_url": "https://data-explorer.oecd.org/vis?df[ds]=DisseminateFinalDMZ&df[id]=DSD_BOP%40DF_BOP&df[ag]=OECD.SDD.NAD",
         "data": {
             "2000": 4.8, "2002": 3.9, "2004": 1.5, "2006": 2.9, "2008": 0.0,
@@ -162,11 +159,11 @@ OECD_CATALOG = {
             "2020": -0.4, "2021": 0.3, "2022": 1.0, "2023": -0.2, "2024": -0.5
         }
     },
-    "Exports of Goods and Services (% of GDP) (Ekspor Barang dan Jasa)": {
-        "kategori": "5. Perdagangan & Sektor Eksternal",
-        "unit": "% dari PDB",
+    "Exports of Goods and Services (% of GDP)": {
+        "kategori": "5. International Trade",
+        "unit": "% of GDP",
         "oecd_code": "SNA / P6_PDB",
-        "desc": "Proporsi seluruh barang fisik dan jasa yang dipasarkan kepada pihak non-residen internasional terhadap Produk Domestik Bruto.",
+        "desc": "Value of all goods and other market services provided to the rest of the world, expressed as a percentage of GDP.",
         "source_url": "https://data-explorer.oecd.org/vis?df[ds]=DisseminateFinalDMZ&df[id]=DSD_NAMAIN1%40DF_TABLE1&df[ag]=OECD.SDD.NAD",
         "data": {
             "2000": 41.0, "2002": 32.7, "2004": 32.2, "2006": 31.0, "2008": 29.8,
@@ -214,18 +211,18 @@ if int(th_start) > int(th_end):
     st.stop()
 
 # ==============================================================================
-# 3. KOTAK INFORMASI DEFINISI METODOLOGI & TAUTAN RESMI OECD (SEPERTI WORLD BANK)
+# 3. KOTAK INFORMASI DEFINISI METODOLOGI & TAUTAN RESMI OECD
 # ==============================================================================
 st.divider()
 
-with st.expander("ℹ️ Definisi Indikator & Sumber Metadata Resmi OECD", expanded=True):
-    st.markdown(f"**Nama Seri:** {selected_name}")
-    st.markdown(f"**Bidang / Dimensi:** `{meta['kategori']}`")
-    st.markdown(f"**Kode Seri Teknis OECD:** `{meta['oecd_code']}`")
-    st.markdown(f"**Satuan Pengukuran:** `{meta['unit']}`")
-    st.markdown(f"**Deskripsi Metodologi:**\n{meta['desc']}")
+with st.expander("ℹ️ Indicator Definition & Official OECD Metadata", expanded=True):
+    st.markdown(f"**Series Name:** {selected_name}")
+    st.markdown(f"**Category / Dimension:** `{meta['kategori']}`")
+    st.markdown(f"**OECD Technical Series Code:** `{meta['oecd_code']}`")
+    st.markdown(f"**Measurement Unit:** `{meta['unit']}`")
+    st.markdown(f"**Methodological Description:**\n{meta['desc']}")
     st.markdown(
-        f"🔗 **Tautan Basis Data Resmi:** [Buka Data di OECD Data Explorer / SDMX Registry]({meta['source_url']})"
+        f"🔗 **Official Database Link:** [Open Data in OECD Data Explorer / SDMX Registry]({meta['source_url']})"
     )
 
 # ==============================================================================
@@ -237,7 +234,7 @@ df_grid = pd.DataFrame({"Tahun": rentang_tahun_pilihan})
 raw_series_df = pd.DataFrame(list(meta["data"].items()), columns=["Tahun", f"Indonesia ({meta['unit']})"])
 df_final = pd.merge(df_grid, raw_series_df, on="Tahun", how="left").sort_values("Tahun")
 
-st.subheader(f"📈 Tren Deret Waktu: {selected_name}")
+st.subheader(f"📈 Time Series Trend: {selected_name}")
 
 val_col = f"Indonesia ({meta['unit']})"
 fig = go.Figure()
@@ -246,13 +243,13 @@ fig.add_trace(go.Scatter(
     y=df_final[val_col],
     mode="lines+markers",
     name="Indonesia",
-    connectgaps=False,  # Garis grafik otomatis putus jika ada tahun yang belum dirilis
+    connectgaps=False,
     line=dict(width=2.5, color="#005A9C"),
-    hovertemplate=f"Tahun %{{x}}<br>Nilai: %{{y}} {meta['unit']}<extra></extra>"
+    hovertemplate=f"Year %{{x}}<br>Value: %{{y}} {meta['unit']}<extra></extra>"
 ))
 
 fig.update_layout(
-    xaxis=dict(title="Tahun", tickmode="linear"),
+    xaxis=dict(title="Year", tickmode="linear"),
     yaxis=dict(title=meta["unit"]),
     hovermode="x unified",
     margin=dict(l=20, r=20, t=40, b=20)
@@ -262,11 +259,11 @@ st.plotly_chart(fig, use_container_width=True)
 # ==============================================================================
 # 5. TABEL OBSERVASI & EKSPOR DATA (CSV & XLSX)
 # ==============================================================================
-st.subheader("📋 Tabel Data Observasi Resmi")
+st.subheader("📋 Observation Data Table")
 c_csv, c_xlsx = st.columns(2)
 
 c_csv.download_button(
-    "📥 Unduh CSV",
+    "📥 Download CSV",
     df_final.to_csv(index=False).encode("utf-8"),
     f"OECD_IDN_{meta['oecd_code'].replace(' ', '_')}_{th_start}_{th_end}.csv",
     "text/csv"
@@ -276,7 +273,7 @@ buf = io.BytesIO()
 with pd.ExcelWriter(buf, engine="openpyxl") as writer:
     df_final.to_excel(writer, index=False, sheet_name="OECD Data")
 c_xlsx.download_button(
-    "📊 Unduh Excel (.xlsx)",
+    "📊 Download Excel (.xlsx)",
     buf.getvalue(),
     f"OECD_IDN_{meta['oecd_code'].replace(' ', '_')}_{th_start}_{th_end}.xlsx",
     "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
@@ -284,5 +281,5 @@ c_xlsx.download_button(
 
 st.dataframe(df_final.fillna("-"), use_container_width=True)
 st.caption(
-    "💡 **Catatan OECD:** Nilai strip (-) menandakan data pada tahun tersebut belum dicakup dalam siklus pelaporan berkala OECD."
+    "💡 **OECD Note:** A dash (-) indicates that data for that specific year is not covered within OECD's periodic reporting cycle."
 )
