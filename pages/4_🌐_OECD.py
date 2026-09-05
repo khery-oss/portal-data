@@ -12,25 +12,8 @@ st.write(
     "langsung dari server resmi **OECD (Organization for Economic Cooperation and Development)**."
 )
 
-# Pilihan Dataset & Indikator Populer OECD
-OECD_DATASETS = {
-    "Main Economic Indicators (MEI) - Pertumbuhan & Harga": {
-        "dataset": "OECD.SDD.NAD,DSD_NAMAIN1@DF_TABLE1", # Contoh struktur data PDB
-        "filter": "IDN.B1_GE..HUR..", 
-        "unit": "Persen / Mata Uang"
-    },
-    "Key Short-Term Economic Indicators": {
-        "dataset": "OECD.SDD.STES,DSD_STES@DF_STES",
-        "filter": "IDN.CC..M",
-        "unit": "Indeks / Persen"
-    }
-}
-
-# Atau gunakan API universal OECD SDMX yang lebih ramah pengembang untuk data ringkas:
-# Contoh API OECD JSON untuk data komparatif:
 @st.cache_data(ttl=3600)
-def fetch_oecd_data(country="IDN", indicator="MEI_GBM"):
-    # Menggunakan endpoint statistik OECD umum
+def fetch_oecd_data(country="IDN", indicator="CPI"):
     url = f"https://stats.oecd.org/SDMX-JSON/data/DP_LIVE/{country}.{indicator}.ALL/OECD?startTime=2010&endTime=2026"
     headers = {"User-Agent": "Mozilla/5.0"}
     try:
@@ -52,7 +35,6 @@ ind_choice = st.selectbox(
     ]
 )
 
-# Mapping kode indikator resmi OECD DP_LIVE
 ind_map = {
     "Consumer Price Index (Inflation)": "CPI",
     "Gross Domestic Product (GDP Growth)": "GDV_ANNPCT",
@@ -62,7 +44,6 @@ ind_map = {
 
 target_ind = ind_map[ind_choice]
 
-# Pilihan Negara (OECD mencakup negara anggota dan partner utama seperti Indonesia)
 country_code = st.selectbox("Pilih Negara / Ekonomi:", ["IDN (Indonesia)", "USA (Amerika Serikat)", "JPN (Jepang)", "DEU (Jerman)", "GBR (Inggris)"], index=0)
 iso_c = country_code.split(" ")[0]
 
@@ -72,15 +53,12 @@ if st.button("🌐 Tarik Data OECD Live", type="primary"):
 
     if raw_data and "dataSets" in raw_data and len(raw_data["dataSets"]) > 0:
         try:
-            # Parsing struktur SDMX-JSON OECD
             dataset = raw_data["dataSets"][0]
             series_data = dataset.get("series", {})
             
-            # Ambil dimensi waktu dari struktur 'structure'
             time_points = raw_data["structure"]["dimensions"]["observation"][0]["values"]
             time_labels = [tp["id"] for tp in time_points]
 
-            # Ekstraksi nilai observasi
             records = []
             for key, series_val in series_data.items():
                 observations = series_val.get("observations", {})
@@ -88,7 +66,7 @@ if st.button("🌐 Tarik Data OECD Live", type="primary"):
                     t_idx = int(time_idx_str)
                     if t_idx < len(time_labels):
                         year_val = time_labels[t_idx]
-                        numeric_val = val_list[0] # Nilai data ada di indeks pertama
+                        numeric_val = val_list[0]
                         records.append({
                             "Periode": year_val,
                             "Nilai": numeric_val
@@ -99,7 +77,6 @@ if st.button("🌐 Tarik Data OECD Live", type="primary"):
                 
                 st.success(f"Berhasil menarik data OECD untuk **{country_code}** - **{ind_choice}**")
                 
-                # Visualisasi Grafik
                 fig = go.Figure()
                 fig.add_trace(go.Scatter(
                     x=df_res["Periode"],
@@ -115,15 +92,13 @@ if st.button("🌐 Tarik Data OECD Live", type="primary"):
                 )
                 st.plotly_chart(fig, use_container_width=True)
 
-                # Tabel Data
                 st.subheader("📋 Tabel Data Observasi")
                 st.dataframe(df_res, use_container_width=True)
             else:
                 st.warning("Struktur data ditemukan, tetapi isi observasi kosong untuk parameter ini.")
         except Exception as e:
-            st.error(f struktur kesalahan parsing JSON OECD: {e}")
+            st.error(f"Kesalahan parsing data OECD: {e}")
     else:
         st.warning(
-            f"Server OECD tidak mengembalikan data untuk kombinasi negara `{iso_c}` dan indikator `{target_ind}`. "
-            "Beberapa indikator mendetail memerlukan parameter dimensi tambahan."
+            f"Server OECD tidak mengembalikan data untuk kombinasi negara `{iso_c}` dan indikator `{target_ind}`."
         )
