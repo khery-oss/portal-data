@@ -494,8 +494,29 @@ def main() -> None:
             st.json(raw_response)
         return
 
+    # ── Filter Wilayah / Kategori (Multiselect) ──
+    st.subheader("Visualisasi Tren")
+    kategori_list = list(df.columns)
+    
+    # Coba otomatis mencari data 'INDONESIA' atau 'NASIONAL' sebagai default tampilan awal
+    default_kat = [k for k in kategori_list if "INDONESIA" in k.upper() or "NASIONAL" in k.upper()]
+    
+    # Jika tidak ada label Nasional, jadikan kolom pertama sebagai default agar grafik tidak penuh
+    if not default_kat:
+        default_kat = kategori_list[:1] 
+        
+    selected_kategori = st.multiselect(
+        "Pilih Wilayah / Rincian untuk ditampilkan di grafik:",
+        options=kategori_list,
+        default=default_kat
+    )
+    
     # ── Grafik tren ──
-    render_timeseries_chart(df, selected_var_label)
+    if selected_kategori:
+        df_plot = df[selected_kategori]
+        render_timeseries_chart(df_plot, selected_var_label)
+    else:
+        st.warning("Pilih minimal satu wilayah/rincian pada kotak di atas untuk menampilkan grafik.")
 
     # ── Statistik ringkas ──
     with st.expander("📈 Statistik Deskriptif"):
