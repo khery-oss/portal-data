@@ -10,7 +10,7 @@ st.set_page_config(
 
 st.title("🇮🇩 IndoEcon Explorer")
 st.markdown(
-    "Portal observasi data makroekonomi, ketenagakerjaan, sosial-pendidikan, dan pembangunan berkelanjutan "
+    "Portal observasi data makroekonomi, ketenagakerjaan, sosial-pendidikan, kesehatan publik, dan pembangunan berkelanjutan "
     "Indonesia yang terintegrasi langsung dengan berbagai institusi resmi internasional dan nasional. "
     "Seluruh data ditarik secara **100% Live API** secara *real-time* tanpa penyimpanan data statis (*no hardcoding*)."
 )
@@ -27,7 +27,7 @@ st.info(
     "* **Standar Sitasi & Penulisan Sumber:** Dalam penulisan karya ilmiah, skripsi, tesis, jurnal, maupun laporan riset, "
     "penulisan sumber **tetap menggunakan sumber asli** tempat data diterbitkan "
     "(seperti *World Bank, FRED (Federal Reserve Bank of St. Louis), ILO (International Labour Organization), "
-    "UN SDGs (United Nations), UNESCO Institute for Statistics, atau BPS (Badan Pusat Statistik)*).\n"
+    "UN SDGs (United Nations), UNESCO Institute for Statistics, atau WHO (World Health Organization)*).\n"
     "* **Koreksi & Masukan:** Apabila terdapat kekeliruan, kesalahan data, atau *error* pada penarikan API, "
     "bisa langsung diberitahukan ke email tim pengembang melalui formulir kontak di bawah."
 )
@@ -63,9 +63,9 @@ with col2:
     * **Cakupan:** Angka Partisipasi Kasar/Murni (APK/APM), angka melek aksara (literasi), rasio murid-guru, dan pembiayaan belanja pendidikan publik.
     * **Penyedia:** UNESCO UIS Data Repository API.
     
-    ### 📊 6. BPS (Badan Pusat Statistik RI)
-    * **Cakupan:** Statistik resmi domestik nasional dan sub-nasional (provinsi/kabupaten), inflasi IHK regional, dan kemiskinan daerah.
-    * **Penyedia:** WebAPI Resmi Badan Pusat Statistik Indonesia.
+    ### 🏥 6. WHO (World Health Organization)
+    * **Cakupan:** Indikator kesehatan publik, angka harapan hidup, stunting & gizi balita, tenaga medis, jaminan kesehatan semesta (*UHC*), dan modal manusia (*human capital*).
+    * **Penyedia:** WHO Global Health Observatory (GHO) OData API.
     """)
 
 st.divider()
