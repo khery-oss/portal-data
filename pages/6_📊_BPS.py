@@ -5,12 +5,12 @@ import streamlit as st
 
 st.set_page_config(page_title="BPS Explorer - IndoEcon", layout="wide")
 
-st.title("📊 BPS (Badan Pusat Statistik RI) - Publikasi Statistik Resmi")
+st.title("📊 BPS (Badan Pusat Statistik RI) - Tabel Publikasi Resmi")
 st.markdown(
-    "Portal eksplorasi tabel data publikasi resmi dari **WebAPI BPS RI** secara *real-time* (*100% Live API*)."
+    "Eksplorasi tabel rilis resmi dan data statistik publikasi langsung dari "
+    "**WebAPI BPS RI** secara *real-time* (*100% Live API*)."
 )
 
-# API Key dibaca aman dari secrets
 bps_api_key = st.secrets.get("BPS_API_KEY", "")
 
 HEADERS = {
@@ -18,96 +18,105 @@ HEADERS = {
 }
 
 if not bps_api_key:
-    st.error("⚙️ Kunci WebAPI BPS belum terdeteksi di `st.secrets['BPS_API_KEY']`.")
+    st.error("⚙️ Kunci WebAPI BPS belum terdeteksi di secrets pengembang (`st.secrets['BPS_API_KEY']`).")
     st.stop()
 
-st.subheader("1. Penarikan Katalog Tabel Statistik Resmi BPS")
-st.write("Menghubungkan langsung ke endpoint publikasi tabel resmi BPS Pusat (Domain 0000).")
+st.subheader("1. Penarikan Katalog Rilis Resmi BPS")
+st.write("Mengambil kompilasi tabel statistik publikasi terbaru yang diterbitkan oleh server BPS Pusat.")
 
-# Pilihan halaman katalog publikasi
-halaman = st.selectbox("Pilih Halaman Katalog Publikasi:", [1, 2, 3, 4, 5], index=0)
-
-if st.button("📊 Tarik Data Publikasi BPS (Live API)", type="primary"):
-    with st.spinner(f"Menghubungi server BPS untuk katalog halaman {halaman}..."):
-        api_url = f"https://webapi.bps.go.id/v1/api/list/model/statictable/lang/ind/domain/0000/page/{halaman}/key/{bps_api_key}/"
-
-        try:
-            res = requests.get(api_url, headers=HEADERS, timeout=25)
-            if res.status_code == 200:
-                payload = res.json()
-
-                if payload.get("data-availability") == "available":
-                    raw_data = payload.get("data", [])
-
-                    items = []
-                    if isinstance(raw_data, list) and len(raw_data) > 1 and isinstance(raw_data[1], list):
-                        items = raw_data[1]
-                    elif isinstance(raw_data, list):
-                        items = raw_data
-
-                    records = []
-                    for item in items:
-                        if isinstance(item, dict):
-                            judul = item.get("title", "")
-                            tgl = item.get("updt", "") or item.get("cr_date", "")
-                            table_id = item.get("table_id", "")
-                            link_unduh = item.get("excel", "")
-
-                            if judul:
-                                records.append({
-                                    "ID Tabel": str(table_id),
-                                    "Judul Publikasi Statistik": str(judul).strip(),
-                                    "Pembaruan Terakhir": str(tgl).strip(),
-                                    "Tautan Berkas Excel BPS": str(link_unduh).strip()
-                                })
-
-                    if records:
-                        df_table = pd.DataFrame(records)
-                        st.success(f"Berhasil menarik {len(df_table)} tabel publikasi resmi dari server BPS!")
-                        st.divider()
-
-                        # Pencarian Cepat
-                        kata_kunci = st.text_input("🔍 Cari Judul Publikasi (misal: Inflasi, PDRB, Kemiskinan, Upah):", "")
-                        if kata_kunci.strip():
-                            df_tampil = df_table[df_table["Judul Publikasi Statistik"].str.contains(kata_kunci, case=False, na=False)]
-                        else:
-                            df_tampil = df_table
-
-                        # Tombol Ekspor Data Katalog
-                        c1, c2 = st.columns(2)
-                        c1.download_button(
-                            "📥 Unduh Daftar (CSV)",
-                            df_tampil.to_csv(index=False).encode("utf-8"),
-                            f"BPS_Katalog_Tabel_Hal_{halaman}.csv",
-                            "text/csv"
-                        )
-                        buf = io.BytesIO()
-                        with pd.ExcelWriter(buf, engine="openpyxl") as writer:
-                            df_tampil.to_excel(writer, index=False, sheet_name="BPS Tables")
-                        c2.download_button(
-                            "📊 Unduh Daftar (.xlsx)",
-                            buf.getvalue(),
-                            f"BPS_Katalog_Tabel_Hal_{halaman}.xlsx",
-                            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-                        )
-
-                        # Tampilan Data
-                        st.dataframe(
-                            df_tampil,
-                            use_container_width=True,
-                            hide_index=True,
-                            column_config={
-                                "Tautan Berkas Excel BPS": st.column_config.LinkColumn(
-                                    "Unduh Berkas Resmi BPS",
-                                    help="Tautan langsung ke dokumen resmi yang diterbitkan server BPS"
-                                )
-                            }
-                        )
+if st.button("📊 Tarik Data Publikasi BPS Terbaru (Live API)", type="primary"):
+    with st.spinner("Menghubungi server BPS dan mengunduh katalog publikasi resmi..."):
+        all_records = []
+        
+        # Otomatis menarik 5 halaman teratas (sekitar 50 publikasi terbaru)
+        for page_num in range(1, 6):
+            api_url = f"https://webapi.bps.go.id/v1/api/list/model/statictable/lang/ind/domain/0000/page/{page_num}/key/{bps_api_key}/"
+            try:
+                res = requests.get(api_url, headers=HEADERS, timeout=20)
+                if res.status_code == 200:
+                    payload = res.json()
+                    if payload.get("data-availability") == "available":
+                        raw_data = payload.get("data", [])
+                        items = raw_data[1] if isinstance(raw_data, list) and len(raw_data) > 1 else raw_data
+                        
+                        for it in items:
+                            if isinstance(it, dict):
+                                title = it.get("title", "")
+                                if title:
+                                    all_records.append({
+                                        "ID Tabel": str(it.get("table_id", "")),
+                                        "Judul Publikasi Statistik": str(title).strip(),
+                                        "Pembaruan Terakhir": str(it.get("updt", "") or it.get("cr_date", "")).strip(),
+                                        "Tautan Berkas Excel BPS": str(it.get("excel", "")).strip()
+                                    })
                     else:
-                        st.warning("Server BPS merespons dengan data kosong untuk halaman ini.")
-                else:
-                    st.warning("Respon server BPS: data publikasi tidak tersedia pada halaman ini.")
-            else:
-                st.error(f"Gagal menghubungi server BPS (Kode Status HTTP: {res.status_code}).")
-        except Exception as e:
-            st.error(f"Terjadi kendala koneksi ke server BPS: {e}")
+                        break
+            except Exception:
+                break
+
+        if all_records:
+            st.session_state["bps_table_data"] = pd.DataFrame(all_records).drop_duplicates(subset=["ID Tabel"])
+
+if "bps_table_data" in st.session_state:
+    df_bps = st.session_state["bps_table_data"]
+    st.success(f"Berhasil memuat {len(df_bps)} tabel statistik resmi langsung dari server BPS RI!")
+    st.divider()
+
+    st.subheader("2. Filter & Pencarian Tabel")
+    c_filter, c_search = st.columns([1.2, 2])
+    
+    with c_filter:
+        topik = st.selectbox(
+            "Filter Berdasarkan Topik Utama:",
+            ["Semua Topik", "Inflasi & Harga", "Ekspor & Impor", "Kemiskinan & Sosial", "Pertanian & Industri", "Lainnya"]
+        )
+
+    with c_search:
+        keyword = st.text_input("🔍 Cari Judul Publikasi Spesifik:", placeholder="Ketik kata kunci (misal: Bahan Baku, Beras, IHK)...")
+
+    # Logika penyaringan topik
+    df_filtered = df_bps.copy()
+    
+    if topik == "Inflasi & Harga":
+        df_filtered = df_filtered[df_filtered["Judul Publikasi Statistik"].str.contains("inflasi|ihk|harga", case=False, na=False)]
+    elif topik == "Ekspor & Impor":
+        df_filtered = df_filtered[df_filtered["Judul Publikasi Statistik"].str.contains("ekspor|impor|perdagangan|barang modal", case=False, na=False)]
+    elif topik == "Kemiskinan & Sosial":
+        df_filtered = df_filtered[df_filtered["Judul Publikasi Statistik"].str.contains("miskin|gini|sosial|upah", case=False, na=False)]
+    elif topik == "Pertanian & Industri":
+        df_filtered = df_filtered[df_filtered["Judul Publikasi Statistik"].str.contains("tani|padi|beras|manufaktur|industri", case=False, na=False)]
+
+    if keyword.strip():
+        df_filtered = df_filtered[df_filtered["Judul Publikasi Statistik"].str.contains(keyword, case=False, na=False)]
+
+    # Tombol Ekspor Daftar
+    c1, c2 = st.columns(2)
+    c1.download_button(
+        "📥 Unduh Daftar (CSV)",
+        df_filtered.to_csv(index=False).encode("utf-8"),
+        "BPS_Katalog_Tabel.csv",
+        "text/csv"
+    )
+    buf = io.BytesIO()
+    with pd.ExcelWriter(buf, engine="openpyxl") as writer:
+        df_filtered.to_excel(writer, index=False, sheet_name="BPS Tables")
+    c2.download_button(
+        "📊 Unduh Daftar (.xlsx)",
+        buf.getvalue(),
+        "BPS_Katalog_Tabel.xlsx",
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    )
+
+    # Menampilkan Tabel dengan tautan unduh aktif
+    st.dataframe(
+        df_filtered,
+        use_container_width=True,
+        hide_index=True,
+        column_config={
+            "Tautan Berkas Excel BPS": st.column_config.LinkColumn(
+                "Unduh Berkas Resmi BPS",
+                display_text="Unduh Excel (.xlsx)",
+                help="Klik untuk mengunduh dokumen data resmi langsung dari server BPS"
+            )
+        }
+    )
