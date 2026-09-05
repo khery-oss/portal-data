@@ -111,6 +111,7 @@ else:
     selected_indicator = st.selectbox(f"Pilih dari {len(filtered_indicators)} Indikator Tersedia:", filtered_indicators)
 
 # Ambil deskripsi dari codebook
+# Ambil deskripsi dari codebook
 indicator_description = codebook_dict.get(
     selected_indicator, 
     codebook_dict.get(selected_indicator.lower(), "Definisi rinci untuk variabel ini dapat merujuk langsung pada dokumen resmi Codebook V-Dem Institute.")
@@ -118,9 +119,12 @@ indicator_description = codebook_dict.get(
 
 with st.expander("📖 Penjelasan & Metadata dari Codebook V-Dem", expanded=True):
     st.markdown(f"**Nama Variabel (Kode):** `{selected_indicator}`")
-    st.markdown(f"**Definisi / Deskripsi dari Codebook:**\n> {indicator_description}")
+    st.markdown("**Definisi / Deskripsi dari Codebook:**")
+    
+    # Menampilkan teks deskripsi secara natural
+    st.info(indicator_description)
+    
     st.markdown("🔗 **Sumber Dokumen:** [V-Dem Codebook & Methodology](https://www.v-dem.net/data/reference-documents/)")
-
 # =============================================================================
 # 3. PENARIKAN & VISUALISASI RUNTUN WAKTU INDONESIA (TANPA BATAS TAHUN)
 # =============================================================================
