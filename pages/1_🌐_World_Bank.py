@@ -1,7 +1,8 @@
-import streamlit as st
-import pandas as pd
-import requests
 import io
+import pandas as pd
+import plotly.graph_objects as go
+import requests
+import streamlit as st
 
 st.set_page_config(page_title="World Bank - Portal Data", layout="wide")
 st.title("🌐 Database Lengkap World Bank - Indonesia")
@@ -11,18 +12,23 @@ HEADERS = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/
 @st.cache_data(ttl=86400)
 def load_wb_indicators():
     indicators = []
-    url = "https://api.worldbank.org/v2/indicator?format=json&per_page=4000"
+    # Mengambil indikator World Bank dengan paginasi penuh agar mencakup seluruh seri valid
+    url = "https://api.worldbank.org/v2/indicator?format=json&per_page=5000"
     try:
         res = requests.get(url, headers=HEADERS, timeout=25)
         data = res.json()
         if len(data) > 1 and data[1]:
             for item in data[1]:
-                indicators.append({
-                    "id": item.get("id"),
-                    "name": item.get("name"),
-                    "sourceNote": item.get("sourceNote", ""),
-                    "sourceOrg": item.get("sourceOrganization", "World Bank")
-                })
+                ind_id = item.get("id")
+                ind_name = item.get("name")
+                # Filter hanya indikator yang memiliki format kode standar World Bank (mengandung titik)
+                if ind_id and ind_name and "." in ind_id:
+                    indicators.append({
+                        "id": ind_id,
+                        "name": ind_name,
+                        "sourceNote": item.get("sourceNote", ""),
+                        "sourceOrg": item.get("sourceOrganization", "World Bank")
+                    })
     except Exception:
         pass
     return indicators
@@ -30,8 +36,8 @@ def load_wb_indicators():
 all_wb_indicators = load_wb_indicators()
 
 query_wb = st.text_input(
-    "🔍 Cari indikator World Bank (misal: 'gdp', 'education', 'health', 'co2', 'poverty'):",
-    value="gdp"
+    "🔍 Cari indikator World Bank (misal: 'GDP', 'Inflation', 'Poverty', 'Education', 'CO2'):",
+    value="GDP growth"
 ).strip()
 
 if query_wb and all_wb_indicators:
@@ -53,7 +59,7 @@ if query_wb and all_wb_indicators:
 
         if st.button("📊 Ambil Data World Bank", type="primary"):
             with st.spinner(f"Menarik time-series untuk {kode_wb}..."):
-                data_url = f"https://api.worldbank.org/v2/country/IDN/indicator/{kode_wb}?format=json&per_page=120"
+                data_url = f"https://api.worldbank.org/v2/country/IDN/indicator/{kode_wb}?format=json&per_page=100"
                 try:
                     r_data = requests.get(data_url, headers=HEADERS, timeout=15)
                     data_json = r_data.json()
@@ -93,10 +99,29 @@ if query_wb and all_wb_indicators:
                             "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
                         )
 
-                        st.line_chart(df_wb.set_index("Tahun")["Nilai"])
+                        # Visualisasi Interaktif Plotly
+                        fig = go.Figure()
+                        fig.add_trace(go.Scatter(
+                            x=df_wb["Tahun"],
+                            y=df_wb["Nilai"],
+                            mode="lines+markers",
+                            name="Indonesia (World Bank)",
+                            line=dict(width=2.5, color="#002244"),
+                            hovertemplate="Tahun %{x}<br>Nilai: %{y}<extra></extra>"
+                        ))
+                        fig.update_layout(
+                            xaxis=dict(title="Tahun", tickmode="linear"),
+                            yaxis=dict(title="Nilai Indikator"),
+                            hovermode="x unified",
+                            margin=dict(l=20, r=20, t=40, b=20)
+                        )
+                        st.plotly_chart(fig, use_container_width=True)
+
                         with st.expander("📋 Tabel Data Lengkap"):
                             st.dataframe(df_wb.sort_values(by="Tahun", ascending=False), use_container_width=True)
                     else:
-                        st.warning(f"Indikator '{kode_wb}' terdaftar, tetapi observasi data Indonesia tidak tersedia.")
+                        st.warning(f"Indikator '{kode_wb}' terdaftar, tetapi observasi data Indonesia tidak tersedia untuk seri ini.")
                 except Exception as e:
                     st.error(f"Gagal memuat data: {e}")
+    else:
+        st.warning("Tidak ada indikator yang cocok dengan kata kunci tersebut.")
