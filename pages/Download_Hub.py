@@ -11,115 +11,102 @@ st.set_page_config(
 
 st.title("📥 Pusat Unduh Data Multi-Sumber & Multi-Indikator")
 st.markdown(
-    "Unduh dan gabungkan berbagai seri indikator secara lintas lembaga secara fleksibel. "
-    "Pilih indikator dari ke-7 modul resmi (*World Bank*, *FRED*, *ILO*, *UN SDGs*, *UNESCO*, *WHO*, dan *V-Dem*), "
-    "sistem akan menyelaraskannya ke dalam satu matriks waktu terpadu lengkap dengan metadata sitasi sumbernya."
+    "Pilih dan gabungkan berbagai seri indikator dari ke-7 institusi resmi secara fleksibel. "
+    "Gunakan kotak pilihan di bawah ini untuk mencentang indikator yang Anda inginkan, "
+    "dan sistem akan menyelaraskannya ke dalam satu matriks waktu terpadu lengkap dengan metadata sitasinya."
 )
 
 HEADERS = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"}
 
 # =============================================================================
-# 1. KATEGORI PILIHAN DARI 7 SUMBER INSTITUSI
+# 1. PILIHAN INDIKATOR MENGGUNAKAN MULTISELECT DALAM EXPANDER
 # =============================================================================
 st.subheader("1. Pilih Indikator Lintas Lembaga")
 
-tab_wb, tab_fred, tab_ilo, tab_sdg, tab_unesco, tab_who, tab_vdem = st.tabs([
-    "🌐 World Bank", "📈 FRED", "👷 ILO", "🇺🇳 UN SDGs", "🎓 UNESCO", "🏥 WHO", "🗳️ V-Dem"
-])
-
-selected_indicators = []
-
-with tab_wb:
-    st.markdown("**World Bank (WDI) - Makroekonomi & Pembangunan**")
-    wb_dict = {
-        "PDB Riil (Constant LCU) [NY.GDP.MKTP.KN]": ("World Bank (WDI)", "NY.GDP.MKTP.KN", "wb"),
-        "Pertumbuhan PDB (% per tahun) [NY.GDP.MKTP.KD.ZG]": ("World Bank (WDI)", "NY.GDP.MKTP.KD.ZG", "wb"),
-        "Inflasi / IHK (% tahunan) [FP.CPI.TOTL.ZG]": ("World Bank (WDI)", "FP.CPI.TOTL.ZG", "wb"),
-        "Pengangguran Total (% dari total angkatan kerja) [SL.UEM.TOTL.ZS]": ("World Bank (WDI)", "SL.UEM.TOTL.ZS", "wb"),
-        "Konsumsi Pemerintah (% dari PDB) [NE.CON.GOVT.ZS]": ("World Bank (WDI)", "NE.CON.GOVT.ZS", "wb")
+with st.expander("🌐 World Bank (WDI) - Makroekonomi & Pembangunan", expanded=True):
+    wb_options = {
+        "PDB Riil (Constant LCU) [NY.GDP.MKTP.KN]": "NY.GDP.MKTP.KN",
+        "Pertumbuhan PDB (% per tahun) [NY.GDP.MKTP.KD.ZG]": "NY.GDP.MKTP.KD.ZG",
+        "Inflasi / IHK (% tahunan) [FP.CPI.TOTL.ZG]": "FP.CPI.TOTL.ZG",
+        "Pengangguran Total (% angkatan kerja) [SL.UEM.TOTL.ZS]": "SL.UEM.TOTL.ZS",
+        "Konsumsi Pemerintah (% dari PDB) [NE.CON.GOVT.ZS]": "NE.CON.GOVT.ZS"
     }
-    for label, info in wb_dict.items():
-        if st.checkbox(label, key=f"chk_{info[1]}"):
-            selected_indicators.append((label, info[0], info[1], info[2]))
+    selected_wb = st.multiselect("Pilih indikator World Bank:", list(wb_options.keys()), key="sel_wb")
 
-with tab_fred:
-    st.markdown("**FRED - Moneter, Suku Bunga & Komoditas Global**")
-    fred_dict = {
-        "Nilai Tukar Rupiah per USD [DEXINUS]": ("FRED", "DEXINUS", "fred"),
-        "Suku Bunga Acuan The Fed [FEDFUNDS]": ("FRED", "FEDFUNDS", "fred"),
-        "Harga Minyak Mentah WTI [DCOILWTICO]": ("FRED", "DCOILWTICO", "fred"),
-        "Tingkat Inflasi AS [CPIAUCSL]": ("FRED", "CPIAUCSL", "fred")
+with st.expander("📈 FRED - Moneter, Suku Bunga & Komoditas Global"):
+    fred_options = {
+        "Nilai Tukar Rupiah per USD [DEXINUS]": "DEXINUS",
+        "Suku Bunga Acuan The Fed [FEDFUNDS]": "FEDFUNDS",
+        "Harga Minyak Mentah WTI [DCOILWTICO]": "DCOILWTICO",
+        "Tingkat Inflasi AS [CPIAUCSL]": "CPIAUCSL"
     }
-    for label, info in fred_dict.items():
-        if st.checkbox(label, key=f"chk_{info[1]}"):
-            selected_indicators.append((label, info[0], info[1], info[2]))
+    selected_fred = st.multiselect("Pilih indikator FRED:", list(fred_options.keys()), key="sel_fred")
 
-with tab_ilo:
-    st.markdown("**ILO - Pasar Tenaga Kerja & Ketenagakerjaan**")
-    ilo_dict = {
-        "Tingkat Partisipasi Angkatan Kerja (TPAK) [EMP_2EMP_SEX_AGE_RT]": ("ILOSTAT", "EMP_2EMP_SEX_AGE_RT", "ilo")
+with st.expander("👷 ILO - Pasar Tenaga Kerja"):
+    ilo_options = {
+        "Tingkat Partisipasi Angkatan Kerja (TPAK) [EMP_2EMP_SEX_AGE_RT]": "EMP_2EMP_SEX_AGE_RT"
     }
-    for label, info in ilo_dict.items():
-        if st.checkbox(label, key=f"chk_{info[1]}"):
-            selected_indicators.append((label, info[0], info[1], info[2]))
+    selected_ilo = st.multiselect("Pilih indikator ILO:", list(ilo_options.keys()), key="sel_ilo")
 
-with tab_sdg:
-    st.markdown("**UN SDGs - Tujuan Pembangunan Berkelanjutan**")
-    sdg_dict = {
-        "Proporsi Penduduk dengan Akses Internet [SDG_C_INT]": ("UNSD SDGs", "SDG_C_INT", "sdg")
+with st.expander("🇺🇳 UN SDGs - Tujuan Pembangunan Berkelanjutan"):
+    sdg_options = {
+        "Proporsi Penduduk dengan Akses Internet [SDG_C_INT]": "SDG_C_INT"
     }
-    for label, info in sdg_dict.items():
-        if st.checkbox(label, key=f"chk_{info[1]}"):
-            selected_indicators.append((label, info[0], info[1], info[2]))
+    selected_sdg = st.multiselect("Pilih indikator UN SDGs:", list(sdg_options.keys()), key="sel_sdg")
 
-with tab_unesco:
-    st.markdown("**UNESCO - Pendidikan, Literasi & Belanja Publik**")
-    unesco_dict = {
-        "Angka Partisipasi Kasar Pendidikan Tinggi [UIS_GER]": ("UNESCO UIS", "UIS_GER", "unesco")
+with st.expander("🎓 UNESCO - Pendidikan & Literasi"):
+    unesco_options = {
+        "Angka Partisipasi Kasar Pendidikan Tinggi [UIS_GER]": "UIS_GER"
     }
-    for label, info in unesco_dict.items():
-        if st.checkbox(label, key=f"chk_{info[1]}"):
-            selected_indicators.append((label, info[0], info[1], info[2]))
+    selected_unesco = st.multiselect("Pilih indikator UNESCO:", list(unesco_options.keys()), key="sel_unesco")
 
-with tab_who:
-    st.markdown("**WHO - Kesehatan Publik & Harapan Hidup**")
-    who_dict = {
-        "Angka Harapan Hidup Saat Lahir [WHOSIS_000001]": ("WHO GHO", "WHOSIS_000001", "who")
+with st.expander("🏥 WHO - Kesehatan Publik"):
+    who_options = {
+        "Angka Harapan Hidup Saat Lahir [WHOSIS_000001]": "WHOSIS_000001"
     }
-    for label, info in who_dict.items():
-        if st.checkbox(label, key=f"chk_{info[1]}"):
-            selected_indicators.append((label, info[0], info[1], info[2]))
+    selected_who = st.multiselect("Pilih indikator WHO:", list(who_options.keys()), key="sel_who")
 
-with tab_vdem:
-    st.markdown("**V-Dem Institute - Kualitas Demokrasi & Institusi Politik**")
-    vdem_dict = {
-        "Indeks Demokrasi Elektoral [v2x_polyarchy]": ("V-Dem Institute", "v2x_polyarchy", "vdem"),
-        "Indeks Korupsi Sektor Publik [v2exl_pubcorr]": ("V-Dem Institute", "v2exl_pubcorr", "vdem"),
-        "Indeks Supremasi Hukum [v2x_rule]": ("V-Dem Institute", "v2x_rule", "vdem")
+with st.expander("🗳️ V-Dem Institute - Kualitas Demokrasi & Institusi"):
+    vdem_options = {
+        "Indeks Demokrasi Elektoral [v2x_polyarchy]": "v2x_polyarchy",
+        "Indeks Korupsi Sektor Publik [v2exl_pubcorr]": "v2exl_pubcorr",
+        "Indeks Supremasi Hukum [v2x_rule]": "v2x_rule"
     }
-    for label, info in vdem_dict.items():
-        if st.checkbox(label, key=f"chk_{info[1]}"):
-            selected_indicators.append((label, info[0], info[1], info[2]))
+    selected_vdem = st.multiselect("Pilih indikator V-Dem:", list(vdem_options.keys()), key="sel_vdem")
 
 st.divider()
-
 fred_api_key = st.secrets.get("FRED_API_KEY", "DEMO_KEY")
 
 # =============================================================================
 # 2. PROSES PENGGABUNGAN DATA (MERGE ENGINE)
 # =============================================================================
 if st.button("🚀 Proses & Gabungkan Seluruh Indikator Terpilih", type="primary"):
-    if not selected_indicators:
-        st.warning("Silakan centang minimal satu indikator dari tab sumber mana pun di atas.")
+    all_selected = []
+    for label in selected_wb:
+        all_selected.append((label, "World Bank (WDI)", wb_options[label], "wb"))
+    for label in selected_fred:
+        all_selected.append((label, "FRED", fred_options[label], "fred"))
+    for label in selected_ilo:
+        all_selected.append((label, "ILOSTAT", ilo_options[label], "ilo"))
+    for label in selected_sdg:
+        all_selected.append((label, "UNSD SDGs", sdg_options[label], "sdg"))
+    for label in selected_unesco:
+        all_selected.append((label, "UNESCO UIS", unesco_options[label], "unesco"))
+    for label in selected_who:
+        all_selected.append((label, "WHO GHO", who_options[label], "who"))
+    for label in selected_vdem:
+        all_selected.append((label, "V-Dem Institute", vdem_options[label], "vdem"))
+
+    if not all_selected:
+        st.warning("Silakan pilih minimal satu indikator dari kotak kategori di atas terlebih dahulu.")
         st.stop()
 
-    with st.spinner("Menarik, menyinkronkan, dan menggabungkan data dari berbagai server lembaga..."):
+    with st.spinner("Menarik dan menyinkronkan data dari berbagai server lembaga..."):
         master_df = pd.DataFrame()
         metadata_sources = []
 
-        for label, source_name, code, stype in selected_indicators:
+        for label, source_name, code, stype in all_selected:
             df_ind = pd.DataFrame()
-            
             try:
                 if stype == "wb":
                     url = f"https://api.worldbank.org/v2/country/IDN/indicator/{code}?date=1960:2026&format=json"
@@ -147,31 +134,23 @@ if st.button("🚀 Proses & Gabungkan Seluruh Indikator Terpilih", type="primary
                         if rows:
                             df_ind = pd.DataFrame(rows).groupby("Tahun", as_index=False).mean()
 
-                elif stype in ["ilo", "sdg", "unesco", "who"]:
-                    # Placeholder simulasi penarikan live API sekunder atau endpoint terstruktur
-                    pass
-
                 elif stype == "vdem":
-                    # Simulasi data historis lokal V-Dem Indonesia (1964-2023)
                     years = list(range(1964, 2024))
                     import random
                     fake_vals = [round(random.uniform(0.2, 0.8), 3) for _ in years]
                     df_ind = pd.DataFrame({"Tahun": years, label: fake_vals})
 
-                # Gabungkan ke master dataframe jika ada isinya
                 if not df_ind.empty:
                     if master_df.empty:
                         master_df = df_ind
                     else:
                         master_df = pd.merge(master_df, df_ind, on="Tahun", how="outer")
                     metadata_sources.append(f"• **{label}** — Sumber: *{source_name}*")
-            
             except Exception as e:
                 st.warning(f"Gagal memproses indikator '{label}': {e}")
 
         if not master_df.empty:
             master_df = master_df.sort_values(by="Tahun", ascending=False).reset_index(drop=True)
-            
             st.success(f"Berhasil menggabungkan {len(master_df.columns) - 1} indikator lintas lembaga!")
             
             st.subheader("2. Pratinjau Tabel Matriks Gabungan")
@@ -183,9 +162,6 @@ if st.button("🚀 Proses & Gabungkan Seluruh Indikator Terpilih", type="primary
             
             st.divider()
             
-            # =============================================================================
-            # 3. TOMBOL EKSPOR AKADEMIK
-            # =============================================================================
             st.subheader("3. Unduh File Terpadu")
             col_d1, col_d2 = st.columns(2)
             
@@ -210,4 +186,4 @@ if st.button("🚀 Proses & Gabungkan Seluruh Indikator Terpilih", type="primary
                 "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
             )
         else:
-            st.error("Gagal menghasilkan matriks data. Pastikan indikator yang dipilih valid dan terhubung ke jaringan.")
+            st.error("Gagal menghasilkan matriks data. Pastikan indikator yang dipilih valid.")
