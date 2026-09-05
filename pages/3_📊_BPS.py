@@ -246,22 +246,27 @@ def fetch_timeseries(
 
 def _parse_nilai(raw_val) -> float | None:
     """
-    Konversi nilai dari datacontent BPS ke float.
-    Kembalikan None (→ NaN di DataFrame) jika nilai kosong, '-', atau tidak bisa diparse.
-    Tidak ada estimasi atau substitusi — nilai kosong tetap kosong.
+    Konversi nilai dari datacontent BPS ke float secara aman.
     """
     if raw_val is None:
         return None
+        
+    # Jika nilainya sudah berupa angka (float/int) bawaan JSON, langsung kembalikan
+    if isinstance(raw_val, (int, float)):
+        return float(raw_val)
+        
     s = str(raw_val).strip()
     if s in ("", "-", "N/A", "n/a", "null", "NULL"):
         return None
-    # Bersihkan pemisah ribuan (titik) dan desimal (koma) gaya Indonesia
-    s = s.replace(".", "").replace(",", ".")
+        
+    # JANGAN hapus titik karena titik adalah pemisah desimal standar.
+    # Cukup ganti koma (jika ada gaya penulisan Indonesia) menjadi titik.
+    s = s.replace(",", ".")
+    
     try:
         return float(s)
     except ValueError:
         return None
-
 
 # ──────────────────────────────────────────────────────────────────────────────
 # KOMPONEN UI PEMBANTU
@@ -494,7 +499,8 @@ def main() -> None:
 
     # ── Statistik ringkas ──
     with st.expander("📈 Statistik Deskriptif"):
-        st.dataframe(df.describe().applymap(lambda x: f"{x:,.2f}" if pd.notna(x) else "-"),
+        # GANTI applymap menjadi map
+        st.dataframe(df.describe().map(lambda x: f"{x:,.2f}" if pd.notna(x) else "-"),
                      use_container_width=True)
 
     # ── Tabel observasi ──
