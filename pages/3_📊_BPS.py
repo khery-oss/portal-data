@@ -67,9 +67,8 @@ def _get(url: str, timeout: int = 20) -> dict:
 @st.cache_data(ttl=3600, show_spinner=False)
 def fetch_all_subjects(api_key: str) -> list[dict]:
     """
-    Tarik seluruh subjek BPS secara dinamis dengan iterasi pagination
-    berdasarkan atribut `pages` pada respons metadata.
-    Mengembalikan list dict: [{'subject_id': ..., 'label': ...}, ...]
+    Tarik seluruh subjek BPS secara dinamis dengan iterasi pagination.
+    Merespons struktur array bersarang khusus dari WebAPI BPS.
     """
     subjects: list[dict] = []
     page = 1
@@ -81,36 +80,31 @@ def fetch_all_subjects(api_key: str) -> list[dict]:
         )
         data = _get(url)
 
-        # BPS mengembalikan status 0 jika data tersedia
-        if str(data.get("status", "")) not in ("0", 0):
-            # Mungkin sudah melewati halaman terakhir, berhenti
+        # BPS menggunakan indikator data-availability
+        if data.get("data-availability") != "available":
             break
 
-        items = data.get("data", [])
-        if not items:
+        # BPS meletakkan list data di indeks ke-1 array 'data'
+        raw_data = data.get("data", [])
+        if len(raw_data) > 1:
+            items = raw_data[1]
+        else:
             break
 
         for item in items:
-            # Struktur item subject BPS: {'subject_id': ..., 'subject': ...}
+            # Key asli dari BPS adalah 'sub_id' dan 'title'
             subjects.append({
-                "subject_id": str(item.get("subject_id", item.get("subjectid", ""))),
-                "label":      item.get("subject", item.get("label", str(item))),
+                "subject_id": str(item.get("sub_id", "")),
+                "label": item.get("title", "Tanpa Judul"),
             })
 
-        # Hitung total halaman dari metadata
-        # BPS meletakkan info pagination di level atas respons
-        total_pages = int(data.get("data-availability", {}).get("pages", 1))
-        if page >= total_pages:
-            break
-
-        # Fallback: jika metadata pages tidak ditemukan di sana, cek kunci lain
-        if total_pages == 1 and page == 1:
-            # Coba kunci alternatif yang umum digunakan BPS
-            alt_pages = data.get("pages", data.get("totalpage", 1))
-            total_pages = int(alt_pages)
+        # Ambil total halaman dari metadata di indeks ke-0
+        metadata = raw_data[0] if len(raw_data) > 0 else {}
+        total_pages = int(metadata.get("pages", 1))
 
         if page >= total_pages:
             break
+        
         page += 1
 
     return subjects
@@ -120,8 +114,6 @@ def fetch_all_subjects(api_key: str) -> list[dict]:
 def fetch_variables(api_key: str, subject_id: str, max_pages: int = 5) -> list[dict]:
     """
     Tarik variabel/indikator untuk subjek tertentu.
-    max_pages=5 sebagai batas aman; ubah jika subjek memiliki lebih banyak variabel.
-    Mengembalikan list dict: [{'var_id': ..., 'label': ...}, ...]
     """
     variables: list[dict] = []
 
@@ -132,24 +124,25 @@ def fetch_variables(api_key: str, subject_id: str, max_pages: int = 5) -> list[d
         )
         data = _get(url)
 
-        if str(data.get("status", "")) not in ("0", 0):
+        if data.get("data-availability") != "available":
             break
 
-        items = data.get("data", [])
-        if not items:
+        raw_data = data.get("data", [])
+        if len(raw_data) > 1:
+            items = raw_data[1]
+        else:
             break
 
         for item in items:
+            # Key asli dari BPS adalah 'var_id' dan 'title'
             variables.append({
-                "var_id": str(item.get("var_id", item.get("vervar_id", ""))),
-                "label":  item.get("title", item.get("label", str(item))),
+                "var_id": str(item.get("var_id", "")),
+                "label": item.get("title", "Tanpa Judul"),
             })
 
-        # Cek apakah masih ada halaman berikutnya
-        total_pages = int(
-            data.get("data-availability", {}).get("pages",
-            data.get("pages", data.get("totalpage", 1)))
-        )
+        metadata = raw_data[0] if len(raw_data) > 0 else {}
+        total_pages = int(metadata.get("pages", 1))
+
         if page >= total_pages:
             break
 
