@@ -13,7 +13,8 @@ st.write(
 )
 
 HEADERS = {
-    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+    "Accept": "application/json"
 }
 
 # DAFTAR SERI RESMI UNSD SDG UNTUK INDONESIA
@@ -127,60 +128,49 @@ st.subheader("2. Penarikan Data Runtun Waktu")
 
 if st.button("📊 Ambil Data PBB Indonesia", type="primary"):
     with st.spinner(f"Menghubungi endpoint resmi UNSD New York untuk seri {kode_series}..."):
-        # Endpoint REST API PBB resmi: Series Data untuk Indonesia (geoAreaCode=360)
-        api_url = f"https://unstats.un.org/sdgapi/v1/sdg/Series/{kode_series}/GeoArea/360/DataSlice"
+        # Gunakan endpoint query standar dengan batasan halaman pageSize=500
+        api_url = f"https://unstats.un.org/sdgapi/v1/sdg/Series/Data?seriesCode={kode_series}&areaCode=360&pageSize=500"
+        records = []
         
         try:
             res = requests.get(api_url, headers=HEADERS, timeout=20)
             
-            records = []
-            if res.status_code == 200:
-                data_json = res.json()
-                raw_rows = data_json.get("dimensions", []) or data_json.get("data", [])
-                
-                # Jika format data berupa list observasi standar UNSD
-                if isinstance(data_json, list):
-                    raw_rows = data_json
+            # Fallback parameter alternatif jika server merespons kosong
+            if res.status_code != 200 or not res.json().get("data"):
+                alt_url = f"https://unstats.un.org/sdgapi/v1/sdg/Series/Data?seriesCode={kode_series}&geoAreaCode=360&pageSize=500"
+                res = requests.get(alt_url, headers=HEADERS, timeout=20)
 
-                for item in raw_rows:
-                    thn = item.get("timePeriodStart") or item.get("year")
-                    val = item.get("value")
-                    if thn and val is not None:
+            if res.status_code == 200:
+                payload = res.json()
+                data_list = payload.get("data", [])
+                
+                for row in data_list:
+                    thn = row.get("timePeriodStart") or row.get("timePeriod")
+                    val = row.get("value")
+                    if thn is not None and val is not None:
                         try:
+                            clean_thn = int(str(thn)[:4])
+                            clean_val = float(str(val).replace("<", "").replace(">", "").strip())
                             records.append({
-                                "Tahun": int(thn),
-                                f"Nilai ({meta['unit']})": round(float(val), 2)
+                                "Tahun": clean_thn,
+                                f"Nilai ({meta['unit']})": clean_val
                             })
                         except (ValueError, TypeError):
                             continue
 
-            # Fallback format POST jika endpoint DataSlice mengembalikan format ringkas
-            if not records:
-                post_url = "https://unstats.un.org/sdgapi/v1/sdg/Series/Data"
-                payload = {"seriesCodes": [kode_series], "geoAreaCodes": [360]}
-                p_res = requests.post(post_url, json=payload, headers=HEADERS, timeout=20)
-                if p_res.status_code == 200:
-                    p_data = p_res.json().get("data", [])
-                    for item in p_data:
-                        thn = item.get("timePeriodStart")
-                        val = item.get("value")
-                        if thn and val is not None:
-                            try:
-                                records.append({
-                                    "Tahun": int(thn),
-                                    f"Nilai ({meta['unit']})": round(float(val), 2)
-                                })
-                            except (ValueError, TypeError):
-                                continue
-
             if records:
-                df_un = pd.DataFrame(records).drop_duplicates(subset=["Tahun"]).sort_values(by="Tahun", ascending=True)
                 val_col = f"Nilai ({meta['unit']})"
+                # Group by Tahun agar nilai rata-rata nasional yang muncul jika ada data terpilah
+                df_un = (
+                    pd.DataFrame(records)
+                    .groupby("Tahun", as_index=False)[val_col]
+                    .mean()
+                    .round(2)
+                    .sort_values(by="Tahun", ascending=True)
+                )
 
                 st.success(f"Berhasil menarik {len(df_un)} observasi tahunan langsung dari server PBB!")
-
                 st.divider()
-                st.markdown("🔗 **Tautan Data Portal Resmi:** [UNSD SDG Global Platform](https://unstats.un.org/sdgs/dataportal)")
 
                 # Tombol Download Data
                 c1, c2 = st.columns(2)
@@ -200,7 +190,7 @@ if st.button("📊 Ambil Data PBB Indonesia", type="primary"):
                     "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
                 )
 
-                # Visualisasi Interaktif Plotly (Corak Biru PBB)
+                # Visualisasi Interaktif Plotly
                 fig = go.Figure()
                 fig.add_trace(go.Scatter(
                     x=df_un["Tahun"],
@@ -219,10 +209,7 @@ if st.button("📊 Ambil Data PBB Indonesia", type="primary"):
                 st.plotly_chart(fig, use_container_width=True)
 
                 with st.expander("📋 Tabel Runtun Waktu Lengkap"):
-                    st.dataframe(
-                        df_un.sort_values(by="Tahun", ascending=False),
-                        use_container_width=True
-                    )
+                    st.dataframe(df_un.sort_values(by="Tahun", ascending=False), use_container_width=True)
             else:
                 st.warning("Observasi runtun waktu untuk indikator ini belum dilaporkan atau sedang dalam proses pembaruan di server PBB.")
         except Exception as e:
