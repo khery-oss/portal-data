@@ -54,7 +54,7 @@ if df_codebook is not None:
             codebook_dict[str(row[col_var]).strip()] = str(row[col_desc]).strip()
 
 # =============================================================================
-# 2. PEMILIHAN MODEPILIHAN INDIKATOR (UTAMA vs PENCARIAN BEBAS)
+# 2. PEMILIHAN INDIKATOR (UTAMA vs PENCARIAN BEBAS)
 # =============================================================================
 st.subheader("1. Pemilihan Indikator V-Dem & Sinkronisasi Codebook")
 
@@ -79,18 +79,19 @@ mode_pilihan = st.radio(
     horizontal=True
 )
 
+# Daftar kolom teks/meta yang BUKAN merupakan indikator numerik waktu
 exclude_cols = [
     "country_name", "country_text_id", "country_id", "year", "historical_date", 
     "project", "historical", "histname", "codingstart", "codingend", "COWcode",
     "codingstart_contemp", "codingend_contemp", "codingstart_hist", "codingend_hist",
-    "gapstart1", "gapstart2", "gapstart3", "gapend1", "gapend2", "gapend3", "gap_index"
+    "gapstart1", "gapstart2", "gapstart3", "gapend1", "gapend2", "gapend3", "gap_index",
+    "lpname", "slpname", "tlpname", "v2elregnam", "v2ellocnam", "v2juhcname", "v2lgnameup", "v2lgnamelo"
 ]
 
 if mode_pilihan == "⭐ Indikator Utama (Kurasi Cepat)":
-    # Hanya tampilkan indikator utama yang tersedia di dataframe
     valid_curated = {k: v for k, v in CURATED_VDEM.items() if v in df_idn.columns}
     if not valid_curated:
-        valid_curated = CURATED_VDEM # Fallback jika nama kolom berbeda tipis
+        valid_curated = CURATED_VDEM
     
     selected_name = st.selectbox("Pilih Indikator Utama V-Dem:", list(valid_curated.keys()))
     selected_indicator = valid_curated[selected_name]
@@ -99,7 +100,7 @@ else:
         c for c in df_idn.columns 
         if c not in exclude_cols and pd.api.types.is_numeric_dtype(df_idn[c])
     ]
-    search_term = st.text_input("🔍 Cari Indikator Bebas (ketik kata kunci, misal: libdem, corruption, freedom, rule):", "")
+    search_term = st.text_input("🔍 Cari Indikator Bebas (ketik kata kunci, misal: libdem, corruption, freedom, rule, suffrage):", "")
     filtered_indicators = [
         ind for ind in available_indicators
         if not search_term.strip() or search_term.lower() in ind.lower() or search_term.lower() in codebook_dict.get(ind, "").lower()
@@ -109,7 +110,7 @@ else:
         st.stop()
     selected_indicator = st.selectbox(f"Pilih dari {len(filtered_indicators)} Indikator Tersedia:", filtered_indicators)
 
-# Ambil deskripsi dari codebook (jika tidak ada di codebook, coba cari otomatis atau tampilkan keterangan default)
+# Ambil deskripsi dari codebook
 indicator_description = codebook_dict.get(
     selected_indicator, 
     codebook_dict.get(selected_indicator.lower(), "Definisi rinci untuk variabel ini dapat merujuk langsung pada dokumen resmi Codebook V-Dem Institute.")
