@@ -97,7 +97,7 @@ TARGET_EMAIL = "indoecon.project@gmail.com"
 with st.form("feedback_form", clear_on_submit=True):
     col_f1, col_f2 = st.columns(2)
     with col_f1:
-        nama_pengirim = st.text_input("Nama Lengkap / Instansi Akademik*", placeholder="Contoh: Kherisya Nevilia (Universitas Indonesia)")
+        nama_pengirim = st.text_input("Nama Lengkap / Instansi Akademik*", placeholder="Contoh: Aco Uci (Universitas ABC)")
     with col_f2:
         email_pengirim = st.text_input("Alamat Email Pengirim*", placeholder="nama@email.com")
         
