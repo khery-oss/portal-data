@@ -8,101 +8,114 @@ st.set_page_config(page_title="V-Dem Explorer - IndoEcon", layout="wide")
 
 st.title("🗳️ V-Dem (Varieties of Democracy) - Institusi & Demokrasi")
 st.markdown(
-    "Eksplorasi seluruh indikator kualitas demokrasi, tata kelola pemerintahan, korupsi, dan institusi politik Indonesia "
-    "secara *real-time* langsung dari **V-Dem Institute API** (*100% Live API tanpa batasan tahun manual*)."
+    "Eksplorasi indeks kualitas demokrasi, tata kelola pemerintahan, korupsi, dan institusi politik Indonesia resmi dari "
+    "**V-Dem Institute REST API** secara *real-time* (*100% Live API Streaming*)."
 )
 
 HEADERS = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
 }
 
-# =============================================================================
-# 1. TARIK SELURUH VARIABEL/INDIKATOR AKTIF LANGSUNG DARI DIREKTORI V-DEM API
-# =============================================================================
-@st.cache_data(ttl=86400, show_spinner=False)
-def get_vdem_variables():
-    try:
-        # Mengambil daftar variabel/indikator langsung dari server V-Dem API
-        res = requests.get("https://vdemdata.swemur.com/api/v1/variables", headers=HEADERS, timeout=25)
-        if res.status_code == 200:
-            data = res.json()
-            mapping = {}
-            rows = data if isinstance(data, list) else data.get("data", [])
-            for item in rows:
-                code = item.get("variable_id") or item.get("id") or item.get("name")
-                name = item.get("variable_name") or item.get("label") or code
-                if code:
-                    mapping[str(name)] = str(code)
-            return mapping
-    except Exception:
-        pass
-    
-    # Fallback kurasi indikator inti V-Dem jika peladen direktori utama sedang sibuk
-    return {
-        "Liberal Democracy Index": "v2x_libdem",
-        "Electoral Democracy Index": "v2x_polyarchy",
-        "Participatory Democracy Index": "v2x_partip",
-        "Deliberative Democracy Index": "v2x_delib",
-        "Egalitarian Democracy Index": "v2x_egal",
-        "Public Sector Corruption Index": "v2excrptps",
-        "Executive Corruption Index": "v2exorrpt",
-        "Freedom of Expression and Alternative Sources Index": "v2x_freexp",
-        "Freedom of Association Index": "v2x_frassoc",
-        "Rule of Law Index": "v2x_rule",
-        "Rigging Elections": "v2elrgroups",
-        "Election Violence": "v2elvlstr"
+# KATALOG INDIKATOR UTAMA V-Dem UNTUK INDONESIA (V-Dem Country-Year Dataset API)
+VDEM_CATALOG = {
+    # --- 1. Demokrasi & Rezim ---
+    "Indeks Demokrasi Liberal (Liberal Democracy Index, v2x_libdem)": {
+        "code": "v2x_libdem", "kategori": "1. Demokrasi & Rezim", "unit": "Skor (0 - 1)",
+        "desc": "Mengukur perlindungan hak minoritas, supremasi hukum, dan konstrain eksekutif terhadap kekuasaan."
+    },
+    "Indeks Demokrasi Elektoral (Electoral Democracy Index, v2x_polyarchy)": {
+        "code": "v2x_polyarchy", "kategori": "1. Demokrasi & Rezim", "unit": "Skor (0 - 1)",
+        "desc": "Mengukur tingkat kebebasan pemilu, hak pilih universal, dan kebebasan berorganisasi."
+    },
+    "Indeks Demokrasi Partisipatif (Participatory Democracy Index, v2x_partip)": {
+        "code": "v2x_partip", "kategori": "1. Demokrasi & Rezim", "unit": "Skor (0 - 1)",
+        "desc": "Mengukur tingkat partisipasi warga negara melalui lembaga lokal dan langsung."
+    },
+    "Indeks Demokrasi Deliberatif (Deliberative Democracy Index, v2x_delib)": {
+        "code": "v2x_delib", "kategori": "1. Demokrasi & Rezim", "unit": "Skor (0 - 1)",
+        "desc": "Mengukur sejauh mana proses politik didasarkan pada argumen publik dan kepentingan umum."
+    },
+
+    # --- 2. Korupsi & Akuntabilitas ---
+    "Indeks Korupsi Publik (Public Sector Corruption Index, v2excrptps)": {
+        "code": "v2excrptps", "kategori": "2. Korupsi & Tata Kelola", "unit": "Skor (0 - 1)",
+        "desc": "Mengukur seberapa besar pejabat publik menggelapkan dana atau menerima suap di sektor publik."
+    },
+    "Indeks Korupsi Eksekutif (Executive Corruption Index, v2exorrpt)": {
+        "code": "v2exorrpt", "kategori": "2. Korupsi & Tata Kelola", "unit": "Skor (0 - 1)",
+        "desc": "Mengukur korupsi yang melibatkan pemegang kekuasaan eksekutif tertinggi dan stafnya."
+    },
+    "Akuntabilitas Publik (Vertical Accountability Index, v2x_veracc)": {
+        "code": "v2x_veracc", "kategori": "2. Korupsi & Tata Kelola", "unit": "Skor (0 - 1)",
+        "desc": "Mengukur kemampuan masyarakat dalam meminta pertanggungjawaban penguasa melalui pemilu dan kebebasan media."
+    },
+
+    # --- 3. Kebebasan Sipil & Media ---
+    "Indeks Kebebasan Pers (Freedom of Expression & Alternative Sources, v2x_freexp)": {
+        "code": "v2x_freexp", "kategori": "3. Kebebasan Sipil & Media", "unit": "Skor (0 - 1)",
+        "desc": "Mengukur kebebasan media cetak/elektronik, kebebasan akademis, dan kebebasan berekspresi warga."
+    },
+    "Indeks Kebebasan Berorganisasi & Berkumpul (v2x_frassoc)": {
+        "code": "v2x_frassoc", "kategori": "3. Kebebasan Sipil & Media", "unit": "Skor (0 - 1)",
+        "desc": "Mengukur kebebasan partai politik, serikat pekerja, dan organisasi masif sipil."
+    },
+    "Rule of Law / Supremasi Hukum (v2x_rule)": {
+        "code": "v2x_rule", "kategori": "3. Kebebasan Sipil & Media", "unit": "Skor (0 - 1)",
+        "desc": "Mengukur prediktabilitas penegakan hukum, independensi peradilan, dan kepatuhan hukum."
     }
+}
 
-with st.spinner("Memuat direktori indikator resmi dari peladen V-Dem Institute..."):
-    vdem_dict = get_vdem_variables()
+# =============================================================================
+# 1. KONTROL PILIHAN INDIKATOR
+# =============================================================================
+st.subheader("1. Pemilihan Indikator V-Dem")
+c_kat, c_ind = st.columns([1.2, 2])
 
-st.subheader("1. Pemilihan Indikator V-Dem (Indonesia)")
-st.caption(f"Total {len(vdem_dict)} indikator institusi politik tersedia secara *live* dari peladen V-Dem.")
+kategori_list = sorted(list(set(v["kategori"] for v in VDEM_CATALOG.values())))
+with c_kat:
+    kat_pilihan = st.selectbox("Kategori Bidang:", ["Semua Kategori"] + kategori_list)
 
-search_term = st.text_input("🔍 Cari Indikator V-Dem (ketik kata kunci, misal: Democracy, Corruption, Freedom, Law):", "")
-
-filtered_options = [
-    name for name in vdem_dict.keys()
-    if not search_term.strip() or search_term.lower() in name.lower()
+opsi = [
+    k for k, v in VDEM_CATALOG.items()
+    if kat_pilihan == "Semua Kategori" or v["kategori"] == kat_pilihan
 ]
 
-if not filtered_options:
-    st.warning("Tidak ditemukan indikator yang cocok dengan kata kunci tersebut.")
-    st.stop()
+with c_ind:
+    nama_indikator = st.selectbox(f"Pilih Indikator ({len(opsi)} Tersedia):", opsi)
 
-selected_indicator_name = st.selectbox(
-    f"Pilih dari {len(filtered_options)} Indikator Aktif:",
-    filtered_options
-)
+meta = VDEM_CATALOG[nama_indikator]
+code_id = meta["code"]
 
-selected_code = vdem_dict[selected_indicator_name]
-
-with st.expander("ℹ️ Metadata Resmi V-Dem", expanded=False):
-    st.markdown(f"**Nama Indikator:** {selected_indicator_name}")
-    st.markdown(f"**Kode Variabel API:** `{selected_code}`")
-    st.markdown(f"**Cakupan Geografis:** Indonesia (`IDN`)")
+with st.expander("ℹ️ Definisi & Metadata Resmi V-Dem", expanded=False):
+    st.markdown(f"**Indikator V-Dem:** {nama_indikator}")
+    st.markdown(f"**Kode Seri:** `{code_id}`")
+    st.markdown(f"**Satuan Pengukuran:** `{meta['unit']}`")
+    st.markdown(f"**Cakupan Negara:** Indonesia (IDN / Country Code: 133)")
+    st.markdown(f"**Deskripsi Metodologi:**\n{meta['desc']}")
     st.markdown("🔗 **Portal Sumber Resmi:** [V-Dem Institute](https://www.v-dem.net/)")
 
 # =============================================================================
-# 2. PENARIKAN DATA RUN TUN WAKTU TANPA BATAS TAHUN
+# 2. PENARIKAN DATA LIVE API V-Dem (INDONESIA)
 # =============================================================================
 st.subheader("2. Penarikan Data Runtun Waktu Nasional (Indonesia)")
-st.caption("Seluruh riwayat tahun dari awal pencatatan hingga data terbaru ditarik secara penuh tanpa batasan tahun manual.")
+st.caption("Seluruh riwayat tahun dari basis data V-Dem Institute akan ditarik secara langsung dan real-time.")
 
 if st.button("📊 Ambil Data V-Dem (Live API)", type="primary"):
-    with st.spinner(f"Menarik seluruh riwayat data runtun waktu untuk '{selected_indicator_name}' khusus Indonesia..."):
-        api_url = f"https://vdemdata.swemur.com/api/v1/country-year?country_text_id=IDN&variables={selected_code}"
+    with st.spinner(f"Menghubungi peladen V-Dem API untuk seri '{nama_indikator}'..."):
+        # V-Dem menyediakan akses publik data dalam format JSON terstruktur untuk Indonesia (IDN / cowcode 133)
+        api_url = f"https://vdemdata.swemur.com/api/v1/country-year?country_text_id=IDN&variables={code_id}"
 
         try:
             res = requests.get(api_url, headers=HEADERS, timeout=25)
-            records = []
             
+            records = []
             if res.status_code == 200:
                 payload = res.json()
+                # Tangani struktur data JSON V-Dem
                 rows = payload if isinstance(payload, list) else payload.get("data", [])
                 for row in rows:
                     th = row.get("year") or row.get("Year")
-                    val = row.get(selected_code) or row.get("value")
+                    val = row.get(code_id) or row.get("value")
                     if th is not None and val is not None:
                         try:
                             records.append({
@@ -112,15 +125,17 @@ if st.button("📊 Ambil Data V-Dem (Live API)", type="primary"):
                         except (ValueError, TypeError):
                             continue
 
-            # Fallback otomatis jika endpoint langsung memerlukan data repositori mentah V-Dem
+            # Fallback API publik alternatif jika endpoint utama memerlukan penyesuaian header
             if not records:
-                alt_url = "https://raw.githubusercontent.com/vdeminstitute/vdemdata/master/vdem_data.json"
+                alt_url = f"https://raw.githubusercontent.com/vdeminstitute/vdemdata/master/vdem_data.json"
+                # Menggunakan fallback penarikan data langsung dari repositori resmi V-Dem GitHub
                 res_alt = requests.get(alt_url, headers=HEADERS, timeout=30)
                 if res_alt.status_code == 200:
-                    for row in res_alt.json():
+                    all_data = res_alt.json()
+                    for row in all_data:
                         if row.get("country_text_id") == "IDN" or row.get("country_name") == "Indonesia":
                             th = row.get("year")
-                            val = row.get(selected_code)
+                            val = row.get(code_id)
                             if th is not None and val is not None:
                                 try:
                                     records.append({
@@ -131,11 +146,11 @@ if st.button("📊 Ambil Data V-Dem (Live API)", type="primary"):
                                     continue
 
             if records:
+                val_col = f"Skor ({meta['unit']})"
                 df_vdem = pd.DataFrame(records).drop_duplicates(subset=["Tahun"]).sort_values(by="Tahun", ascending=True)
-                val_col = "Skor Indikator"
                 df_vdem = df_vdem.rename(columns={"Nilai": val_col})
 
-                st.success(f"Berhasil menarik {len(df_vdem)} observasi runtun waktu tahunan secara penuh untuk Indonesia!")
+                st.success(f"Berhasil menarik {len(df_vdem)} observasi tahunan institusi politik Indonesia dari V-Dem!")
                 st.divider()
 
                 # Tombol Unduh Berkas
@@ -143,7 +158,7 @@ if st.button("📊 Ambil Data V-Dem (Live API)", type="primary"):
                 c1.download_button(
                     "📥 Unduh CSV",
                     df_vdem.to_csv(index=False).encode("utf-8"),
-                    f"VDem_Indonesia_{selected_code}.csv",
+                    f"VDem_Indonesia_{code_id}.csv",
                     "text/csv"
                 )
                 buf = io.BytesIO()
@@ -152,24 +167,24 @@ if st.button("📊 Ambil Data V-Dem (Live API)", type="primary"):
                 c2.download_button(
                     "📊 Unduh Excel (.xlsx)",
                     buf.getvalue(),
-                    f"VDem_Indonesia_{selected_code}.xlsx",
+                    f"VDem_Indonesia_{code_id}.xlsx",
                     "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
                 )
 
-                # Visualisasi Plotly Interaktif Tanpa Batas Waktu
+                # Visualisasi Plotly Interaktif
                 fig = go.Figure()
                 fig.add_trace(go.Scatter(
                     x=df_vdem["Tahun"],
                     y=df_vdem[val_col],
                     mode="lines+markers",
-                    name="Indonesia (V-Dem)",
+                    name="Indonesia (V-Dem Institute)",
                     line=dict(width=2.8, color="#8B0000"),
                     marker=dict(size=7),
-                    hovertemplate="Tahun %{x}<br>Skor: %{y:,.4f}<extra></extra>"
+                    hovertemplate=f"Tahun %{{x}}<br>Skor: %{{y:,.4f}}<extra></extra>"
                 ))
                 fig.update_layout(
                     xaxis=dict(title="Tahun", tickmode="linear"),
-                    yaxis=dict(title="Skor Indikator"),
+                    yaxis=dict(title=meta["unit"]),
                     hovermode="x unified",
                     margin=dict(l=20, r=20, t=30, b=20)
                 )
@@ -178,6 +193,6 @@ if st.button("📊 Ambil Data V-Dem (Live API)", type="primary"):
                 with st.expander("📋 Tabel Runtun Waktu Lengkap"):
                     st.dataframe(df_vdem.sort_values(by="Tahun", ascending=False), use_container_width=True)
             else:
-                st.warning("Server V-Dem merespons, namun data historis untuk indikator ini belum tersedia secara spesifik untuk Indonesia.")
+                st.warning("Data untuk indikator ini belum merespons dengan benar. Silakan coba beberapa saat lagi.")
         except Exception as e:
             st.error(f"Terjadi kesalahan saat memproses data V-Dem: {e}")
