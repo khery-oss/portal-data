@@ -110,22 +110,38 @@ else:
         st.stop()
     selected_indicator = st.selectbox(f"Pilih dari {len(filtered_indicators)} Indikator Tersedia:", filtered_indicators)
 
-# Ambil deskripsi dari codebook
+import re
+
 # Ambil deskripsi dari codebook
 indicator_description = codebook_dict.get(
     selected_indicator, 
     codebook_dict.get(selected_indicator.lower(), "Definisi rinci untuk variabel ini dapat merujuk langsung pada dokumen resmi Codebook V-Dem Institute.")
 )
 
+# Trik otomatis mengubah simbol pangkat seperti ^1.585 atau ^2 menjadi format superscripts (pangkat atas) ala matematika
+def format_math_text(text):
+    # Mengubah pola ^angka menjadi karakter pangkat atas unicode
+    superscript_map = {"0": "⁰", "1": "¹", "2": "²", "3": "³", "4": "⁴", "5": "⁵", "6": "⁶", "7": "⁷", "8": "⁸", "9": "⁹", ".": "∙", "-": "⁻"}
+    def replace_pow(match):
+        pow_str = match.group(1)
+        return "".join(superscript_map.get(c, c) for c in pow_str)
+    
+    # Mengganti format ^1.585 menjadi bentuk pangkat visual
+    formatted = re.sub(r'\^([0-9\.]+)', lambda m: "".join(superscript_map.get(c, c) for c in m.group(1)), text)
+    # Merapikan tanda kali perkalian
+    formatted = formatted.replace(" * ", " × ")
+    return formatted
+
+cleaned_description = format_math_text(indicator_description)
+
 with st.expander("📖 Penjelasan & Metadata dari Codebook V-Dem", expanded=True):
     st.markdown(f"**Nama Variabel (Kode):** `{selected_indicator}`")
     st.markdown("**Definisi / Deskripsi dari Codebook:**")
     
-    # Menampilkan teks deskripsi secara natural
-    st.info(indicator_description)
+    # Menampilkan teks dengan format matematika yang sudah dirapikan otomatis
+    st.info(cleaned_description)
     
-    st.markdown("🔗 **Sumber Dokumen:** [V-Dem Codebook & Methodology](https://www.v-dem.net/data/reference-documents/)")
-# =============================================================================
+    st.markdown("🔗 **Sumber Dokumen:** [V-Dem Codebook & Methodology](https://www.v-dem.net/data/reference-documents/)")# =============================================================================
 # 3. PENARIKAN & VISUALISASI RUNTUN WAKTU INDONESIA (TANPA BATAS TAHUN)
 # =============================================================================
 st.subheader("2. Visualisasi Runtun Waktu Historis Indonesia")
