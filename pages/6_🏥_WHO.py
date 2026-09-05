@@ -9,103 +9,185 @@ st.set_page_config(page_title="WHO Explorer - IndoEcon", layout="wide")
 st.title("🏥 WHO (World Health Organization) - Modal Manusia & Kesehatan")
 st.markdown(
     "Eksplorasi indikator kesehatan publik dan modal manusia (*human capital*) Indonesia resmi dari "
-    "**WHO Global Health Observatory (GHO) REST API** secara *real-time* (*100% Live API Streaming*)."
+    "**WHO Global Health Observatory (GHO) REST API** secara *real-time* (*100% Live API Streaming* tanpa penyimpanan data lokal)."
 )
 
 HEADERS = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
 }
 
-# KATALOG 20 INDIKATOR STRATEGIS INDONESIA DARI WHO GHO
+# KATALOG 45 INDIKATOR RESMI WHO GHO (PENAMAAN SESUAI DOKUMENTASI GLOBAL WHO)
 WHO_CATALOG = {
-    # --- 1. Usia Harapan Hidup & Kematian Umum ---
-    "Angka Harapan Hidup saat Lahir (Life Expectancy, Tahun)": {
-        "code": "WHOSIS_000001", "kategori": "1. Harapan Hidup & Kematian", "unit": "Tahun",
-        "desc": "Rata-rata perkiraan jumlah tahun hidup yang dapat dicapai bayi yang baru lahir di Indonesia."
+    # --- 1. Life expectancy and mortality ---
+    "Life expectancy at birth (years)": {
+        "code": "WHOSIS_000001", "kategori": "1. Life Expectancy & Mortality", "unit": "Years",
+        "desc": "Average number of years that a newborn is expected to live if current mortality rates apply."
     },
-    "Angka Harapan Hidup Sehat (HALE at Birth, Tahun)": {
-        "code": "WHOSIS_000002", "kategori": "1. Harapan Hidup & Kematian", "unit": "Tahun",
-        "desc": "Perkiraan rata-rata tahun hidup dalam kondisi sehat tanpa keterbatasan akibat sakit parah."
+    "Healthy life expectancy (HALE) at birth (years)": {
+        "code": "WHOSIS_000002", "kategori": "1. Life Expectancy & Mortality", "unit": "Years",
+        "desc": "Average number of years that a person can expect to live in full health."
     },
-    "Angka Harapan Hidup pada Usia 60 Tahun (Life Expectancy at Age 60)": {
-        "code": "WHOSIS_000015", "kategori": "1. Harapan Hidup & Kematian", "unit": "Tahun",
-        "desc": "Rata-rata sisa tahun hidup yang diharapkan bagi penduduk yang telah mencapai usia 60 tahun."
+    "Life expectancy at age 60 (years)": {
+        "code": "WHOSIS_000015", "kategori": "1. Life Expectancy & Mortality", "unit": "Years",
+        "desc": "Average number of years that a person at age 60 can expect to live."
     },
-    "Probabilitas Kematian Dini Akibat PTM / NCD Usia 30-70 (%)": {
-        "code": "NCDMORT3070", "kategori": "1. Harapan Hidup & Kematian", "unit": "%",
-        "desc": "Peluang meninggal akibat penyakit kardiovaskular, kanker, diabetes, atau respirasi kronis antara usia 30-70."
+    "Probability (%) of dying between exact ages 30 and 70 from any of cardiovascular disease, cancer, diabetes, or chronic respiratory disease": {
+        "code": "NCDMORT3070", "kategori": "1. Life Expectancy & Mortality", "unit": "%",
+        "desc": "Unconditional probability of dying between ages 30 and 70 from major non-communicable diseases."
     },
-
-    # --- 2. Kesehatan Ibu, Bayi & Anak ---
-    "Angka Kematian Balita (Under-five Mortality Rate per 1.000 Kelahiran)": {
-        "code": "MDG_0000000007", "kategori": "2. Ibu, Bayi & Anak", "unit": "Per 1.000 Kelahiran",
-        "desc": "Probabilitas anak meninggal sebelum genap usia lima tahun per seribu kelahiran hidup."
+    "Adult mortality rate (probability of dying between 15 and 60 years per 1,000 population)": {
+        "code": "WHOSIS_000007", "kategori": "1. Life Expectancy & Mortality", "unit": "Per 1,000 Population",
+        "desc": "Probability of a 15-year-old dying before reaching age 60."
     },
-    "Angka Kematian Bayi / IMR (per 1.000 Kelahiran)": {
-        "code": "MDG_0000000001", "kategori": "2. Ibu, Bayi & Anak", "unit": "Per 1.000 Kelahiran",
-        "desc": "Probabilitas bayi meninggal sebelum genap usia satu tahun per seribu kelahiran hidup."
-    },
-    "Angka Kematian Neonatal (per 1.000 Kelahiran)": {
-        "code": "WHOSIS_000003", "kategori": "2. Ibu, Bayi & Anak", "unit": "Per 1.000 Kelahiran",
-        "desc": "Kematian bayi dalam 28 hari pertama kehidupan per seribu kelahiran hidup."
-    },
-    "Rasio Kematian Ibu / MMR (per 100.000 Kelahiran Hidup)": {
-        "code": "MDG_0000000026", "kategori": "2. Ibu, Bayi & Anak", "unit": "Per 100.000 Kelahiran",
-        "desc": "Kematian perempuan terkait kehamilan atau persalinan per seratus ribu kelahiran hidup."
-    },
-    "Persalinan Ditolong Tenaga Kesehatan Terlatih (%)": {
-        "code": "MDG_0000000025", "kategori": "2. Ibu, Bayi & Anak", "unit": "% Kelahiran",
-        "desc": "Persentase persalinan yang dibantu oleh dokter, bidan, atau perawat berkualifikasi."
+    "Crude death rate (per 1,000 population)": {
+        "code": "WHOSIS_000004", "kategori": "1. Life Expectancy & Mortality", "unit": "Per 1,000 Population",
+        "desc": "Number of deaths occurring among the population of a given geographical area during a given year."
     },
 
-    # --- 3. Imunisasi & Penyakit Menular ---
-    "Cakupan Imunisasi Campak Balita (MCV1, %)": {
-        "code": "WHS3_62", "kategori": "3. Imunisasi & Penyakit Menular", "unit": "%",
-        "desc": "Persentase anak usia satu tahun yang menerima dosis pertama vaksin campak."
+    # --- 2. Child and maternal health ---
+    "Under-five mortality rate (probability of dying by age 5 per 1,000 live births)": {
+        "code": "MDG_0000000007", "kategori": "2. Child & Maternal Health", "unit": "Per 1,000 Live Births",
+        "desc": "Probability of dying between birth and exactly exact age 5 per 1,000 live births."
     },
-    "Cakupan Imunisasi Polio (Pol3, %)": {
-        "code": "WHS3_49", "kategori": "3. Imunisasi & Penyakit Menular", "unit": "%",
-        "desc": "Persentase bayi yang telah menerima 3 dosis vaksin polio."
+    "Infant mortality rate (probability of dying between birth and exact age 1 per 1,000 live births)": {
+        "code": "MDG_0000000001", "kategori": "2. Child & Maternal Health", "unit": "Per 1,000 Live Births",
+        "desc": "Probability of dying between birth and exact age 1."
     },
-    "Cakupan Imunisasi DTP3 (%)": {
-        "code": "WHS3_40", "kategori": "3. Imunisasi & Penyakit Menular", "unit": "%",
-        "desc": "Persentase bayi yang mendapatkan vaksin difteri, tetanus, dan pertusis lengkap."
+    "Neonatal mortality rate (per 1,000 live births)": {
+        "code": "WHOSIS_000003", "kategori": "2. Child & Maternal Health", "unit": "Per 1,000 Live Births",
+        "desc": "Probability of dying during the first 28 completed days of life per 1,000 live births."
     },
-    "Insidensi Tuberkulosis / TB (per 100.000 Penduduk)": {
-        "code": "MDG_0000000020", "kategori": "3. Imunisasi & Penyakit Menular", "unit": "Per 100.000 Penduduk",
-        "desc": "Perkiraan jumlah kasus baru dan kambuh TB per seratus ribu penduduk dalam satu tahun."
+    "Maternal mortality ratio (per 100,000 live births)": {
+        "code": "MDG_0000000026", "kategori": "2. Child & Maternal Health", "unit": "Per 100,000 Live Births",
+        "desc": "Number of maternal deaths per 100,000 live births during a specified time period."
     },
-    "Prevalensi Tuberkulosis (per 100.000 Penduduk)": {
-        "code": "MDG_0000000018", "kategori": "3. Imunisasi & Penyakit Menular", "unit": "Per 100.000 Penduduk",
-        "desc": "Jumlah total penderita TB pada waktu tertentu per seratus ribu penduduk."
+    "Births attended by skilled health personnel (%)": {
+        "code": "MDG_0000000025", "kategori": "2. Child & Maternal Health", "unit": "%",
+        "desc": "Percentage of deliveries attended by skilled health personnel (doctors, nurses, or midwives)."
     },
-
-    # --- 4. Tenaga Medis & Infrastruktur Kesehatan ---
-    "Kepadatan Tenaga Medis / Dokter (per 10.000 Penduduk)": {
-        "code": "HWF_0001", "kategori": "4. Tenaga Medis & Kapasitas", "unit": "Per 10.000 Penduduk",
-        "desc": "Jumlah ketersediaan dokter umum dan spesialis per sepuluh ribu penduduk."
+    "Adolescent birth rate (per 1,000 women aged 15-19 years)": {
+        "code": "M_03", "kategori": "2. Child & Maternal Health", "unit": "Per 1,000 Women",
+        "desc": "Annual number of births to women aged 15-19 years per 1,000 women in that age group."
     },
-    "Kepadatan Perawat & Bidan (per 10.000 Penduduk)": {
-        "code": "HWF_0002", "kategori": "4. Tenaga Medis & Kapasitas", "unit": "Per 10.000 Penduduk",
-        "desc": "Jumlah perawat dan bidan resmi yang bertugas per sepuluh ribu penduduk."
-    },
-    "Kepadatan Apoteker / Farmasis (per 10.000 Penduduk)": {
-        "code": "HWF_0003", "kategori": "4. Tenaga Medis & Kapasitas", "unit": "Per 10.000 Penduduk",
-        "desc": "Jumlah tenaga kefarmasian resmi per sepuluh ribu penduduk."
+    "Antenatal care coverage - at least four visits (%)": {
+        "code": "WHS4_128", "kategori": "2. Child & Maternal Health", "unit": "%",
+        "desc": "Percentage of women aged 15-49 attended at least four times during pregnancy by any provider."
     },
 
-    # --- 5. Akses Sanitasi & Jaminan Kesehatan ---
-    "Cakupan Layanan Kesehatan Semesta (UHC Coverage Index)": {
-        "code": "UHC_INDEX_REPORTED", "kategori": "5. Sanitasi & Jaminan Kesehatan", "unit": "Indeks (0-100)",
-        "desc": "Indeks cakupan layanan esensial yang mencakup kesehatan reproduksi, penyakit menular, dan kapasitas rumah sakit."
+    # --- 3. Nutrition and physical development ---
+    "Stunting prevalence among children under 5 years (%)": {
+        "code": "NUTRITION_STUNTING_PREV", "kategori": "3. Nutrition & Growth", "unit": "%",
+        "desc": "Prevalence of moderate and severe stunting (height-for-age < -2 SD from WHO median)."
     },
-    "Populasi dengan Akses Air Minum Layak (%)": {
-        "code": "WSH_WATER_BASIC", "kategori": "5. Sanitasi & Jaminan Kesehatan", "unit": "% Populasi",
-        "desc": "Persentase penduduk yang menggunakan sumber air minum terlindungi."
+    "Wasting prevalence among children under 5 years (%)": {
+        "code": "NUTRITION_WASTING_PREV", "kategori": "3. Nutrition & Growth", "unit": "%",
+        "desc": "Prevalence of moderate and severe wasting (weight-for-height < -2 SD from WHO median)."
     },
-    "Populasi dengan Akses Sanitasi Dasar Layak (%)": {
-        "code": "WSH_SANITATION_BASIC", "kategori": "5. Sanitasi & Jaminan Kesehatan", "unit": "% Populasi",
-        "desc": "Persentase penduduk dengan akses fasilitas jamban dan sanitasi higienis."
+    "Overweight prevalence among children under 5 years (%)": {
+        "code": "NUTRITION_OVERWEIGHT_PREV", "kategori": "3. Nutrition & Growth", "unit": "%",
+        "desc": "Prevalence of overweight (weight-for-height > +2 SD from WHO median)."
+    },
+    "Prevalence of anemia among children aged 6-59 months (%)": {
+        "code": "NUTRITION_ANEMIA_CHILDREN", "kategori": "3. Nutrition & Growth", "unit": "%",
+        "desc": "Percentage of children aged 6-59 months with hemoglobin concentration < 110 g/L."
+    },
+    "Prevalence of anemia among women of reproductive age 15-49 years (%)": {
+        "code": "NUTRITION_ANEMIA_WOMEN", "kategori": "3. Nutrition & Growth", "unit": "%",
+        "desc": "Percentage of women aged 15-49 years with hemoglobin concentration below standard thresholds."
+    },
+
+    # --- 4. Immunization and infectious diseases ---
+    "Measles-containing-vaccine first-dose (MCV1) immunization coverage among 1-year-olds (%)": {
+        "code": "WHS3_62", "kategori": "4. Immunization & Communicable Diseases", "unit": "%",
+        "desc": "Percentage of surviving infants who received one dose of measles-containing vaccine."
+    },
+    "Polio (Pol3) immunization coverage among 1-year-olds (%)": {
+        "code": "WHS3_49", "kategori": "4. Immunization & Communicable Diseases", "unit": "%",
+        "desc": "Percentage of surviving infants who received three doses of polio vaccine."
+    },
+    "Diphtheria tetanus toxoid and pertussis (DTP3) immunization coverage among 1-year-olds (%)": {
+        "code": "WHS3_40", "kategori": "4. Immunization & Communicable Diseases", "unit": "%",
+        "desc": "Percentage of surviving infants who received three doses of DTP-containing vaccine."
+    },
+    "Tuberculosis incidence (per 100,000 population)": {
+        "code": "MDG_0000000020", "kategori": "4. Immunization & Communicable Diseases", "unit": "Per 100,000 Population",
+        "desc": "Estimated number of new and relapse tuberculosis cases arising in a given year."
+    },
+    "Tuberculosis prevalence (per 100,000 population)": {
+        "code": "MDG_0000000018", "kategori": "4. Immunization & Communicable Diseases", "unit": "Per 100,000 Population",
+        "desc": "Number of all cases of tuberculosis (all forms) in a population at a given point in time."
+    },
+    "Malaria incidence rate (per 1,000 population at risk)": {
+        "code": "MALARIA_EST_INCIDENCE", "kategori": "4. Immunization & Communicable Diseases", "unit": "Per 1,000 Population",
+        "desc": "Estimated number of new malaria cases per 1,000 population at risk."
+    },
+    "Hepatitis B surface antigen (HBsAg) prevalence among children under 5 years (%)": {
+        "code": "HEPB_3", "kategori": "4. Immunization & Communicable Diseases", "unit": "%",
+        "desc": "Percentage of children aged 1-4 years who are chronically infected with hepatitis B."
+    },
+
+    # --- 5. Health workforce and infrastructure ---
+    "Medical doctors (per 10,000 population)": {
+        "code": "HWF_0001", "kategori": "5. Health Workforce", "unit": "Per 10,000 Population",
+        "desc": "Number of medical doctors (general practitioners and specialists) per 10,000 population."
+    },
+    "Nursing and midwifery personnel (per 10,000 population)": {
+        "code": "HWF_0002", "kategori": "5. Health Workforce", "unit": "Per 10,000 Population",
+        "desc": "Number of nursing and midwifery personnel per 10,000 population."
+    },
+    "Pharmacists (per 10,000 population)": {
+        "code": "HWF_0003", "kategori": "5. Health Workforce", "unit": "Per 10,000 Population",
+        "desc": "Number of licensed pharmacists active in the health sector per 10,000 population."
+    },
+    "Dentists (per 10,000 population)": {
+        "code": "HWF_0004", "kategori": "5. Health Workforce", "unit": "Per 10,000 Population",
+        "desc": "Number of dentists or dental practitioners per 10,000 population."
+    },
+    "Hospital beds (per 10,000 population)": {
+        "code": "HWF_BE_HOSP", "kategori": "5. Health Workforce", "unit": "Per 10,000 Population",
+        "desc": "Number of inpatient hospital beds available in public, private, general, and specialty hospitals."
+    },
+
+    # --- 6. Universal health coverage, financing, and risk factors ---
+    "UHC service coverage index": {
+        "code": "UHC_INDEX_REPORTED", "kategori": "6. UHC, Financing & Risk Factors", "unit": "Index (0-100)",
+        "desc": "Composite index of essential service coverage (reproductive, maternal, infectious, non-communicable diseases)."
+    },
+    "Population using safely managed drinking-water services (%)": {
+        "code": "WSH_WATER_SAFELY_MANAGED", "kategori": "6. UHC, Financing & Risk Factors", "unit": "%",
+        "desc": "Percentage of population using an improved drinking-water source located on premises."
+    },
+    "Population using safely managed sanitation services (%)": {
+        "code": "WSH_SANITATION_SAFELY_MANAGED", "kategori": "6. UHC, Financing & Risk Factors", "unit": "%",
+        "desc": "Percentage of population using improved sanitation facilities that are not shared."
+    },
+    "Domestic general government health expenditure (GGHE-D) as percentage of gross domestic product (GDP) (%)": {
+        "code": "GHED_GGHE_GDP_SHA", "kategori": "6. UHC, Financing & Risk Factors", "unit": "% of GDP",
+        "desc": "General government expenditure on health from domestic sources expressed as a share of GDP."
+    },
+    "Out-of-pocket expenditure as percentage of current health expenditure (CHE) (%)": {
+        "code": "GHED_OOP_SHA", "kategori": "6. UHC, Financing & Risk Factors", "unit": "% of Current Health Exp.",
+        "desc": "Share of out-of-pocket payments directly out of pocket by households in total health expenditure."
+    },
+    "Age-standardized prevalence of tobacco smoking among persons aged 15 years and older (%)": {
+        "code": "M_GBD_TOBACCO", "kategori": "6. UHC, Financing & Risk Factors", "unit": "%",
+        "desc": "Percentage of population aged 15+ years who currently smoke any form of tobacco."
+    },
+    "Prevalence of obesity among adults aged 18+ years (BMI >= 30) (%)": {
+        "code": "NCD_BMI_30A", "kategori": "6. UHC, Financing & Risk Factors", "unit": "%",
+        "desc": "Age-standardized prevalence of obesity among adults aged 18 years and older."
+    },
+    "Prevalence of raised blood pressure among adults aged 30-79 years (%)": {
+        "code": "NCD_CVD_BP_30A", "kategori": "6. UHC, Financing & Risk Factors", "unit": "%",
+        "desc": "Age-standardized prevalence of raised blood pressure (systolic >=140 or diastolic >=90)."
+    },
+    "Prevalence of raised blood glucose among adults aged 18 years and older (%)": {
+        "code": "NCD_GLUC_03", "kategori": "6. UHC, Financing & Risk Factors", "unit": "%",
+        "desc": "Age-standardized prevalence of raised fasting blood glucose or currently on medication for diabetes."
+    },
+    "Alcohol, total per capita (15+ years) consumption (in litres of pure alcohol)": {
+        "code": "SA_0000001688", "kategori": "6. UHC, Financing & Risk Factors", "unit": "Litres",
+        "desc": "Recorded and unrecorded alcohol per capita consumption among adults aged 15 years and older."
     }
 }
 
@@ -131,21 +213,21 @@ meta = WHO_CATALOG[nama_indikator]
 code_id = meta["code"]
 
 with st.expander("ℹ️ Definisi & Metadata Resmi WHO", expanded=False):
-    st.markdown(f"**Indikator:** {nama_indikator}")
-    st.markdown(f"**Kode Indikator WHO:** `{code_id}`")
+    st.markdown(f"**Indikator Resmi WHO:** {nama_indikator}")
+    st.markdown(f"**Kode Seri GHO:** `{code_id}`")
     st.markdown(f"**Satuan Pengukuran:** `{meta['unit']}`")
-    st.markdown(f"**Cakupan Negara:** Indonesia (IDN)")
-    st.markdown(f"**Metodologi / Deskripsi:**\n{meta['desc']}")
-    st.markdown("🔗 **Basis Data:** [WHO Global Health Observatory](https://www.who.int/data/gho)")
+    st.markdown(f"**Cakupan Geografis:** Indonesia (IDN)")
+    st.markdown(f"**Deskripsi Metodologi:**\n{meta['desc']}")
+    st.markdown("🔗 **Portal Sumber Resmi:** [WHO Global Health Observatory](https://www.who.int/data/gho)")
 
 # =============================================================================
 # 2. PENARIKAN DATA LIVE API WHO (INDONESIA)
 # =============================================================================
 st.subheader("2. Penarikan Data Runtun Waktu Nasional (Indonesia)")
-st.caption("Seluruh riwayat tahun yang tercatat di basis data resmi WHO akan diambil secara otomatis.")
+st.caption("Seluruh riwayat tahun yang tercatat di basis data resmi WHO akan diambil secara *real-time*.")
 
 if st.button("📊 Ambil Data WHO (Live API)", type="primary"):
-    with st.spinner(f"Menghubungi server WHO GHO API untuk seri {nama_indikator}..."):
+    with st.spinner(f"Menghubungi server WHO GHO API untuk seri '{nama_indikator}'..."):
         api_url = f"https://ghoapi.azureedge.net/api/{code_id}"
         query_params = {"$filter": "SpatialDim eq 'IDN'"}
 
@@ -190,7 +272,7 @@ if st.button("📊 Ambil Data WHO (Live API)", type="primary"):
                     df_who = df_raw.groupby("Tahun", as_index=False)["Nilai"].mean().round(2)
                     df_who = df_who.rename(columns={"Nilai": val_col}).sort_values(by="Tahun", ascending=True)
 
-                    st.success(f"Berhasil menarik {len(df_who)} observasi tahunan resmi untuk Indonesia dari server WHO!")
+                    st.success(f"Berhasil menarik {len(df_who)} observasi tahunan resmi untuk Indonesia langsung dari server WHO!")
                     st.divider()
 
                     # Tombol Unduh
@@ -211,7 +293,7 @@ if st.button("📊 Ambil Data WHO (Live API)", type="primary"):
                         "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
                     )
 
-                    # Visualisasi Plotly
+                    # Visualisasi Plotly Interaktif
                     fig = go.Figure()
                     fig.add_trace(go.Scatter(
                         x=df_who["Tahun"],
@@ -233,7 +315,7 @@ if st.button("📊 Ambil Data WHO (Live API)", type="primary"):
                     with st.expander("📋 Tabel Runtun Waktu Lengkap"):
                         st.dataframe(df_who.sort_values(by="Tahun", ascending=False), use_container_width=True)
                 else:
-                    st.warning("Server WHO merespons, namun catatan observasi untuk Indonesia belum dipublikasikan pada kode ini.")
+                    st.warning("Server WHO merespons, namun catatan observasi runtun waktu untuk Indonesia belum dipublikasikan pada seri indikator ini.")
             else:
                 st.error(f"Gagal menghubungi server WHO (Kode Status HTTP: {res.status_code}).")
         except Exception as e:
