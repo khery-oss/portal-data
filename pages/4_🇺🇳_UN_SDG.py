@@ -17,7 +17,7 @@ HEADERS = {
     "Accept": "application/json"
 }
 
-# DAFTAR INDIKATOR RESMI UNSD UNTUK INDONESIA
+# DAFTAR SERI UTAMA UNSD SDG YANG TERSEDIA LENGKAP UNTUK INDONESIA
 UN_SDG_SERIES = {
     "Income Share Held by Bottom 40% of Population (%)": {
         "code": "SI_DST_040P", "goal": "Goal 10: Penurunan Kesenjangan", "unit": "%",
@@ -27,17 +27,17 @@ UN_SDG_SERIES = {
         "code": "SL_EMP_PCAP", "goal": "Goal 8: Pekerjaan Layak & Pertumbuhan", "unit": "%",
         "desc": "Laju pertumbuhan tahunan PDB riil per tenaga kerja yang bekerja (produktivitas tenaga kerja)."
     },
-    "Proportion of Population Below International Poverty Line (%)": {
-        "code": "SI_POV_DAY1", "goal": "Goal 1: Pengentasan Kemiskinan", "unit": "%",
-        "desc": "Persentase penduduk yang hidup di bawah garis kemiskinan internasional."
+    "Annual Growth Rate of Real GDP per Capita (%)": {
+        "code": "NY_GDP_PCAP", "goal": "Goal 8: Pekerjaan Layak & Pertumbuhan", "unit": "%",
+        "desc": "Laju pertumbuhan tahunan Produk Domestik Bruto riil per kapita."
     },
     "Unemployment Rate (% of Total Labor Force)": {
         "code": "SL_TLF_UEM", "goal": "Goal 8: Pekerjaan Layak & Pertumbuhan", "unit": "%",
-        "desc": "Tingkat pengangguran terbuka nasional resmi berdasarkan ILO/PBB."
+        "desc": "Tingkat pengangguran terbuka nasional resmi berdasarkan pemantauan ILO/PBB."
     },
     "Manufacturing Value Added as Proportion of GDP (%)": {
         "code": "NV_IND_MANF", "goal": "Goal 9: Industri & Inovasi", "unit": "% of GDP",
-        "desc": "Nilai tambah sektor industri manufaktur sebagai proporsi dari total PDB."
+        "desc": "Nilai tambah sektor industri manufaktur sebagai proporsi dari total PDB nasional."
     },
     "Renewable Energy Share in Total Final Energy Consumption (%)": {
         "code": "EG_FEC_RNEW", "goal": "Goal 7: Energi Bersih", "unit": "%",
@@ -47,9 +47,9 @@ UN_SDG_SERIES = {
         "code": "EN_ATM_CO2MVA", "goal": "Goal 9: Industri & Inovasi", "unit": "kg CO2 / USD",
         "desc": "Intensitas emisi karbon dioksida per unit nilai tambah manufaktur."
     },
-    "Maternal Mortality Ratio (per 100,000 Live Births)": {
-        "code": "SH_STA_MORT", "goal": "Goal 3: Kesehatan Sejahtera", "unit": "per 100k Births",
-        "desc": "Angka kematian ibu (AKI) per 100.000 kelahiran hidup."
+    "Proportion of Population Below International Poverty Line (%)": {
+        "code": "SI_POV_DAY1", "goal": "Goal 1: Pengentasan Kemiskinan", "unit": "%",
+        "desc": "Persentase penduduk yang hidup di bawah garis kemiskinan ekstrem internasional."
     }
 }
 
@@ -80,73 +80,54 @@ with st.expander("ℹ️ Metadata Resmi PBB (UNSD)", expanded=False):
     st.markdown(f"**Definisi:**\n{meta['desc']}")
     st.markdown("🔗 **Portal Sumber:** [UNSD Global SDG Database](https://unstats.un.org/sdgs/dataportal)")
 
-# 2. Penarikan Data Live via GET GeoArea (Endpoint Paling Stabil)
+# 2. Penarikan Data Runtun Waktu
 st.subheader("2. Penarikan Data Runtun Waktu")
 
 if st.button("📊 Ambil Data PBB Indonesia", type="primary"):
-    with st.spinner(f"Mengunduh runtun waktu resmi untuk seri {kode_series}..."):
-        # Endpoint GET langsung per negara (360 = Indonesia)
-        url = f"https://unstats.un.org/sdgapi/v1/sdg/Series/{kode_series}/GeoArea/360/DataSlice"
+    with st.spinner(f"Menghubungi endpoint resmi PBB untuk seri {kode_series}..."):
+        # Endpoint query resmi yang dipakai oleh UI web unstats.un.org
+        api_url = f"https://unstats.un.org/sdgapi/v1/sdg/Series/Data?seriesCode={kode_series}&areaCode=360&pageSize=500"
         records = []
-
+        
         try:
-            res = requests.get(url, headers=HEADERS, timeout=20)
+            res = requests.get(api_url, headers=HEADERS, timeout=25)
+            
+            # Jika request pertama ditolak, gunakan parameter geoAreaCode
+            if res.status_code != 200 or not res.json().get("data"):
+                alt_url = f"https://unstats.un.org/sdgapi/v1/sdg/Series/Data?seriesCode={kode_series}&geoAreaCode=360&pageSize=500"
+                res = requests.get(alt_url, headers=HEADERS, timeout=25)
+                
             if res.status_code == 200:
                 payload = res.json()
-                items = payload if isinstance(payload, list) else payload.get("data", [])
+                data_list = payload.get("data", [])
                 
-                for row in items:
-                    # Menangkap semua kemungkinan penamaan field tahun di API PBB
-                    thn = (
-                        row.get("timePeriodStart") or 
-                        row.get("timePeriod") or 
-                        row.get("year") or 
-                        row.get("dimensions", {}).get("Time_detail")
-                    )
+                for row in data_list:
+                    thn = row.get("timePeriodStart") or row.get("timePeriod")
                     val = row.get("value")
                     
                     if thn is not None and val is not None:
                         try:
-                            # Bersihkan format string tahun seperti "2015-01-01" atau "<2.5"
                             clean_thn = int(str(thn)[:4])
                             clean_val = float(str(val).replace("<", "").replace(">", "").strip())
                             records.append({
                                 "Tahun": clean_thn,
-                                f"Nilai ({meta['unit']})": round(clean_val, 2)
+                                f"Nilai ({meta['unit']})": clean_val
                             })
                         except (ValueError, TypeError):
                             continue
 
-            # Fallback jika endpoint DataSlice kosong: gunakan endpoint query Data
-            if not records:
-                query_url = f"https://unstats.un.org/sdgapi/v1/sdg/Series/Data?seriesCode={kode_series}&geoAreaCode=360"
-                q_res = requests.get(query_url, headers=HEADERS, timeout=20)
-                if q_res.status_code == 200:
-                    q_data = q_res.json().get("data", [])
-                    for row in q_data:
-                        thn = row.get("timePeriodStart") or row.get("timePeriod") or row.get("year")
-                        val = row.get("value")
-                        if thn is not None and val is not None:
-                            try:
-                                clean_thn = int(str(thn)[:4])
-                                clean_val = float(str(val).replace("<", "").replace(">", "").strip())
-                                records.append({
-                                    "Tahun": clean_thn,
-                                    f"Nilai ({meta['unit']})": round(clean_val, 2)
-                                })
-                            except (ValueError, TypeError):
-                                continue
-
             if records:
                 val_col = f"Nilai ({meta['unit']})"
+                # Group by Tahun untuk menangani jika ada breakdown gender/wilayah pada tahun yang sama
                 df_un = (
                     pd.DataFrame(records)
                     .groupby("Tahun", as_index=False)[val_col]
                     .mean()
+                    .round(2)
                     .sort_values(by="Tahun", ascending=True)
                 )
 
-                st.success(f"Berhasil menarik {len(df_un)} observasi tahunan langsung dari server PBB!")
+                st.success(f"Berhasil menarik {len(df_un)} observasi data langsung dari server PBB!")
                 st.divider()
 
                 # Tombol Download Data
@@ -167,7 +148,7 @@ if st.button("📊 Ambil Data PBB Indonesia", type="primary"):
                     "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
                 )
 
-                # Visualisasi Interaktif Plotly
+                # Plotly Visualisasi Interaktif
                 fig = go.Figure()
                 fig.add_trace(go.Scatter(
                     x=df_un["Tahun"],
