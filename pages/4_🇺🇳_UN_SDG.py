@@ -9,52 +9,21 @@ st.set_page_config(page_title="UN Data Explorer - Indonesia", layout="wide")
 st.title("🇺🇳 United Nations (UN) SDG - Portal Data Indonesia")
 st.write(
     "Eksplorasi indikator pembangunan berkelanjutan dan sosio-ekonomi dari **United Nations Statistics Division (UNSD API)** "
-    "khusus untuk **Indonesia (M49 Code: 360)** yang ditarik secara **100% langsung (*real-time live API*)** dari server resmi PBB."
+    "khusus untuk **Indonesia (M49 Code: 360)** secara langsung (*100% real-time live API*)."
 )
 
 HEADERS = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
 }
 
-# 1. Unduh Seluruh Katalog Seri Indikator Resmi PBB (UNSD) dengan Cache
-@st.cache_data(ttl=86400)
-def load_all_un_series():
-    url = "https://unstats.un.org/sdgapi/v1/sdg/Series/List?allparams=false"
-    try:
-        res = requests.get(url, headers=HEADERS, timeout=25)
-        if res.status_code == 200:
-            data = res.json()
-            series_list = []
-            for item in data:
-                code = item.get("code")
-                desc = item.get("description", "")
-                goals = item.get("goal", [])
-                goal_str = f"Goal {', '.join(goals)}" if goals else "Umum"
-                if code and desc:
-                    series_list.append({
-                        "code": code,
-                        "description": desc,
-                        "goal": goal_str
-                    })
-            return series_list
-    except Exception:
-        pass
-    return []
-
-with st.spinner("Menghubungkan ke katalog global United Nations Statistics Division..."):
-    all_un_catalog = load_all_un_series()
-
-# 2. Pilihan Mode Eksplorasi
+# 1. Pilihan Mode Tampilan
 mode = st.radio(
     "Pilih Mode Tampilan:",
-    ["⭐ Indikator Utama Sosio-Ekonomi (Kurasi)", "🔍 Jelajahi Seluruh Katalog PBB (Semua Indikator & Goals)"],
+    ["⭐ Indikator Utama Sosio-Ekonomi (Langsung Siap)", "🔍 Jelajahi Seluruh Katalog PBB (Pencarian Bebas)"],
     horizontal=True
 )
 
-selected_code = None
-selected_title = None
-
-# DAFTAR KOMPILASI SOSIO-EKONOMI UTAMA INDONESIA
+# DAFTAR KOMPILASI SOSIO-EKONOMI UTAMA INDONESIA (Tanpa Perlu Loading Berat)
 POPULAR_UN_SERIES = {
     "Annual Growth Rate of Real GDP per Employed Person (%)": {
         "code": "SL_EMP_PCAP", "goal": "Goal 8: Pekerjaan Layak & Pertumbuhan", "unit": "%",
@@ -94,7 +63,10 @@ POPULAR_UN_SERIES = {
     }
 }
 
-if mode == "⭐ Indikator Utama Sosio-Ekonomi (Kurasi)":
+selected_code = None
+selected_title = None
+
+if mode == "⭐ Indikator Utama Sosio-Ekonomi (Langsung Siap)":
     st.subheader("1. Pemilihan Indikator Sosio-Ekonomi")
     selected_title = st.selectbox("Pilih Indikator:", list(POPULAR_UN_SERIES.keys()))
     meta = POPULAR_UN_SERIES[selected_title]
@@ -105,38 +77,60 @@ if mode == "⭐ Indikator Utama Sosio-Ekonomi (Kurasi)":
 
 else:
     st.subheader("1. Pencarian di Seluruh Katalog PBB")
-    query_un = st.text_input(
-        "Cari topik apa saja di database PBB (misal: 'poverty', 'gdp', 'water', 'forest', 'health', 'education'):",
-        value="gdp"
-    ).strip()
+    
+    # Hanya jalankan pemanggilan ke server PBB saat tab pencarian ini dibuka
+    @st.cache_data(ttl=86400)
+    def fetch_un_catalog():
+        url = "https://unstats.un.org/sdgapi/v1/sdg/Series/List?allparams=false"
+        try:
+            res = requests.get(url, headers=HEADERS, timeout=12)
+            if res.status_code == 200:
+                data = res.json()
+                return [
+                    {
+                        "code": item.get("code"),
+                        "description": item.get("description", ""),
+                        "goal": f"Goal {', '.join(item.get('goal', []))}" if item.get("goal") else "Umum"
+                    }
+                    for item in data if item.get("code") and item.get("description")
+                ]
+        except Exception:
+            pass
+        return []
 
-    if query_un and all_un_catalog:
-        tokens = query_un.lower().split()
-        results = [
-            s for s in all_un_catalog
-            if all(token in s["description"].lower() or token in s["code"].lower() for token in tokens)
-        ]
-        
-        if results:
-            st.success(f"Ditemukan {len(results)} indikator terkait di database resmi PBB!")
-            
-            # Format tampilan dropdown bersih
-            selected_item = st.selectbox(
-                "Pilih Indikator dari Katalog PBB:",
-                options=results,
-                format_func=lambda x: f"[{x['goal']}] {x['description']}"
-            )
-            selected_code = selected_item["code"]
-            selected_title = selected_item["description"]
-            satuan_display = "Nilai Observasi"
-            deskripsi_display = selected_item["description"]
-            goal_display = selected_item["goal"]
-        else:
-            st.warning("Tidak ada indikator yang cocok dengan kata kunci tersebut.")
+    with st.spinner("Mengambil daftar katalog dari PBB..."):
+        all_un_catalog = fetch_un_catalog()
+
+    if all_un_catalog:
+        query_un = st.text_input(
+            "Ketik kata kunci (misal: 'poverty', 'gdp', 'water', 'forest', 'health'):",
+            value="gdp"
+        ).strip()
+
+        if query_un:
+            tokens = query_un.lower().split()
+            results = [
+                s for s in all_un_catalog
+                if all(token in s["description"].lower() or token in s["code"].lower() for token in tokens)
+            ]
+            if results:
+                st.success(f"Ditemukan {len(results)} indikator terkait di database PBB!")
+                selected_item = st.selectbox(
+                    "Pilih Indikator:",
+                    options=results,
+                    format_func=lambda x: f"[{x['goal']}] {x['description']}"
+                )
+                selected_code = selected_item["code"]
+                selected_title = selected_item["description"]
+                satuan_display = "Nilai Observasi"
+                deskripsi_display = selected_item["description"]
+                goal_display = selected_item["goal"]
+            else:
+                st.warning("Tidak ada indikator yang cocok.")
     else:
-        st.info("Ketik kata kunci untuk mencari di antara ribuan indikator PBB.")
+        st.warning("Koneksi katalog global PBB sedang lambat. Gunakan tab 'Indikator Utama Sosio-Ekonomi' untuk akses cepat.")
 
-# 3. Eksekusi Penarikan Data Live dari Server PBB
+# 2. Penarikan Data Runtun Waktu
 if selected_code:
     with st.expander("ℹ️ Metadata Resmi PBB (UNSD)", expanded=False):
         st.markdown(f"**Nama Indikator:** {selected_title}")
@@ -147,12 +141,12 @@ if selected_code:
         st.markdown("🔗 **Sumber Data:** [UNSD Global SDG Database Portal](https://unstats.un.org/sdgs/dataportal)")
 
     if st.button("📊 Ambil Data PBB Indonesia", type="primary"):
-        with st.spinner(f"Menghubungi endpoint resmi UNSD New York untuk seri {selected_code}..."):
+        with st.spinner(f"Menarik runtun waktu resmi untuk seri {selected_code}..."):
             post_url = "https://unstats.un.org/sdgapi/v1/sdg/Series/Data"
             payload = {"seriesCodes": [selected_code], "geoAreaCodes": [360]}
             
             try:
-                res = requests.post(post_url, json=payload, headers=HEADERS, timeout=20)
+                res = requests.post(post_url, json=payload, headers=HEADERS, timeout=15)
                 records = []
                 
                 if res.status_code == 200:
@@ -176,7 +170,6 @@ if selected_code:
                     st.success(f"Berhasil menarik {len(df_un)} observasi tahunan langsung dari server PBB!")
                     st.divider()
 
-                    # Tombol Unduh
                     c1, c2 = st.columns(2)
                     c1.download_button(
                         "📥 Unduh CSV",
@@ -194,14 +187,13 @@ if selected_code:
                         "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
                     )
 
-                    # Visualisasi Plotly Interaktif
                     fig = go.Figure()
                     fig.add_trace(go.Scatter(
                         x=df_un["Tahun"],
                         y=df_un[val_col],
                         mode="lines+markers",
                         name="Indonesia (UN SDGs)",
-                        line=dict(width=2.5, color="#009edb"),  # Biru Khas PBB
+                        line=dict(width=2.5, color="#009edb"),
                         hovertemplate=f"Tahun %{{x}}<br>Nilai: %{{y}}<extra></extra>"
                     ))
                     fig.update_layout(
