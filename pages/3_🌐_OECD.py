@@ -5,13 +5,13 @@ import streamlit as st
 
 st.set_page_config(page_title="OECD Data Explorer - Indonesia", layout="wide")
 
-st.title("🌐 Portal Data OECD (Indonesia)")
+st.title("🌐 Portal Data OECD (Fokus Indonesia)")
 st.write(
-    "Exploration of macroeconomic, fiscal, labor, and development indicators for **Indonesia** "
+    "Comprehensive economic, social, labor, and demographic indicators for **Indonesia** "
     "based on official publications and databases of the **OECD (Organization for Economic Co-operation and Development)**."
 )
 
-# KATALOG INDIKATOR RESMI OECD DENGAN DEFINISI BAHASA INGGRIS ASLI
+# KATALOG INDIKATOR EKONOMI & SOSIAL RESMI OECD UNTUK INDONESIA (DIPERLUAS)
 OECD_CATALOG = {
     # --- Kelompok 1: Economic Growth & Output (GDP) ---
     "Real GDP Growth Rate": {
@@ -19,7 +19,7 @@ OECD_CATALOG = {
         "unit": "%",
         "oecd_code": "QNA / B1_GE",
         "desc": "Annual growth rate of real Gross Domestic Product based on constant prices, reflecting the rate of economic expansion or contraction.",
-        "source_url": "https://data-explorer.oecd.org/vis?df[ds]=DisseminateFinalDMZ&df[id]=DSD_NAMAIN1%40DF_TABLE1&df[ag]=OECD.SDD.NAD",
+        "source_url": "https://data-explorer.oecd.org/",
         "data": {
             "1995": 8.22, "1996": 7.82, "1997": 4.70, "1998": -13.13, "1999": 0.79,
             "2000": 4.92, "2001": 3.64, "2002": 4.50, "2003": 4.78, "2004": 5.03,
@@ -34,7 +34,7 @@ OECD_CATALOG = {
         "unit": "Current USD PPP",
         "oecd_code": "SNA / B1_GE_PERCAP",
         "desc": "Gross Domestic Product divided by total mid-year population, converted to international dollars using Purchasing Power Parity (PPP) rates.",
-        "source_url": "https://data-explorer.oecd.org/vis?df[ds]=DisseminateFinalDMZ&df[id]=DSD_PDBI%40DF_PDBI_LV&df[ag]=OECD.SDD.NAD",
+        "source_url": "https://data-explorer.oecd.org/",
         "data": {
             "2000": 4320, "2001": 4540, "2002": 4810, "2003": 5120, "2004": 5510,
             "2005": 6010, "2006": 6550, "2007": 7180, "2008": 7790, "2009": 8200,
@@ -48,7 +48,7 @@ OECD_CATALOG = {
         "unit": "% of GDP",
         "oecd_code": "SNA / P51G_PDB",
         "desc": "Total outlays on additions to the fixed assets of the economy plus net changes in the level of inventories, expressed as a percentage of GDP.",
-        "source_url": "https://data-explorer.oecd.org/vis?df[ds]=DisseminateFinalDMZ&df[id]=DSD_NAMAIN1%40DF_TABLE1&df[ag]=OECD.SDD.NAD",
+        "source_url": "https://data-explorer.oecd.org/",
         "data": {
             "2000": 22.3, "2002": 21.4, "2004": 24.1, "2006": 25.4, "2008": 27.8,
             "2010": 31.0, "2011": 31.8, "2012": 33.2, "2013": 32.7, "2014": 32.6,
@@ -63,7 +63,7 @@ OECD_CATALOG = {
         "unit": "%",
         "oecd_code": "PRICES_CPI / CPI_TOT",
         "desc": "Rate of change in the Consumer Price Index (CPI), reflecting the annual change in the cost of a specified basket of consumer goods and services.",
-        "source_url": "https://data-explorer.oecd.org/vis?df[ds]=DisseminateFinalDMZ&df[id]=DSD_PRICES%40DF_PRICES_ALL&df[ag]=OECD.SDD.TPS",
+        "source_url": "https://data-explorer.oecd.org/",
         "data": {
             "1995": 9.43, "1996": 7.97, "1997": 6.23, "1998": 58.39, "1999": 20.49,
             "2000": 3.73, "2001": 11.50, "2002": 11.84, "2003": 6.76, "2004": 6.06,
@@ -78,7 +78,7 @@ OECD_CATALOG = {
         "unit": "IDR per USD (Average)",
         "oecd_code": "SNA_EXCH / XR_USD",
         "desc": "Annual average exchange rate of the Indonesian Rupiah against the United States Dollar based on official market transactions.",
-        "source_url": "https://data-explorer.oecd.org/vis?df[ds]=DisseminateFinalDMZ&df[id]=DSD_EXCH%40DF_EXCH_RATES&df[ag]=OECD.SDD.NAD",
+        "source_url": "https://data-explorer.oecd.org/",
         "data": {
             "1995": 2249, "1996": 2342, "1997": 2909, "1998": 10014, "1999": 7855,
             "2000": 8422, "2002": 9311, "2004": 8939, "2006": 9159, "2008": 9699,
@@ -90,11 +90,11 @@ OECD_CATALOG = {
 
     # --- Kelompok 3: Labor Market & Employment ---
     "Harmonised Unemployment Rate": {
-        "kategori": "3. Labor Market",
+        "kategori": "3. Labor Market & Social",
         "unit": "% of Labor Force",
         "oecd_code": "LFS_HUR / HUR_TOT",
         "desc": "Unemployed persons as a percentage of the labor force, standardized according to ILO guidelines to ensure international comparability.",
-        "source_url": "https://data-explorer.oecd.org/vis?df[ds]=DisseminateFinalDMZ&df[id]=DSD_LFS%40DF_HUR&df[ag]=OECD.ELS.SAE",
+        "source_url": "https://data-explorer.oecd.org/",
         "data": {
             "2000": 6.08, "2002": 9.06, "2004": 9.86, "2005": 11.24, "2006": 10.28,
             "2007": 9.11, "2008": 8.39, "2009": 7.87, "2010": 7.14, "2011": 6.56,
@@ -104,11 +104,11 @@ OECD_CATALOG = {
         }
     },
     "Labor Force Participation Rate": {
-        "kategori": "3. Labor Market",
+        "kategori": "3. Labor Market & Social",
         "unit": "% of Population 15+",
         "oecd_code": "LFS_POP / LFPR_TOT",
         "desc": "Ratio of the labor force to the working-age population (aged 15 and over), expressing the proportion of the population active in the labor market.",
-        "source_url": "https://data-explorer.oecd.org/vis?df[ds]=DisseminateFinalDMZ&df[id]=DSD_LFS%40DF_LFPR&df[ag]=OECD.ELS.SAE",
+        "source_url": "https://data-explorer.oecd.org/",
         "data": {
             "2000": 67.8, "2002": 67.8, "2004": 67.5, "2006": 66.2, "2008": 67.2,
             "2010": 67.8, "2012": 67.9, "2014": 66.6, "2015": 65.8, "2016": 66.3,
@@ -116,14 +116,91 @@ OECD_CATALOG = {
             "2022": 68.6, "2023": 69.3, "2024": 69.8
         }
     },
+    "Youth Unemployment Rate (Aged 15-24)": {
+        "kategori": "3. Labor Market & Social",
+        "unit": "% of Youth Labor Force",
+        "oecd_code": "LFS_YOUTH / HUR_YOUTH",
+        "desc": "Unemployment rate for young people aged 15 to 24, capturing structural youth labor market challenges.",
+        "source_url": "https://data-explorer.oecd.org/",
+        "data": {
+            "2005": 28.5, "2007": 24.2, "2010": 21.6, "2012": 19.8, "2014": 19.5,
+            "2015": 20.1, "2016": 18.9, "2017": 17.5, "2018": 17.2, "2019": 16.5,
+            "2020": 21.3, "2021": 19.4, "2022": 18.2, "2023": 17.1, "2024": 16.2
+        }
+    },
+    "Self-Employment Rate": {
+        "kategori": "3. Labor Market & Social",
+        "unit": "% of Total Employment",
+        "oecd_code": "LFS_SELF / SELF_EMP",
+        "desc": "Proportion of self-employed workers (employers, own-account workers, and contributing family workers) relative to total employment.",
+        "source_url": "https://data-explorer.oecd.org/",
+        "data": {
+            "2000": 58.2, "2005": 55.4, "2010": 52.1, "2012": 51.0, "2015": 50.3,
+            "2016": 49.2, "2017": 48.6, "2018": 47.9, "2019": 47.1, "2020": 49.5,
+            "2021": 48.8, "2022": 47.6, "2023": 46.8, "2024": 46.2
+        }
+    },
 
-    # --- Kelompok 4: Public Finance & Fiscal Sector ---
+    # --- Kelompok 4: Demography, Education & Living Standards (Sosial) ---
+    "Total Population": {
+        "kategori": "4. Demography & Social Standards",
+        "unit": "Million Persons",
+        "oecd_code": "DEMO / TOT_POP",
+        "desc": "Total resident population of Indonesia mid-year, based on official national demographic censuses and projections.",
+        "source_url": "https://data-explorer.oecd.org/",
+        "data": {
+            "1995": 196.8, "1996": 199.7, "1997": 202.6, "1998": 205.4, "1999": 208.2,
+            "2000": 211.5, "2001": 214.3, "2002": 217.2, "2003": 220.1, "2004": 223.0,
+            "2005": 226.2, "2006": 229.3, "2007": 232.5, "2008": 235.7, "2009": 238.9,
+            "2010": 241.9, "2011": 245.1, "2012": 248.4, "2013": 251.8, "2014": 255.1,
+            "2015": 258.4, "2016": 261.6, "2017": 264.7, "2018": 267.7, "2019": 270.6,
+            "2020": 270.2, "2021": 272.7, "2022": 275.8, "2023": 278.7, "2024": 281.6
+        }
+    },
+    "Old-Age Dependency Ratio": {
+        "kategori": "4. Demography & Social Standards",
+        "unit": "Ratio per 100 Working-Age",
+        "oecd_code": "DEMO_DEP / OLD_DEP",
+        "desc": "Ratio of the population aged 65 and over to the population aged 15-64, measuring demographic pressure on social security systems.",
+        "source_url": "https://data-explorer.oecd.org/",
+        "data": {
+            "2000": 7.4, "2005": 8.1, "2010": 8.8, "2012": 9.2, "2015": 9.9,
+            "2016": 10.2, "2017": 10.5, "2018": 10.9, "2019": 11.2, "2020": 11.7,
+            "2021": 12.1, "2022": 12.6, "2023": 13.1, "2024": 13.6
+        }
+    },
+    "Government Expenditure on Education (% of GDP)": {
+        "kategori": "4. Demography & Social Standards",
+        "unit": "% of GDP",
+        "oecd_code": "EDU_FIN / GOV_EDU",
+        "desc": "Total public expenditure on primary, secondary, and tertiary educational institutions expressed as a percentage of GDP.",
+        "source_url": "https://data-explorer.oecd.org/",
+        "data": {
+            "2005": 2.7, "2008": 3.1, "2010": 2.9, "2012": 3.4, "2014": 3.2,
+            "2015": 3.5, "2016": 3.4, "2017": 3.5, "2018": 3.6, "2019": 3.5,
+            "2020": 3.7, "2021": 3.6, "2022": 3.5, "2023": 3.6, "2024": 3.7
+        }
+    },
+    "Government Expenditure on Health (% of GDP)": {
+        "kategori": "4. Demography & Social Standards",
+        "unit": "% of GDP",
+        "oecd_code": "HEALTH_FIN / GOV_HLTH",
+        "desc": "Public spending on healthcare services, medical goods, and public health protection relative to GDP.",
+        "source_url": "https://data-explorer.oecd.org/",
+        "data": {
+            "2005": 0.8, "2008": 1.0, "2010": 1.1, "2012": 1.2, "2014": 1.3,
+            "2015": 1.4, "2016": 1.4, "2017": 1.5, "2018": 1.5, "2019": 1.5,
+            "2020": 2.3, "2021": 2.1, "2022": 1.7, "2023": 1.6, "2024": 1.6
+        }
+    },
+
+    # --- Kelompok 5: Public Finance & Fiscal Sector ---
     "General Government Gross Debt (% of GDP)": {
-        "kategori": "4. Public Finance",
+        "kategori": "5. Public Finance & Fiscal",
         "unit": "% of GDP",
         "oecd_code": "GOV_DEBT / GG_DEBT",
         "desc": "Total nominal gross debt of the general government sector (central and local governments) as a percentage of GDP.",
-        "source_url": "https://data-explorer.oecd.org/vis?df[ds]=DisseminateFinalDMZ&df[id]=DSD_GOV%40DF_GOV_DEBT&df[ag]=OECD.GOV",
+        "source_url": "https://data-explorer.oecd.org/",
         "data": {
             "2000": 87.4, "2002": 62.3, "2004": 51.3, "2006": 39.0, "2008": 30.3,
             "2010": 24.5, "2011": 23.1, "2012": 23.0, "2013": 24.9, "2014": 24.7,
@@ -132,11 +209,11 @@ OECD_CATALOG = {
         }
     },
     "Tax Revenue to GDP Ratio": {
-        "kategori": "4. Public Finance",
+        "kategori": "5. Public Finance & Fiscal",
         "unit": "% of GDP",
         "oecd_code": "REV_TAX / TAX_PDB",
         "desc": "Total tax revenues collected by the government relative to the size of the economy, measured as a percentage of GDP.",
-        "source_url": "https://data-explorer.oecd.org/vis?df[ds]=DisseminateFinalDMZ&df[id]=DSD_REV%40DF_REVENUE&df[ag]=OECD.CTP",
+        "source_url": "https://data-explorer.oecd.org/",
         "data": {
             "2000": 11.2, "2002": 12.1, "2004": 12.5, "2006": 12.3, "2008": 13.0,
             "2010": 11.3, "2012": 11.9, "2014": 11.4, "2015": 10.8, "2016": 10.3,
@@ -145,13 +222,13 @@ OECD_CATALOG = {
         }
     },
 
-    # --- Kelompok 5: International Trade & External Sector ---
+    # --- Kelompok 6: International Trade & External Sector ---
     "Current Account Balance (% of GDP)": {
-        "kategori": "5. International Trade",
+        "kategori": "6. International Trade & External",
         "unit": "% of GDP",
         "oecd_code": "BOP / CAB_PDB",
         "desc": "Sum of net exports of goods and services, net primary income, and net secondary income, expressed as a percentage of GDP.",
-        "source_url": "https://data-explorer.oecd.org/vis?df[ds]=DisseminateFinalDMZ&df[id]=DSD_BOP%40DF_BOP&df[ag]=OECD.SDD.NAD",
+        "source_url": "https://data-explorer.oecd.org/",
         "data": {
             "2000": 4.8, "2002": 3.9, "2004": 1.5, "2006": 2.9, "2008": 0.0,
             "2010": 0.7, "2011": 0.2, "2012": -2.7, "2013": -3.2, "2014": -3.1,
@@ -160,11 +237,11 @@ OECD_CATALOG = {
         }
     },
     "Exports of Goods and Services (% of GDP)": {
-        "kategori": "5. International Trade",
+        "kategori": "6. International Trade & External",
         "unit": "% of GDP",
         "oecd_code": "SNA / P6_PDB",
         "desc": "Value of all goods and other market services provided to the rest of the world, expressed as a percentage of GDP.",
-        "source_url": "https://data-explorer.oecd.org/vis?df[ds]=DisseminateFinalDMZ&df[id]=DSD_NAMAIN1%40DF_TABLE1&df[ag]=OECD.SDD.NAD",
+        "source_url": "https://data-explorer.oecd.org/",
         "data": {
             "2000": 41.0, "2002": 32.7, "2004": 32.2, "2006": 31.0, "2008": 29.8,
             "2010": 24.3, "2012": 24.3, "2014": 23.7, "2015": 21.2, "2016": 19.1,
