@@ -28,7 +28,6 @@ if st.button("📊 Tarik Data Publikasi BPS Terbaru (Live API)", type="primary")
     with st.spinner("Menghubungi server BPS dan mengunduh katalog publikasi resmi..."):
         all_records = []
         
-        # Otomatis menarik 5 halaman teratas (sekitar 50 publikasi terbaru)
         for page_num in range(1, 6):
             api_url = f"https://webapi.bps.go.id/v1/api/list/model/statictable/lang/ind/domain/0000/page/{page_num}/key/{bps_api_key}/"
             try:
@@ -42,12 +41,27 @@ if st.button("📊 Tarik Data Publikasi BPS Terbaru (Live API)", type="primary")
                         for it in items:
                             if isinstance(it, dict):
                                 title = it.get("title", "")
+                                table_id = str(it.get("table_id", "")).strip()
+                                raw_excel = str(it.get("excel", "")).strip()
+                                
+                                # Perbaikan & normalisasi tautan berkas
+                                if raw_excel and raw_excel.lower() != "none":
+                                    if raw_excel.startswith("/"):
+                                        valid_url = f"https://www.bps.go.id{raw_excel}"
+                                    elif not raw_excel.startswith("http"):
+                                        valid_url = f"https://www.bps.go.id/{raw_excel}"
+                                    else:
+                                        valid_url = raw_excel
+                                    valid_url = valid_url.replace("http://", "https://")
+                                else:
+                                    valid_url = f"https://www.bps.go.id/id/statistics-table/2/{table_id}/view.html"
+
                                 if title:
                                     all_records.append({
-                                        "ID Tabel": str(it.get("table_id", "")),
+                                        "ID Tabel": table_id,
                                         "Judul Publikasi Statistik": str(title).strip(),
                                         "Pembaruan Terakhir": str(it.get("updt", "") or it.get("cr_date", "")).strip(),
-                                        "Tautan Berkas Excel BPS": str(it.get("excel", "")).strip()
+                                        "Tautan Resmi BPS": valid_url
                                     })
                     else:
                         break
@@ -74,7 +88,6 @@ if "bps_table_data" in st.session_state:
     with c_search:
         keyword = st.text_input("🔍 Cari Judul Publikasi Spesifik:", placeholder="Ketik kata kunci (misal: Bahan Baku, Beras, IHK)...")
 
-    # Logika penyaringan topik
     df_filtered = df_bps.copy()
     
     if topik == "Inflasi & Harga":
@@ -89,7 +102,6 @@ if "bps_table_data" in st.session_state:
     if keyword.strip():
         df_filtered = df_filtered[df_filtered["Judul Publikasi Statistik"].str.contains(keyword, case=False, na=False)]
 
-    # Tombol Ekspor Daftar
     c1, c2 = st.columns(2)
     c1.download_button(
         "📥 Unduh Daftar (CSV)",
@@ -107,16 +119,15 @@ if "bps_table_data" in st.session_state:
         "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
     )
 
-    # Menampilkan Tabel dengan tautan unduh aktif
     st.dataframe(
         df_filtered,
         use_container_width=True,
         hide_index=True,
         column_config={
-            "Tautan Berkas Excel BPS": st.column_config.LinkColumn(
-                "Unduh Berkas Resmi BPS",
-                display_text="Unduh Excel (.xlsx)",
-                help="Klik untuk mengunduh dokumen data resmi langsung dari server BPS"
+            "Tautan Resmi BPS": st.column_config.LinkColumn(
+                "Tautan Resmi BPS",
+                display_text="Buka Berkas / Tabel Resmi",
+                help="Membuka tabel rilis resmi langsung di portal BPS"
             )
         }
     )
