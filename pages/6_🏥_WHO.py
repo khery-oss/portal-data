@@ -8,8 +8,8 @@ st.set_page_config(page_title="WHO Explorer - IndoEcon", layout="wide")
 
 st.title("🏥 WHO (World Health Organization) - Modal Manusia & Kesehatan")
 st.markdown(
-    "Eksplorasi indikator kesehatan publik dan modal manusia khusus wilayah **Indonesia (IDN)** "
-    "langsung dari **WHO Global Health Observatory (GHO) API** secara *real-time* (*100% Live API Dinamis*)."
+    "Eksplorasi seluruh indikator kesehatan publik wilayah **Indonesia (IDN)** secara otomatis "
+    "langsung dari **WHO Global Health Observatory (GHO) API** (*100% Live API Dinamis tanpa Hardcode*)."
 )
 
 HEADERS = {
@@ -17,19 +17,18 @@ HEADERS = {
 }
 
 # =============================================================================
-# 1. TARIK HANYA INDIKATOR YANG MEMILIKI DATA INDONESIA (IDN)
+# 1. TARIK SELURUH INDIKATOR AKTIF YANG TERSEDIA DI SERVER WHO
 # =============================================================================
 @st.cache_data(ttl=86400, show_spinner=False)
-def get_indonesia_active_indicators():
+def get_all_who_indicators():
     try:
-        # Mengambil langsung data khusus wilayah IDN dari endpoint GHO
-        res = requests.get("https://ghoapi.azureedge.net/api/Indicator?$filter=SpatialDim eq 'IDN'", headers=HEADERS, timeout=25)
+        # Mengambil direktori lengkap dari server pusat WHO OData
+        res = requests.get("https://ghoapi.azureedge.net/api/Indicator", headers=HEADERS, timeout=25)
         if res.status_code == 200:
             data = res.json().get("value", [])
             mapping = {}
             for item in data:
-                # OData GHO mengembalikan entri berdasarkan observasi wilayah
-                code = item.get("IndicatorCode") or item.get("Indicator")
+                code = item.get("IndicatorCode")
                 name = item.get("IndicatorName")
                 if code and name:
                     mapping[name] = code
@@ -38,32 +37,22 @@ def get_indonesia_active_indicators():
         pass
     return {}
 
-with st.spinner("Memindai dan menyaring indikator yang memiliki data resmi untuk Indonesia di server WHO..."):
-    indicator_dict = get_indonesia_active_indicators()
+with st.spinner("Memuat direktori pusat indikator kesehatan dari peladen WHO..."):
+    all_indicators = get_all_who_indicators()
 
-# Fallback jika endpoint spesifik kosong, gunakan direktori utama yang sudah dikurasi
-if not indicator_dict:
-    indicator_dict = {
-        "Life expectancy at birth (years)": "WHOSIS_000001",
-        "Healthy life expectancy (HALE) at birth (years)": "WHOSIS_000002",
-        "Under-five mortality rate (probability of dying by age 5 per 1,000 live births)": "MDG_0000000007",
-        "Infant mortality rate (probability of dying between birth and exact age 1 per 1,000 live births)": "MDG_0000000001",
-        "Neonatal mortality rate (per 1,000 live births)": "WHOSIS_000003",
-        "Maternal mortality ratio (per 100,000 live births)": "MDG_0000000026",
-        "Stunting prevalence among children under 5 years (%)": "NUTRITION_STUNTING_PREV",
-        "Wasting prevalence among children under 5 years (%)": "NUTRITION_WASTING_PREV",
-        "UHC service coverage index": "UHC_INDEX_REPORTED",
-        "Medical doctors (per 10,000 population)": "HWF_0001",
-        "Nursing and midwifery personnel (per 10,000 population)": "HWF_0002",
-        "Hospital beds (per 10,000 population)": "HWF_BE_HOSP"
-    }
+if not all_indicators:
+    st.error("Gagal terhubung ke direktori utama peladen WHO. Periksa koneksi internet Anda.")
+    st.stop()
 
-st.subheader("1. Pemilihan Indikator Khusus Indonesia")
+st.subheader("1. Pemilihan Indikator Kesehatan Indonesia")
+st.caption(f"Total {len(all_indicators)} indikator global terdeteksi di server WHO. Ketik kata kunci untuk mencari data khusus Indonesia.")
 
-search_term = st.text_input("🔍 Cari Indikator (ketik kata kunci, misal: Life Expectancy, Mortality, Stunting, Doctor):", "")
+# Kotak Pencarian Dinamis
+search_term = st.text_input("🔍 Cari Indikator (misal: Life Expectancy, Mortality, Stunting, Hospital, UHC, Malaria):", "")
 
+# Filter pencarian real-time dari seluruh indikator WHO
 filtered_options = [
-    name for name in indicator_dict.keys()
+    name for name in all_indicators.keys()
     if not search_term.strip() or search_term.lower() in name.lower()
 ]
 
@@ -72,11 +61,11 @@ if not filtered_options:
     st.stop()
 
 selected_indicator_name = st.selectbox(
-    f"Pilih dari {len(filtered_options)} Indikator Tersedia untuk Indonesia:",
+    f"Pilih dari {len(filtered_options)} Indikator Aktif:",
     filtered_options
 )
 
-selected_code = indicator_dict[selected_indicator_name]
+selected_code = all_indicators[selected_indicator_name]
 
 with st.expander("ℹ️ Metadata Resmi WHO GHO", expanded=False):
     st.markdown(f"**Nama Indikator:** {selected_indicator_name}")
@@ -85,12 +74,13 @@ with st.expander("ℹ️ Metadata Resmi WHO GHO", expanded=False):
     st.markdown("🔗 **Sumber Resmi:** [WHO Global Health Observatory](https://www.who.int/data/gho)")
 
 # =============================================================================
-# 2. PENARIKAN DATA RUN TUN WAKTU INDONESIA
+# 2. PENARIKAN DATA RUNTUN WAKTU KHUSUS INDONESIA
 # =============================================================================
 st.subheader("2. Penarikan Data Runtun Waktu Nasional (Indonesia)")
+st.caption("Data runtun waktu historis ditarik seketika secara live khusus untuk wilayah Indonesia.")
 
 if st.button("📊 Ambil Data WHO (Live API)", type="primary"):
-    with st.spinner(f"Menarik data runtun waktu untuk '{selected_indicator_name}'..."):
+    with st.spinner(f"Menarik data runtun waktu untuk '{selected_indicator_name}' langsung dari peladen WHO..."):
         api_url = f"https://ghoapi.azureedge.net/api/{selected_code}"
         query_params = {"$filter": "SpatialDim eq 'IDN'"}
 
@@ -106,6 +96,7 @@ if st.button("📊 Ambil Data WHO (Live API)", type="primary"):
                     th = it.get("TimeDim")
                     val = it.get("NumericValue")
                     
+                    # Saring agregat jenis kelamin umum jika tersedia
                     dim1 = it.get("Dim1")
                     if dim1 and dim1 not in ["BTSX", "TOTAL", "SEX_BTSX"]:
                         continue
@@ -177,7 +168,7 @@ if st.button("📊 Ambil Data WHO (Live API)", type="primary"):
                     with st.expander("📋 Tabel Runtun Waktu Lengkap"):
                         st.dataframe(df_who.sort_values(by="Tahun", ascending=False), use_container_width=True)
                 else:
-                    st.warning("Server WHO merespons, namun catatan observasi runtun waktu untuk Indonesia belum tersedia pada indikator ini.")
+                    st.warning("Server WHO merespons, namun catatan observasi runtun waktu untuk wilayah Indonesia belum tersedia pada indikator ini. Silakan coba cari indikator kesehatan lainnya.")
             else:
                 st.error(f"Gagal menghubungi server WHO (Kode Status HTTP: {res.status_code}).")
         except Exception as e:
