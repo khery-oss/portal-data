@@ -17,8 +17,9 @@ HEADERS = {
     "Accept": "application/json"
 }
 
-# DAFTAR SERI RESMI UNSD SDG UNTUK INDONESIA
 # Kode Area PBB (M49) untuk Indonesia = 360
+AREA_CODE_IDN = 360
+
 UN_SDG_SERIES = {
     # --- Goal 8: Pekerjaan Layak & Pertumbuhan Ekonomi ---
     "Annual Growth Rate of Real GDP per Employed Person (%)": {
@@ -38,7 +39,7 @@ UN_SDG_SERIES = {
         "desc": "Persentase generasi muda (usia 15-24) yang tidak bersekolah, bekerja, atau mengikuti pelatihan."
     },
 
-    # --- Goal 1 & 10: Kemiskinan & Ketimpangan ---
+    # --- Goal 1: Kemiskinan ---
     "Proportion of Population Below International Poverty Line (%)": {
         "code": "SI_POV_DAY1", "goal": "Goal 1: Pengentasan Kemiskinan", "unit": "%",
         "desc": "Persentase penduduk yang hidup di bawah garis kemiskinan ekstrem internasional."
@@ -47,6 +48,8 @@ UN_SDG_SERIES = {
         "code": "SI_COV_POOR", "goal": "Goal 1: Pengentasan Kemiskinan", "unit": "%",
         "desc": "Cakupan perlindungan jaminan sosial nasional bagi kelompok rentan/miskin."
     },
+
+    # --- Goal 10: Ketimpangan ---
     "Income Share Held by Bottom 40% of Population (%)": {
         "code": "SI_DST_040P", "goal": "Goal 10: Penurunan Kesenjangan", "unit": "%",
         "desc": "Pangsa pendapatan nasional yang dinikmati oleh 40% penduduk terbawah (indikator ketimpangan)."
@@ -66,7 +69,7 @@ UN_SDG_SERIES = {
         "desc": "Intensitas emisi karbon dioksida per unit nilai tambah manufaktur."
     },
 
-    # --- Goal 7 & 13: Energi & Aksi Iklim ---
+    # --- Goal 7: Energi Bersih ---
     "Renewable Energy Share in Total Final Energy Consumption (%)": {
         "code": "EG_FEC_RNEW", "goal": "Goal 7: Energi Bersih", "unit": "%",
         "desc": "Pangsa energi baru terbarukan dalam total konsumsi energi nasional."
@@ -76,7 +79,7 @@ UN_SDG_SERIES = {
         "desc": "Intensitas energi primer nasional (rasio pasokan energi per unit PDB)."
     },
 
-    # --- Goal 3 & 4: Kesehatan & Pendidikan ---
+    # --- Goal 3: Kesehatan ---
     "Maternal Mortality Ratio (per 100,000 Live Births)": {
         "code": "SH_STA_MORT", "goal": "Goal 3: Kesehatan Sejahtera", "unit": "per 100k Births",
         "desc": "Angka kematian ibu (AKI) per 100.000 kelahiran hidup."
@@ -85,6 +88,8 @@ UN_SDG_SERIES = {
         "code": "SH_DYN_MORT", "goal": "Goal 3: Kesehatan Sejahtera", "unit": "per 1,000 Births",
         "desc": "Angka kematian balita per 1.000 kelahiran hidup."
     },
+
+    # --- Goal 4: Pendidikan ---
     "Participation Rate in Pre-primary Education (%)": {
         "code": "SE_PRE_PARTN", "goal": "Goal 4: Pendidikan Berkualitas", "unit": "%",
         "desc": "Tingkat partisipasi pendidikan anak usia dini (PAUD/TK)."
@@ -117,7 +122,7 @@ with st.expander("ℹ️ Definisi & Metadata Resmi PBB (UNSD)", expanded=False):
     st.markdown(f"**Indikator:** {selected_name}")
     st.markdown(f"**Target SDG:** `{meta['goal']}`")
     st.markdown(f"**UN Series Code:** `{kode_series}`")
-    st.markdown(f"**Kode Wilayah PBB (M49):** `360 (Indonesia)`")
+    st.markdown(f"**Kode Wilayah PBB (M49):** `{AREA_CODE_IDN} (Indonesia)`")
     st.markdown(f"**Deskripsi:**\n{meta['desc']}")
     st.markdown("🔗 **Basis Data:** [UNSD Global SDG Database Portal](https://unstats.un.org/sdgs/dataportal)")
 
@@ -126,91 +131,113 @@ with st.expander("ℹ️ Definisi & Metadata Resmi PBB (UNSD)", expanded=False):
 # =============================================================================
 st.subheader("2. Penarikan Data Runtun Waktu")
 
-if st.button("📊 Ambil Data PBB Indonesia", type="primary"):
-    with st.spinner(f"Menghubungi endpoint resmi UNSD New York untuk seri {kode_series}..."):
-        # Gunakan endpoint query standar dengan batasan halaman pageSize=500
-        api_url = f"https://unstats.un.org/sdgapi/v1/sdg/Series/Data?seriesCode={kode_series}&areaCode=360&pageSize=500"
-        records = []
-        
-        try:
-            res = requests.get(api_url, headers=HEADERS, timeout=20)
-            
-            # Fallback parameter alternatif jika server merespons kosong
-            if res.status_code != 200 or not res.json().get("data"):
-                alt_url = f"https://unstats.un.org/sdgapi/v1/sdg/Series/Data?seriesCode={kode_series}&geoAreaCode=360&pageSize=500"
-                res = requests.get(alt_url, headers=HEADERS, timeout=20)
+def fetch_unsd(kode: str) -> list:
+    """
+    Tarik data dari UNSD API khusus Indonesia (M49=360).
+    Hanya menerima baris yang geoAreaCode-nya benar-benar 360 (Indonesia).
+    Mencoba dua endpoint resmi secara berurutan.
+    """
+    endpoints = [
+        f"https://unstats.un.org/sdgapi/v1/sdg/Series/Data?seriesCode={kode}&areaCode={AREA_CODE_IDN}&pageSize=500",
+        f"https://unstats.un.org/sdgapi/v1/sdg/Series/Data?seriesCode={kode}&geoAreaCode={AREA_CODE_IDN}&pageSize=500",
+    ]
 
-            if res.status_code == 200:
-                payload = res.json()
-                data_list = payload.get("data", [])
-                
-                for row in data_list:
-                    thn = row.get("timePeriodStart") or row.get("timePeriod")
-                    val = row.get("value")
-                    if thn is not None and val is not None:
-                        try:
-                            clean_thn = int(str(thn)[:4])
-                            clean_val = float(str(val).replace("<", "").replace(">", "").strip())
-                            records.append({
-                                "Tahun": clean_thn,
-                                f"Nilai ({meta['unit']})": clean_val
-                            })
-                        except (ValueError, TypeError):
-                            continue
+    for url in endpoints:
+        try:
+            res = requests.get(url, headers=HEADERS, timeout=20)
+            if res.status_code != 200:
+                continue
+            payload = res.json()
+            data_list = payload.get("data", [])
+            if not data_list:
+                continue
+
+            records = []
+            for row in data_list:
+                # Validasi ketat: pastikan data benar-benar milik Indonesia
+                geo_code = row.get("geoAreaCode") or row.get("areaCode")
+                if geo_code is not None and int(str(geo_code)) != AREA_CODE_IDN:
+                    continue
+
+                thn = row.get("timePeriodStart") or row.get("timePeriod")
+                val = row.get("value")
+                if thn is None or val is None:
+                    continue
+                try:
+                    clean_thn = int(str(thn)[:4])
+                    clean_val = float(str(val).replace("<", "").replace(">", "").strip())
+                    records.append({"Tahun": clean_thn, "nilai_raw": clean_val})
+                except (ValueError, TypeError):
+                    continue
 
             if records:
-                val_col = f"Nilai ({meta['unit']})"
-                # Group by Tahun agar nilai rata-rata nasional yang muncul jika ada data terpilah
-                df_un = (
-                    pd.DataFrame(records)
-                    .groupby("Tahun", as_index=False)[val_col]
-                    .mean()
-                    .round(2)
-                    .sort_values(by="Tahun", ascending=True)
-                )
+                return records
 
-                st.success(f"Berhasil menarik {len(df_un)} observasi tahunan langsung dari server PBB!")
-                st.divider()
+        except Exception:
+            continue
 
-                # Tombol Download Data
-                c1, c2 = st.columns(2)
-                c1.download_button(
-                    "📥 Unduh CSV",
-                    df_un.to_csv(index=False).encode("utf-8"),
-                    f"UN_SDG_{kode_series}_IDN.csv",
-                    "text/csv"
-                )
-                buf = io.BytesIO()
-                with pd.ExcelWriter(buf, engine="openpyxl") as writer:
-                    df_un.to_excel(writer, index=False, sheet_name="UN Data")
-                c2.download_button(
-                    "📊 Unduh Excel (.xlsx)",
-                    buf.getvalue(),
-                    f"UN_SDG_{kode_series}_IDN.xlsx",
-                    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-                )
+    return []
 
-                # Visualisasi Interaktif Plotly
-                fig = go.Figure()
-                fig.add_trace(go.Scatter(
-                    x=df_un["Tahun"],
-                    y=df_un[val_col],
-                    mode="lines+markers",
-                    name="Indonesia (UN SDGs)",
-                    line=dict(width=2.5, color="#009edb"),  # Biru Khas PBB
-                    hovertemplate=f"Tahun %{{x}}<br>Nilai: %{{y}} {meta['unit']}<extra></extra>"
-                ))
-                fig.update_layout(
-                    xaxis=dict(title="Tahun", tickmode="linear"),
-                    yaxis=dict(title=meta["unit"]),
-                    hovermode="x unified",
-                    margin=dict(l=20, r=20, t=40, b=20)
-                )
-                st.plotly_chart(fig, use_container_width=True)
+if st.button("📊 Ambil Data PBB Indonesia", type="primary"):
+    with st.spinner(f"Menghubungi server UNSD untuk seri {kode_series}..."):
+        records = fetch_unsd(kode_series)
 
-                with st.expander("📋 Tabel Runtun Waktu Lengkap"):
-                    st.dataframe(df_un.sort_values(by="Tahun", ascending=False), use_container_width=True)
-            else:
-                st.warning("Observasi runtun waktu untuk indikator ini belum dilaporkan atau sedang dalam proses pembaruan di server PBB.")
-        except Exception as e:
-            st.error(f"Gagal menghubungi server PBB: {e}")
+        if records:
+            val_col = f"Nilai ({meta['unit']})"
+            df_un = (
+                pd.DataFrame(records)
+                .groupby("Tahun", as_index=False)["nilai_raw"]
+                .mean()
+                .round(2)
+                .rename(columns={"nilai_raw": val_col})
+                .sort_values(by="Tahun", ascending=True)
+            )
+
+            st.success(f"Berhasil menarik **{len(df_un)}** observasi tahunan langsung dari server PBB!")
+            st.divider()
+
+            # Tombol Download
+            c1, c2 = st.columns(2)
+            c1.download_button(
+                "📥 Unduh CSV",
+                df_un.to_csv(index=False).encode("utf-8"),
+                f"UN_SDG_{kode_series}_IDN.csv",
+                "text/csv"
+            )
+            buf = io.BytesIO()
+            with pd.ExcelWriter(buf, engine="openpyxl") as writer:
+                df_un.to_excel(writer, index=False, sheet_name="UN Data")
+            c2.download_button(
+                "📊 Unduh Excel (.xlsx)",
+                buf.getvalue(),
+                f"UN_SDG_{kode_series}_IDN.xlsx",
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            )
+
+            # Visualisasi Plotly
+            fig = go.Figure()
+            fig.add_trace(go.Scatter(
+                x=df_un["Tahun"],
+                y=df_un[val_col],
+                mode="lines+markers",
+                name="Indonesia (UN SDGs)",
+                line=dict(width=2.5, color="#009edb"),
+                marker=dict(size=7),
+                hovertemplate=f"Tahun %{{x}}<br>Nilai: %{{y}} {meta['unit']}<extra></extra>"
+            ))
+            fig.update_layout(
+                xaxis=dict(title="Tahun", tickmode="linear"),
+                yaxis=dict(title=meta["unit"]),
+                hovermode="x unified",
+                margin=dict(l=20, r=20, t=40, b=20)
+            )
+            st.plotly_chart(fig, use_container_width=True)
+
+            with st.expander("📋 Tabel Runtun Waktu Lengkap"):
+                st.dataframe(df_un.sort_values(by="Tahun", ascending=False), use_container_width=True)
+
+        else:
+            st.warning(
+                "Observasi runtun waktu untuk indikator ini belum dilaporkan atau sedang dalam proses "
+                "pembaruan di server PBB. Coba indikator lain."
+            )
