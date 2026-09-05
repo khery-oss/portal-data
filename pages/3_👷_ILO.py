@@ -8,7 +8,7 @@ st.set_page_config(page_title="ILO Labour Market Explorer - Indonesia", layout="
 
 st.title("👷 ILO (International Labour Organization) - Pasar Tenaga Kerja Indonesia")
 st.write(
-    "Eksplorasi indikator resmi pasar tenaga kerja, pengangguran, upah, dan partisipasi gender dari "
+    "Eksplorasi indikator pasar tenaga kerja, pengangguran, struktur upah, dan pendidikan dari "
     "**International Labour Organization (ILOSTAT Modelled Estimates)** khusus untuk **Indonesia** "
     "secara langsung (*100% real-time live API*)."
 )
@@ -17,100 +17,130 @@ HEADERS = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
 }
 
-# KATALOG RESMI INDIKATOR KETENAGAKERJAAN ILO (ILOSTAT SERIES) UNTUK INDONESIA
+# KATALOG LENGKAP RESMI INDIKATOR KETENAGAKERJAAN ILO UNTUK INDONESIA
 ILO_CATALOG = {
     # =========================================================================
-    # 1. Angkatan Kerja & Partisipasi (Labor Force Participation)
+    # 1. Partisipasi Angkatan Kerja (TPAK) & Demografi
     # =========================================================================
     "Labor Force Participation Rate, Total (% of Population Ages 15+)": {
-        "code": "SL.TLF.CACT.ZS",
-        "kategori": "1. Partisipasi Angkatan Kerja (TPAK)",
-        "unit": "%",
-        "desc": "Tingkat partisipasi angkatan kerja (TPAK) total penduduk usia 15 tahun ke atas berdasarkan estimasi resmi ILO."
+        "code": "SL.TLF.CACT.ZS", "kategori": "1. Partisipasi Angkatan Kerja (TPAK)", "unit": "%",
+        "desc": "Tingkat partisipasi angkatan kerja (TPAK) total penduduk usia 15 tahun ke atas berdasarkan estimasi standar ILO."
     },
     "Labor Force Participation Rate, Female (% of Female Ages 15+)": {
-        "code": "SL.TLF.CACT.FE.ZS",
-        "kategori": "1. Partisipasi Angkatan Kerja (TPAK)",
-        "unit": "%",
+        "code": "SL.TLF.CACT.FE.ZS", "kategori": "1. Partisipasi Angkatan Kerja (TPAK)", "unit": "%",
         "desc": "Tingkat partisipasi angkatan kerja khusus perempuan usia 15 tahun ke atas."
     },
     "Labor Force Participation Rate, Male (% of Male Ages 15+)": {
-        "code": "SL.TLF.CACT.MA.ZS",
-        "kategori": "1. Partisipasi Angkatan Kerja (TPAK)",
-        "unit": "%",
+        "code": "SL.TLF.CACT.MA.ZS", "kategori": "1. Partisipasi Angkatan Kerja (TPAK)", "unit": "%",
         "desc": "Tingkat partisipasi angkatan kerja khusus laki-laki usia 15 tahun ke atas."
     },
     "Ratio of Female to Male Labor Force Participation Rate (%)": {
-        "code": "SL.TLF.CACT.FM.ZS",
-        "kategori": "1. Partisipasi Angkatan Kerja (TPAK)",
-        "unit": "%",
+        "code": "SL.TLF.CACT.FM.ZS", "kategori": "1. Partisipasi Angkatan Kerja (TPAK)", "unit": "%",
         "desc": "Rasio partisipasi perempuan terhadap laki-laki di pasar tenaga kerja (indikator kesetaraan gender)."
+    },
+    "Total Labor Force (Persons)": {
+        "code": "SL.TLF.TOTL.IN", "kategori": "1. Partisipasi Angkatan Kerja (TPAK)", "unit": "Jiwa",
+        "desc": "Jumlah total orang yang termasuk dalam angkatan kerja resmi (bekerja + menganggur)."
     },
 
     # =========================================================================
-    # 2. Pengangguran & Underemployment
+    # 2. Pengangguran Umum & Pemuda
     # =========================================================================
     "Total Unemployment Rate (% of Total Labor Force)": {
-        "code": "SL.UEM.TOTL.ZS",
-        "kategori": "2. Pengangguran",
-        "unit": "%",
+        "code": "SL.UEM.TOTL.ZS", "kategori": "2. Pengangguran", "unit": "%",
         "desc": "Tingkat pengangguran terbuka nasional resmi berdasarkan metodologi harmonisasi standar ILO."
     },
     "Youth Unemployment Rate (% of Labor Force Ages 15-24)": {
-        "code": "SL.UEM.1524.ZS",
-        "kategori": "2. Pengangguran",
-        "unit": "%",
-        "desc": "Tingkat pengangguran angkatan kerja generasi muda (rentang usia 15–24 tahun)."
+        "code": "SL.UEM.1524.ZS", "kategori": "2. Pengangguran", "unit": "%",
+        "desc": "Tingkat pengangguran angkatan kerja generasi muda usia 15–24 tahun."
     },
     "Female Unemployment Rate (% of Female Labor Force)": {
-        "code": "SL.UEM.TOTL.FE.ZS",
-        "kategori": "2. Pengangguran",
-        "unit": "%",
+        "code": "SL.UEM.TOTL.FE.ZS", "kategori": "2. Pengangguran", "unit": "%",
         "desc": "Tingkat pengangguran angkatan kerja perempuan."
     },
     "Male Unemployment Rate (% of Male Labor Force)": {
-        "code": "SL.UEM.TOTL.MA.ZS",
-        "kategori": "2. Pengangguran",
-        "unit": "%",
+        "code": "SL.UEM.TOTL.MA.ZS", "kategori": "2. Pengangguran", "unit": "%",
         "desc": "Tingkat pengangguran angkatan kerja laki-laki."
     },
+    "Youth NEET Rate (% of Youth Population Ages 15-24)": {
+        "code": "SL.UEM.NEET.ZS", "kategori": "2. Pengangguran", "unit": "%",
+        "desc": "Persentase generasi muda yang tidak sedang bersekolah, bekerja, atau mengikuti pelatihan (Not in Education, Employment, or Training)."
+    },
 
     # =========================================================================
-    # 3. Kualitas Pekerjaan & Kerentanan (Job Quality & Informality)
+    # 3. Pengangguran Berdasarkan Tingkat Pendidikan (Education Breakdown)
+    # =========================================================================
+    "Unemployment with Advanced / Higher Education (% of Total Labor Force with Advanced Education)": {
+        "code": "SL.UEM.ADVN.ZS", "kategori": "3. Pengangguran Menurut Pendidikan", "unit": "%",
+        "desc": "Tingkat pengangguran pada kelompok angkatan kerja berpendidikan tinggi (Diploma, Sarjana, Pascasarjana)."
+    },
+    "Unemployment with Intermediate Education (% of Total Labor Force with Intermediate Education)": {
+        "code": "SL.UEM.INTM.ZS", "kategori": "3. Pengangguran Menurut Pendidikan", "unit": "%",
+        "desc": "Tingkat pengangguran pada kelompok angkatan kerja tamatan pendidikan menengah (SMP / SMA / SMK)."
+    },
+    "Unemployment with Basic Education (% of Total Labor Force with Basic Education)": {
+        "code": "SL.UEM.BASC.ZS", "kategori": "3. Pengangguran Menurut Pendidikan", "unit": "%",
+        "desc": "Tingkat pengangguran pada kelompok angkatan kerja berpendidikan dasar (SD atau tidak tamat SD)."
+    },
+
+    # =========================================================================
+    # 4. Kualitas Pekerjaan, Formalisasi & Kerentanan
     # =========================================================================
     "Vulnerable Employment (% of Total Employment)": {
-        "code": "SL.EMP.VULN.ZS",
-        "kategori": "3. Kualitas Pekerjaan & Kerentanan",
-        "unit": "%",
-        "desc": "Proporsi pekerja rentan (pekerja keluarga tanpa upah dan pekerja mandiri) terhadap total pekerja yang bekerja."
+        "code": "SL.EMP.VULN.ZS", "kategori": "4. Kualitas Pekerjaan & Formalitas", "unit": "%",
+        "desc": "Proporsi pekerja rentan (pekerja keluarga tidak dibayar dan pekerja mandiri) terhadap total tenaga kerja yang bekerja."
     },
     "Wage and Salaried Workers / Formal Employees (% of Total Employment)": {
-        "code": "SL.EMP.WORK.ZS",
-        "kategori": "3. Kualitas Pekerjaan & Kerentanan",
-        "unit": "%",
-        "desc": "Persentase pekerja penerima upah/gaji tetap (indikasi formalisasi pekerjaan) dari total tenaga kerja."
+        "code": "SL.EMP.WORK.ZS", "kategori": "4. Kualitas Pekerjaan & Formalitas", "unit": "%",
+        "desc": "Persentase pekerja penerima upah/gaji reguler (indikator formalisasi pasar kerja)."
+    },
+    "Own-Account Self-Employed Workers (% of Total Employment)": {
+        "code": "SL.EMP.OWAC.ZS", "kategori": "4. Kualitas Pekerjaan & Formalitas", "unit": "%",
+        "desc": "Persentase pekerja mandiri yang berusaha sendiri tanpa bantuan buruh tetap."
+    },
+    "Contributing Family Workers (% of Total Employment)": {
+        "code": "SL.FAM.WORK.ZS", "kategori": "4. Kualitas Pekerjaan & Formalitas", "unit": "%",
+        "desc": "Persentase pekerja keluarga tidak dibayar yang membantu usaha keluarga."
+    },
+    "Employers (% of Total Employment)": {
+        "code": "SL.EMP.MPLY.ZS", "kategori": "4. Kualitas Pekerjaan & Formalitas", "unit": "%",
+        "desc": "Persentase pelaku usaha yang mempekerjakan buruh atau karyawan berbayar tetap."
     },
 
     # =========================================================================
-    # 4. Transformasi Struktural Sektoral (Employment by Sector)
+    # 5. Transformasi Struktural Sektoral (Distribusi Lapangan Usaha)
     # =========================================================================
     "Employment in Services Sector (% of Total Employment)": {
-        "code": "SL.SRV.EMPL.ZS",
-        "kategori": "4. Distribusi Sektoral Tenaga Kerja",
-        "unit": "%",
+        "code": "SL.SRV.EMPL.ZS", "kategori": "5. Lapangan Pekerjaan Menurut Sektor", "unit": "%",
         "desc": "Pangsa penyerapan tenaga kerja di sektor jasa dan perdagangan modern."
     },
     "Employment in Industry / Manufacturing (% of Total Employment)": {
-        "code": "SL.IND.EMPL.ZS",
-        "kategori": "4. Distribusi Sektoral Tenaga Kerja",
-        "unit": "%",
-        "desc": "Pangsa penyerapan tenaga kerja di sektor industri pengolahan dan konstruksi."
+        "code": "SL.IND.EMPL.ZS", "kategori": "5. Lapangan Pekerjaan Menurut Sektor", "unit": "%",
+        "desc": "Pangsa penyerapan tenaga kerja di sektor industri pengolahan, pertambangan, dan konstruksi."
     },
     "Employment in Agriculture (% of Total Employment)": {
-        "code": "SL.AGR.EMPL.ZS",
-        "kategori": "4. Distribusi Sektoral Tenaga Kerja",
-        "unit": "%",
-        "desc": "Pangsa penyerapan tenaga kerja di sektor primer pertanian, kehutanan, dan perikanan."
+        "code": "SL.AGR.EMPL.ZS", "kategori": "5. Lapangan Pekerjaan Menurut Sektor", "unit": "%",
+        "desc": "Pangsa penyerapan tenaga kerja di sektor primer pertanian, perkebunan, kehutanan, dan perikanan."
+    },
+    "Female Employment in Services (% of Female Employment)": {
+        "code": "SL.SRV.EMPL.FE.ZS", "kategori": "5. Lapangan Pekerjaan Menurut Sektor", "unit": "%",
+        "desc": "Proporsi tenaga kerja perempuan yang terserap di sektor jasa."
+    },
+    "Female Employment in Agriculture (% of Female Employment)": {
+        "code": "SL.AGR.EMPL.FE.ZS", "kategori": "5. Lapangan Pekerjaan Menurut Sektor", "unit": "%",
+        "desc": "Proporsi tenaga kerja perempuan yang bekerja di sektor pertanian."
+    },
+
+    # =========================================================================
+    # 6. Isu Khusus: Pekerja Anak & Perlindungan
+    # =========================================================================
+    "Children in Employment (% of Children Ages 7-14)": {
+        "code": "SL.TLF.0714.ZS", "kategori": "6. Perlindungan Tenaga Kerja & Pekerja Anak", "unit": "%",
+        "desc": "Persentase anak usia 7–14 tahun yang terlibat dalam kegiatan ekonomi/bekerja."
+    },
+    "Female Share of Employment in Senior and Middle Management (%)": {
+        "code": "SL.EMP.SMGT.FE.ZS", "kategori": "6. Perlindungan Tenaga Kerja & Pekerja Anak", "unit": "%",
+        "desc": "Porsi representasi perempuan pada posisi manajemen tingkat menengah hingga puncak."
     }
 }
 
@@ -137,7 +167,7 @@ kode_indikator = meta["code"]
 
 with st.expander("ℹ️ Definisi & Metadata Resmi ILO", expanded=False):
     st.markdown(f"**Nama Indikator:** {selected_name}")
-    st.markdown(f"**Kode Seri:** `{kode_indikator}`")
+    st.markdown(f"**Kode Seri Resmi:** `{kode_indikator}`")
     st.markdown(f"**Kategori:** `{meta['kategori']}`")
     st.markdown(f"**Satuan:** `{meta['unit']}`")
     st.markdown(f"**Metodologi / Deskripsi:**\n{meta['desc']}")
@@ -175,10 +205,10 @@ if st.button("📊 Ambil Data Ketenagakerjaan Indonesia", type="primary"):
                 val_col = f"Nilai ({meta['unit']})"
                 df_ilo = pd.DataFrame(records).sort_values(by="Tahun", ascending=True)
 
-                st.success(f"Berhasil menarik {len(df_ilo)} observasi tahunan resmi dari basis data ILO!")
+                st.success(f"Berhasil menarik {len(df_ilo)} observasi tahunan resmi langsung dari server!")
                 st.divider()
 
-                # Tombol Unduh Data
+                # Unduh Data
                 c1, c2 = st.columns(2)
                 c1.download_button(
                     "📥 Unduh CSV",
@@ -196,7 +226,7 @@ if st.button("📊 Ambil Data Ketenagakerjaan Indonesia", type="primary"):
                     "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
                 )
 
-                # Visualisasi Plotly Interaktif
+                # Plotly Visualisasi Interaktif
                 fig = go.Figure()
                 fig.add_trace(go.Scatter(
                     x=df_ilo["Tahun"],
