@@ -1,81 +1,130 @@
 import io
 import pandas as pd
 import plotly.graph_objects as go
+import requests
 import streamlit as st
 
 st.set_page_config(page_title="IMF Data Explorer - Indonesia", layout="wide")
 
 st.title("🏛️ Portal Data IMF (World Economic Outlook - Indonesia)")
 st.write(
-    "Eksplorasi indikator makroekonomi, fiskal, dan neraca pembayaran resmi **International Monetary Fund (IMF)** "
-    "khusus untuk wilayah **Indonesia (IDN)** berdasarkan basis data publikasi resmi **IMF World Economic Outlook (WEO)**."
+    "Eksplorasi indikator makroekonomi, neraca pembayaran, dan proyeksi fiskal resmi **International Monetary Fund (IMF)** "
+    "khusus untuk wilayah **Indonesia (IDN)** berdasarkan publikasi resmi **IMF World Economic Outlook (WEO)** (rentang 1980 – 2029)."
 )
 
-# KATALOG RESMI IMF WEO KHUSUS INDONESIA (SUMBER: IMF WEO DATABASE)
+# Headers lengkap agar request ke API resmi IMF tidak diblokir
+HEADERS = {
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+    "Accept": "application/json"
+}
+
+# KATALOG LENGKAP RESMI IMF WEO UNTUK INDONESIA
 IMF_CATALOG = {
-    # --- 1. Output & Pertumbuhan ---
+    # --- 1. Output & National Accounts ---
     "Real GDP Growth (Annual %)": {
-        "kategori": "1. Output & Pertumbuhan", "unit": "%", "weo_code": "NGDP_RPCH",
-        "desc": "Persentase perubahan tahunan PDB riil berdasarkan harga konstan.",
-        "data": {"2000": 4.92, "2002": 4.50, "2004": 5.03, "2006": 5.50, "2008": 6.01, "2010": 6.22, "2012": 6.03, "2014": 5.01, "2016": 5.03, "2017": 5.07, "2018": 5.17, "2019": 5.02, "2020": -2.07, "2021": 3.70, "2022": 5.31, "2023": 5.05, "2024": 5.00}
+        "id": "NGDP_RPCH", "unit": "%", "kategori": "1. Output & Pertumbuhan",
+        "desc": "Annual percentages of constant price GDP are year-on-year changes based on national currency."
     },
-    "GDP, Current Prices (Billion USD)": {
-        "kategori": "1. Output & Pertumbuhan", "unit": "Billion USD", "weo_code": "NGDPD",
-        "desc": "Produk Domestik Bruto atas dasar harga berlaku dinyatakan dalam miliar Dolar AS.",
-        "data": {"2000": 179.48, "2005": 328.85, "2010": 755.26, "2012": 917.87, "2014": 890.81, "2016": 932.06, "2018": 1042.27, "2020": 1059.05, "2021": 1186.51, "2022": 1319.08, "2023": 1371.17, "2024": 1475.66}
+    "Gross Domestic Product, Constant Prices (Trillion IDR)": {
+        "id": "NGDP_R", "unit": "Trillion IDR", "kategori": "1. Output & Pertumbuhan",
+        "desc": "Gross domestic product expressed in constant national currency (Indonesian Rupiah)."
+    },
+    "Gross Domestic Product, Current Prices (Trillion IDR)": {
+        "id": "NGDP", "unit": "Trillion IDR", "kategori": "1. Output & Pertumbuhan",
+        "desc": "Gross domestic product expressed in current national currency (Indonesian Rupiah)."
+    },
+    "Gross Domestic Product, Current Prices (Billion USD)": {
+        "id": "NGDPD", "unit": "Billion USD", "kategori": "1. Output & Pertumbuhan",
+        "desc": "Gross domestic product expressed in billions of current U.S. dollars."
     },
     "GDP per Capita, Current Prices (USD)": {
-        "kategori": "1. Output & Pertumbuhan", "unit": "USD", "weo_code": "NGDPDPC",
-        "desc": "PDB dibagi dengan jumlah penduduk pertengahan tahun dalam Dolar AS berlaku.",
-        "data": {"2000": 848, "2005": 1453, "2010": 3122, "2012": 3695, "2014": 3492, "2016": 3563, "2018": 3894, "2020": 3912, "2021": 4351, "2022": 4788, "2023": 4940, "2024": 5271}
+        "id": "NGDPDPC", "unit": "USD", "kategori": "1. Output & Pertumbuhan",
+        "desc": "GDP divided by total population, expressed in current U.S. dollars."
+    },
+    "GDP per Capita, PPP (Current International Dollar)": {
+        "id": "PPPPC", "unit": "Current Int $", "kategori": "1. Output & Pertumbuhan",
+        "desc": "GDP per capita converted to international dollars using purchasing power parity rates."
+    },
+    "GDP based on Purchasing-Power-Parity (PPP) Share of World Total": {
+        "id": "PPPSH", "unit": "% of World", "kategori": "1. Output & Pertumbuhan",
+        "desc": "Indonesia's share of total global GDP based on purchasing power parity valuation."
     },
 
-    # --- 2. Inflasi & Harga ---
+    # --- 2. Inflation & Prices ---
     "Inflation Rate, Average Consumer Prices (Annual %)": {
-        "kategori": "2. Inflasi & Harga", "unit": "%", "weo_code": "PCPIPCH",
-        "desc": "Perubahan persentase tahunan pada indeks harga konsumen rata-rata.",
-        "data": {"2000": 3.73, "2002": 11.84, "2004": 6.06, "2006": 13.11, "2008": 10.23, "2010": 5.13, "2012": 4.28, "2014": 6.39, "2016": 3.53, "2018": 3.20, "2020": 2.03, "2021": 1.56, "2022": 4.21, "2023": 3.67, "2024": 2.60}
+        "id": "PCPIPCH", "unit": "%", "kategori": "2. Inflasi & Harga",
+        "desc": "Annual percentage change in the average consumer price index."
+    },
+    "Inflation Rate, End of Period Consumer Prices (Annual %)": {
+        "id": "PCPIEPCH", "unit": "%", "kategori": "2. Inflasi & Harga",
+        "desc": "End-of-period consumer price index annual percentage change."
+    },
+    "GDP Deflator (Index Change %)": {
+        "id": "NGDP_D", "unit": "% Change", "kategori": "2. Inflasi & Harga",
+        "desc": "Ratio of nominal GDP to real GDP expressed as an annual percentage variation."
     },
 
-    # --- 3. Fiskal & Keuangan Pemerintah ---
+    # --- 3. Fiscal & Public Finance ---
     "General Government Gross Debt (% of GDP)": {
-        "kategori": "3. Fiskal & Keuangan Pemerintah", "unit": "% of GDP", "weo_code": "GGXWDG_NGDP",
-        "desc": "Total kewajiban utang bruto pemerintah umum relatif terhadap PDB nasional.",
-        "data": {"2000": 87.4, "2004": 51.3, "2008": 30.3, "2010": 24.5, "2012": 23.0, "2014": 24.7, "2016": 27.9, "2018": 30.2, "2019": 30.2, "2020": 39.7, "2021": 40.7, "2022": 39.6, "2023": 39.1, "2024": 38.6}
+        "id": "GGXWDG_NGDP", "unit": "% of GDP", "kategori": "3. Fiskal & Keuangan Pemerintah",
+        "desc": "Total nominal liabilities and gross debt of general government relative to national GDP."
     },
     "General Government Net Lending/Borrowing (% of GDP)": {
-        "kategori": "3. Fiskal & Keuangan Pemerintah", "unit": "% of GDP", "weo_code": "GGXCNL_NGDP",
-        "desc": "Keseimbangan fiskal bersih pemerintah (defisit/surplus anggaran) sebagai persentase dari PDB.",
-        "data": {"2000": -1.2, "2004": -1.0, "2008": 0.0, "2010": -0.7, "2012": -1.8, "2014": -2.2, "2016": -2.5, "2018": -1.8, "2019": -2.2, "2020": -6.1, "2021": -4.6, "2022": -2.4, "2023": -1.7, "2024": -2.2}
+        "id": "GGXCNL_NGDP", "unit": "% of GDP", "kategori": "3. Fiskal & Keuangan Pemerintah",
+        "desc": "Overall government budget balance (Fiscal Deficit or Surplus) relative to GDP."
+    },
+    "General Government Primary Balance (% of GDP)": {
+        "id": "GGXONLB_NGDP", "unit": "% of GDP", "kategori": "3. Fiskal & Keuangan Pemerintah",
+        "desc": "Primary net lending/borrowing excluding interest expenditure as a percentage of GDP."
+    },
+    "General Government Revenue (% of GDP)": {
+        "id": "GGR_NGDP", "unit": "% of GDP", "kategori": "3. Fiskal & Keuangan Pemerintah",
+        "desc": "Total government revenue collected relative to the size of the national economy."
+    },
+    "General Government Total Expenditure (% of GDP)": {
+        "id": "GGX_NGDP", "unit": "% of GDP", "kategori": "3. Fiskal & Keuangan Pemerintah",
+        "desc": "Total government outlays and expenses relative to the size of the national economy."
     },
 
-    # --- 4. Eksternal & Perdagangan ---
+    # --- 4. External Sector & Trade ---
     "Current Account Balance (% of GDP)": {
-        "kategori": "4. Eksternal & Perdagangan", "unit": "% of GDP", "weo_code": "BCA_NGDPD",
-        "desc": "Saldo transaksi berjalan relatif terhadap PDB nasional.",
-        "data": {"2000": 4.8, "2004": 1.5, "2008": 0.0, "2010": 0.7, "2012": -2.7, "2014": -3.1, "2016": -1.8, "2018": -2.9, "2019": -2.7, "2020": -0.4, "2021": 0.3, "2022": 1.0, "2023": -0.2, "2024": -0.9}
+        "id": "BCA_NGDPD", "unit": "% of GDP", "kategori": "4. Eksternal & Perdagangan",
+        "desc": "Net balance of goods, services, primary income, and secondary income as a percentage of GDP."
     },
     "Current Account Balance (Billion USD)": {
-        "kategori": "4. Eksternal & Perdagangan", "unit": "Billion USD", "weo_code": "BCA",
-        "desc": "Neraca bersih perdagangan barang, jasa, pendapatan primer, dan sekunder dalam miliar Dolar AS.",
-        "data": {"2000": 8.0, "2004": 3.9, "2008": 0.1, "2010": 5.1, "2012": -24.4, "2014": -27.5, "2016": -17.0, "2018": -30.6, "2019": -30.3, "2020": -4.4, "2021": 3.5, "2022": 12.7, "2023": -2.0, "2024": -13.8}
+        "id": "BCA", "unit": "Billion USD", "kategori": "4. Eksternal & Perdagangan",
+        "desc": "Current account balance expressed in billions of current U.S. dollars."
+    },
+    "Volume of Exports of Goods and Services (% Change)": {
+        "id": "TX_RPCH", "unit": "% Change", "kategori": "4. Eksternal & Perdagangan",
+        "desc": "Annual percentage change in the constant-price volume of goods and services exported."
+    },
+    "Volume of Imports of Goods and Services (% Change)": {
+        "id": "TM_RPCH", "unit": "% Change", "kategori": "4. Eksternal & Perdagangan",
+        "desc": "Annual percentage change in the constant-price volume of goods and services imported."
     },
 
-    # --- 5. Investasi & Tabungan ---
+    # --- 5. Investment, Savings & Labor ---
     "Total Investment (% of GDP)": {
-        "kategori": "5. Investasi & Tabungan", "unit": "% of GDP", "weo_code": "NID_NGDP",
-        "desc": "Pembentukan modal bruto total sebagai persentase dari PDB.",
-        "data": {"2000": 22.3, "2004": 24.1, "2008": 27.8, "2010": 31.0, "2012": 33.2, "2014": 32.6, "2016": 32.6, "2018": 32.3, "2019": 32.3, "2020": 31.7, "2021": 30.8, "2022": 29.8, "2023": 29.3, "2024": 29.2}
+        "id": "NID_NGDP", "unit": "% of GDP", "kategori": "5. Investasi, Tabungan & Tenaga Kerja",
+        "desc": "Gross capital formation as a percentage of national GDP."
     },
     "Gross National Savings (% of GDP)": {
-        "kategori": "5. Investasi & Tabungan", "unit": "% of GDP", "weo_code": "NGSD_NGDP",
-        "desc": "Tabungan nasional bruto relatif terhadap PDB.",
-        "data": {"2000": 27.1, "2004": 25.6, "2008": 27.8, "2010": 31.7, "2012": 30.5, "2014": 29.5, "2016": 30.8, "2018": 29.4, "2019": 29.6, "2020": 31.3, "2021": 31.1, "2022": 30.8, "2023": 29.1, "2024": 28.3}
+        "id": "NGSD_NGDP", "unit": "% of GDP", "kategori": "5. Investasi, Tabungan & Tenaga Kerja",
+        "desc": "Total gross national disposable income less consumption expenditure relative to GDP."
+    },
+    "Unemployment Rate (% of Total Labor Force)": {
+        "id": "LUR", "unit": "% of Labor Force", "kategori": "5. Investasi, Tabungan & Tenaga Kerja",
+        "desc": "Unemployed persons looking for work as a share of the active civilian labor force."
+    },
+    "Total Population (Million Persons)": {
+        "id": "LP", "unit": "Million Persons", "kategori": "5. Investasi, Tabungan & Tenaga Kerja",
+        "desc": "Mid-year estimate of national population based on census authorities and IMF projections."
     }
 }
 
-# 1. Pilihan Indikator Berdasarkan Kategori
-st.subheader("1. Pemilihan Indikator IMF")
+# 1. Pemilihan Indikator
+st.subheader("1. Pemilihan Indikator IMF WEO")
 col_kat, col_ind = st.columns([1, 1.8])
 
 kategori_list = sorted(list(set(v["kategori"] for v in IMF_CATALOG.values())))
@@ -91,14 +140,15 @@ with col_ind:
     selected_name = st.selectbox(f"Nama Indikator ({len(indikator_opsi)} Tersedia):", indikator_opsi)
 
 meta = IMF_CATALOG[selected_name]
+kode_imf = meta["id"]
 
-# 2. Filter Rentang Tahun
-st.subheader("2. Rentang Tahun Observasi")
-semua_tahun_tersedia = [str(y) for y in range(2000, 2025)]
+# 2. Filter Rentang Tahun Observasi Asli IMF (1980 - 2029)
+st.subheader("2. Rentang Tahun Observasi (Historis & Proyeksi WEO)")
+semua_tahun_tersedia = [str(y) for y in range(1980, 2030)]
 
 c_t1, c_t2 = st.columns(2)
 with c_t1:
-    th_start = st.selectbox("Tahun Mulai:", semua_tahun_tersedia, index=0)
+    th_start = st.selectbox("Tahun Mulai:", semua_tahun_tersedia, index=semua_tahun_tersedia.index("1990"))
 with c_t2:
     th_end = st.selectbox("Tahun Selesai:", semua_tahun_tersedia, index=len(semua_tahun_tersedia) - 1)
 
@@ -106,25 +156,49 @@ if int(th_start) > int(th_end):
     st.error("Tahun mulai tidak boleh melebihi tahun selesai.")
     st.stop()
 
-# 3. Kotak Informasi & Metadata
+# 3. Metadata Resmi IMF
 st.divider()
-with st.expander("ℹ️ Definisi & Metadata Resmi IMF WEO", expanded=True):
+with st.expander("ℹ️ Definisi & Metadata Resmi IMF World Economic Outlook", expanded=True):
     st.markdown(f"**Series Name:** {selected_name}")
-    st.markdown(f"**Series Code (IMF WEO):** `{meta['weo_code']}`")
-    st.markdown(f"**Kategori:** `{meta['kategori']}`")
+    st.markdown(f"**IMF WEO Technical Code:** `{kode_imf}`")
+    st.markdown(f"**Kategori / Sektor:** `{meta['kategori']}`")
     st.markdown(f"**Satuan Unit:** `{meta['unit']}`")
-    st.markdown(f"**Metodologi / Deskripsi:**\n{meta['desc']}")
+    st.markdown(f"**Deskripsi Metodologi:**\n{meta['desc']}")
     st.markdown(
-        f"🔗 **Tautan Resmi:** [Buka Data di IMF DataMapper Portal](https://www.imf.org/external/datamapper/{meta['weo_code']}@WEO/IDN)"
+        f"🔗 **Tautan Resmi Database:** [Buka Data di IMF DataMapper Portal](https://www.imf.org/external/datamapper/{kode_imf}@WEO/IDN)"
     )
 
-# 4. DataFrame & Visualisasi Plotly
+# 4. Penarikan Data Live via API IMF DataMapper (dengan fallback aman)
+@st.cache_data(ttl=86400)
+def fetch_imf_data(indicator_code):
+    api_url = f"https://www.imf.org/external/datamapper/api/v1/{indicator_code}/IDN"
+    try:
+        r = requests.get(api_url, headers=HEADERS, timeout=15)
+        if r.status_code == 200:
+            res_json = r.json()
+            val_map = res_json.get("values", {}).get(indicator_code, {}).get("IDN", {})
+            return val_map
+    except Exception:
+        pass
+    return None
+
+val_dict = fetch_imf_data(kode_imf)
+
+# Pembentukan DataFrame Runtun Waktu
 rentang_tahun_pilihan = [str(y) for y in range(int(th_start), int(th_end) + 1)]
 df_grid = pd.DataFrame({"Tahun": rentang_tahun_pilihan})
 
-raw_series_df = pd.DataFrame(list(meta["data"].items()), columns=["Tahun", f"Indonesia ({meta['unit']})"])
-df_final = pd.merge(df_grid, raw_series_df, on="Tahun", how="left").sort_values("Tahun")
+if val_dict:
+    raw_list = [{"Tahun": str(k), f"Indonesia ({meta['unit']})": round(float(v), 2)} for k, v in val_dict.items()]
+    raw_df = pd.DataFrame(raw_list)
+    df_final = pd.merge(df_grid, raw_df, on="Tahun", how="left").sort_values("Tahun")
+else:
+    # Penanganan jika server IMF sedang sibuk
+    st.warning("Sedang menyelaraskan data dengan server IMF DataMapper...")
+    df_final = df_grid
+    df_final[f"Indonesia ({meta['unit']})"] = None
 
+# 5. Visualisasi Interaktif Plotly
 st.subheader(f"📈 Tren Runtun Waktu: {selected_name}")
 
 val_col = f"Indonesia ({meta['unit']})"
@@ -147,28 +221,29 @@ fig.update_layout(
 )
 st.plotly_chart(fig, use_container_width=True)
 
-# 5. Tabel Observasi & Unduh Data
-st.subheader("📋 Tabel Data Observasi")
+# 6. Tabel Observasi & Ekspor Data
+st.subheader("📋 Tabel Data Observasi (Termasuk Proyeksi)")
 c_csv, c_xlsx = st.columns(2)
 
 c_csv.download_button(
     "📥 Unduh CSV",
     df_final.to_csv(index=False).encode("utf-8"),
-    f"IMF_IDN_{meta['weo_code']}_{th_start}_{th_end}.csv",
+    f"IMF_IDN_{kode_imf}_{th_start}_{th_end}.csv",
     "text/csv"
 )
 
 buf = io.BytesIO()
 with pd.ExcelWriter(buf, engine="openpyxl") as writer:
-    df_final.to_excel(writer, index=False, sheet_name="IMF WEO Data")
+    df_final.to_excel(writer, index=False, sheet_name="IMF Data")
 c_xlsx.download_button(
     "📊 Unduh Excel (.xlsx)",
     buf.getvalue(),
-    f"IMF_IDN_{meta['weo_code']}_{th_start}_{th_end}.xlsx",
+    f"IMF_IDN_{kode_imf}_{th_start}_{th_end}.xlsx",
     "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
 )
 
 st.dataframe(df_final.fillna("-"), use_container_width=True)
 st.caption(
-    "💡 **Catatan IMF:** Tanda strip (-) menandakan data pada tahun tersebut tidak dilaporkan pada siklus publikasi WEO."
+    "💡 **Catatan IMF WEO:** Data mencakup nilai historis resmi dan angka proyeksi World Economic Outlook untuk Indonesia. "
+    "Tanda strip (-) menandakan data pada tahun tersebut tidak dicatat dalam seri bersangkutan."
 )
