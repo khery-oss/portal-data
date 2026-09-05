@@ -162,12 +162,6 @@ def fetch_timeseries(
 ) -> tuple[pd.DataFrame, dict]:
     """
     Tarik data deret waktu dari endpoint model/data BPS.
-
-    Mengembalikan:
-      - df     : DataFrame pivot bersih (Tahun × Kategori)
-      - meta   : dict metadata mentah dari respons BPS
-
-    Nilai null/kosong dari datacontent dijaga sebagai NaN (tidak diestimasi).
     """
     th_param = build_th_param(tahun_awal, tahun_akhir)
     url = (
@@ -176,109 +170,68 @@ def fetch_timeseries(
     )
     raw = _get(url)
 
-    if str(raw.get("status", "")) not in ("0", 0):
-        msg = raw.get("message", raw.get("msg", str(raw)))
-        raise RuntimeError(f"BPS mengembalikan status error: {msg}")
+    # 1. Perbaikan Logika Pengecekan Status (Sesuai Standar BPS)
+    availability = raw.get("data-availability", "")
+    if availability not in ("available", "list-available"):
+        msg = raw.get("message", raw.get("msg", "Data tidak tersedia di database BPS untuk tahun tersebut."))
+        raise RuntimeError(f"{msg}")
 
-    # ── Ekstrak komponen struktural respons BPS ──
-    data_payload = raw.get("data", [])
-    if not data_payload or len(data_payload) < 2:
-        raise RuntimeError("Respons data BPS tidak mengandung payload yang diharapkan.")
+    # 2. Perbaikan Struktur Pembacaan JSON (Komponen ada di Root, bukan di dalam 'data')
+    datacontent = raw.get("datacontent", {})
+    if not datacontent:
+         raise RuntimeError("Respons API berhasil, namun tabel data (datacontent) kosong.")
 
-    # BPS mengembalikan data[0] sebagai dict metadata (vervar, tahun, turvar, dll.)
-    # dan data[1] sebagai dict datacontent (nilai flat dengan kode komposit).
-    # Namun struktur persis bisa bervariasi antar variabel.
-    # Kita telusuri list untuk menemukan metadata dan datacontent.
-
-    meta_block     = None
-    content_block  = None
-
-    for block in data_payload:
-        if isinstance(block, dict):
-            if "vervar" in block or "tahun" in block:
-                meta_block = block
-            if "datacontent" in block:
-                content_block = block
-
-    if meta_block is None or content_block is None:
-        # Fallback: asumsikan urutan klasik BPS [meta, content]
-        if len(data_payload) >= 2:
-            meta_block    = data_payload[0] if isinstance(data_payload[0], dict) else {}
-            content_block = data_payload[1] if isinstance(data_payload[1], dict) else {}
-        else:
-            raise RuntimeError("Struktur respons data BPS tidak dapat diparsing.")
-
-    vervar_list   = meta_block.get("vervar", [])    # daftar rincian/kategori
-    tahun_list    = meta_block.get("tahun", [])      # daftar tahun (dengan th_id)
-    datacontent   = content_block.get("datacontent", {})
+    vervar_list = raw.get("vervar", [])
+    tahun_list  = raw.get("tahun", [])
+    turvar_list = raw.get("turvar", [])
+    turtahun_list = raw.get("turtahun", [{"val": "0", "label": "Tahunan"}])
 
     if not tahun_list:
-        raise RuntimeError("BPS tidak mengembalikan daftar tahun pada rentang yang dipilih.")
+        raise RuntimeError("BPS tidak mengembalikan parameter tahun pada rentang yang diminta.")
 
-    # ── Bangun mapping ──
-    # vervar_map: {vervar_id_str: label}
-    vervar_map = {}
-    for v in vervar_list:
-        vid   = str(v.get("vervar_id", v.get("val", "")))
-        label = v.get("text", v.get("label", vid))
-        vervar_map[vid] = label
+    # 3. Iterasi Pola Kunci Komposit Dinamis BPS
+    records = []
+    
+    # Fallback/Dummy iterasi agar loop berjalan meskipun dimensi rincian kosong
+    v_iter = vervar_list if vervar_list else [{"val": "", "label": "Nasional"}]
+    t_iter = tahun_list if tahun_list else [{"val": "", "label": ""}]
+    tv_iter = turvar_list if turvar_list else [{"val": "", "label": ""}]
+    tth_iter = turtahun_list if turtahun_list else [{"val": "", "label": ""}]
 
-    # tahun_map: {th_id_str: tahun_masehi}
-    tahun_map = {}
-    for t in tahun_list:
-        tid        = str(t.get("th_id", t.get("val", "")))
-        tahun_masehi = th_to_tahun(int(tid)) if tid.lstrip("-").isdigit() else tid
-        tahun_map[tid] = tahun_masehi
-
-    # ── Parsing datacontent (format kode komposit BPS) ──
-    # Kode komposit umum: "{vervar_id}{turvar_id}{th_id}{period_id}"
-    # Namun panjang dan urutan segmen bervariasi. Strategi: kita iterasi
-    # semua kunci datacontent dan cocokkan dengan pola yang diketahui.
-
-    # Ambil turvar (periode) — biasanya "1" untuk tahunan
-    turvar_list = meta_block.get("turvar", [{"val": "1", "text": "Tahunan"}])
-    turvar_ids  = [str(tv.get("val", "1")) for tv in turvar_list]
-    default_turvar = turvar_ids[0] if turvar_ids else "1"
-
-    # Coba decode kunci datacontent
-    records = []  # [{tahun_masehi: ..., kategori: ..., nilai: ...}]
-
-    for composite_key, raw_val in datacontent.items():
-        # Coba semua kombinasi vervar × tahun × turvar untuk mencocokkan kunci
-        matched = False
-        for vid, vlabel in vervar_map.items():
-            for tid, tahun_masehi in tahun_map.items():
-                for tvid in turvar_ids:
-                    # Bentuk kunci komposit tipikal BPS
-                    # Format: vervar_id + turvar_id + th_id + "1" (sub-periode)
-                    for suffix in ["1", "0", ""]:
-                        candidate = f"{vid}{tvid}{tid}{suffix}"
-                        if composite_key == candidate:
-                            nilai = _parse_nilai(raw_val)
-                            records.append({
-                                "Tahun":     tahun_masehi,
-                                "Kategori":  vlabel,
-                                "Nilai":     nilai,
-                            })
-                            matched = True
-                            break
-                    if matched:
-                        break
-                if matched:
-                    break
+    for v in v_iter:
+        for tv in tv_iter:
+            for th in t_iter:
+                for tth in tth_iter:
+                    # Rumus kunci komposit (Composite Key) khas BPS: vervar + var_id + turvar + tahun + turtahun
+                    # Kita juga buat key cadangan (key2) jika BPS merotasi posisi var_id
+                    key1 = f"{v.get('val','')}{var_id}{tv.get('val','')}{th.get('val','')}{tth.get('val','')}"
+                    key2 = f"{var_id}{tv.get('val','')}{th.get('val','')}{tth.get('val','')}{v.get('val','')}"
+                    
+                    raw_val = datacontent.get(key1, datacontent.get(key2, None))
+                    
+                    # Ekstraksi dan Pembersihan
+                    if raw_val is not None:
+                        nilai = _parse_nilai(raw_val)
+                        
+                        # Ambil nama kategori dan bersihkan HTML tag <b> yang sering disisipkan BPS
+                        kategori_utama = v.get("label", "Nasional").replace("<b>", "").replace("</b>", "").strip()
+                        
+                        # Gabungkan dengan rincian (Contoh: "ACEH - Laki-laki")
+                        if tv.get("label"):
+                            kategori_utama = f"{kategori_utama} - {tv['label']}"
+                            
+                        records.append({
+                            "Tahun": int(th.get("label", 0)),
+                            "Kategori": kategori_utama,
+                            "Nilai": nilai,
+                        })
 
     if not records:
-        # Fallback ringan: jika parsing kunci komposit gagal total,
-        # sajikan datacontent mentah tanpa interpretasi agar tetap transparan.
-        raise RuntimeError(
-            "Tidak dapat mem-parsing kode komposit datacontent BPS untuk variabel ini. "
-            "Struktur kode mungkin berbeda dari pola umum. "
-            f"Contoh kunci pertama: {next(iter(datacontent), 'N/A')}"
-        )
+        raise RuntimeError("Data berhasil ditarik, namun pola kunci pemetaan matriks BPS tidak dikenali oleh sistem.")
 
     df_raw = pd.DataFrame(records)
 
-    # Pivot: baris = Tahun, kolom = Kategori
+    # 4. Pivot tabel untuk UI
     df_pivot = (
         df_raw
         .drop_duplicates(subset=["Tahun", "Kategori"])
