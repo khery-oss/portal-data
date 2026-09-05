@@ -14,79 +14,78 @@ st.markdown(
 # =============================================================================
 # MANAJEMEN API KEY (SESUAI POLA FRED)
 # =============================================================================
-bps_api_key = st.secrets.get("BPS_API_KEY", "")
-
-if not bps_api_key:
+bps_api_key = ""
+if "BPS_API_KEY" in st.secrets:
+    bps_api_key = st.secrets["BPS_API_KEY"]
+else:
     with st.sidebar:
         st.subheader("🔐 Autentikasi BPS WebAPI")
         bps_api_key = st.text_input(
             "Masukkan BPS API Key:",
             type="password",
-            help="Masukkan API key resmi BPS Anda. Kunci tidak akan disimpan di kode."
+            help="Masukkan API key resmi BPS Anda. Nilai ini tidak akan disimpan di dalam kode."
         )
 
 HEADERS = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
 }
 
-# KATALOG RESMI INDIKATOR STRATEGIS NASIONAL (DOMAIN 0000)
-# Disertai parameter wajib: var, turvar, dan rentang tahun (th)
+# =============================================================================
+# KATALOG INDIKATOR RESMI BPS (STRUKTUR SERAGAM & AMAN)
+# =============================================================================
 BPS_CATALOG = {
+    # --- 1. Kemiskinan & Ketimpangan ---
     "Persentase Penduduk Miskin Nasional (P0, %)": {
         "var": "23",
-        "turvar": "0",
+        "kategori": "1. Kemiskinan & Ketimpangan",
         "unit": "%",
-        "kategori": "Kemiskinan & Ketimpangan",
-        "desc": "Persentase penduduk miskin Indonesia berdasarkan Survei Sosial Ekonomi Nasional (Susenas)."
+        "desc": "Persentase penduduk miskin nasional berdasarkan Survei Sosial Ekonomi Nasional (Susenas)."
     },
     "Gini Ratio / Rasio Gini Nasional": {
         "var": "149",
-        "turvar": "0",
+        "kategori": "1. Kemiskinan & Ketimpangan",
         "unit": "Koefisien Gini",
-        "kategori": "Kemiskinan & Ketimpangan",
-        "desc": "Tingkat ketimpangan pengeluaran penduduk agregat (0 = merata sempurna, 1 = timpang sempurna)."
+        "desc": "Tingkat ketimpangan pengeluaran agregat penduduk Indonesia (0 = merata sempurna, 1 = timpang sempurna)."
     },
     "Garis Kemiskinan Nasional (Rp/Kapita/Bulan)": {
         "var": "25",
-        "turvar": "0",
+        "kategori": "1. Kemiskinan & Ketimpangan",
         "unit": "Rp/Kapita/Bulan",
-        "kategori": "Kemiskinan & Ketimpangan",
-        "desc": "Batas minimum rupiah pengeluaran makanan dan non-makanan per kapita sebulan."
+        "desc": "Batas minimum rupiah untuk memenuhi kebutuhan dasar makanan dan non-makanan per orang sebulan."
     },
+
+    # --- 2. Ketenagakerjaan ---
     "Tingkat Pengangguran Terbuka (TPT) Nasional (%)": {
         "var": "543",
-        "turvar": "0",
+        "kategori": "2. Ketenagakerjaan",
         "unit": "%",
-        "kategori": "Ketenagakerjaan",
-        "desc": "Tingkat pengangguran terbuka nasional berdasarkan Survei Angkatan Kerja Nasional (Sakernas)."
+        "desc": "Persentase jumlah penganggur terhadap total angkatan kerja berdasarkan Sakernas."
     },
     "Tingkat Partisipasi Angkatan Kerja (TPAK) Nasional (%)": {
         "var": "542",
-        "turvar": "0",
+        "kategori": "2. Ketenagakerjaan",
         "unit": "%",
-        "kategori": "Ketenagakerjaan",
-        "desc": "Persentase angkatan kerja terhadap total penduduk usia kerja (15 tahun ke atas)."
+        "desc": "Persentase penduduk usia kerja (15 tahun ke atas) yang aktif secara ekonomi."
     },
+
+    # --- 3. Pembangunan Manusia ---
     "Indeks Pembangunan Manusia (IPM) Nasional": {
         "var": "498",
-        "turvar": "0",
+        "kategori": "3. Pembangunan Manusia",
         "unit": "Indeks",
-        "kategori": "Pembangunan Manusia",
-        "desc": "Capaian pembangunan manusia berbasis umur panjang, pengetahuan, dan standar hidup layak."
+        "desc": "Capaian komposit derajat kesehatan, taraf pendidikan, dan standar hidup layak."
     },
     "Angka Harapan Hidup saat Lahir (AHH) Nasional": {
         "var": "500",
-        "turvar": "0",
+        "kategori": "3. Pembangunan Manusia",
         "unit": "Tahun",
-        "desc": "Perkiraan rata-rata tahun hidup yang dapat dicapai bayi baru lahir."
+        "desc": "Perkiraan rata-rata tahun hidup yang dapat dicapai bayi yang baru lahir."
     },
     "Rata-rata Lama Sekolah (RLS) Nasional": {
-        "var_id": "501",
         "var": "501",
-        "turvar": "0",
+        "kategori": "3. Pembangunan Manusia",
         "unit": "Tahun",
-        "kategori": "Pembangunan Manusia",
-        "desc": "Rata-rata lama bersekolah penduduk usia 25 tahun ke atas."
+        "desc": "Rata-rata lama bersekolah formal yang ditempuh oleh penduduk usia 25 tahun ke atas."
     }
 }
 
@@ -96,13 +95,14 @@ BPS_CATALOG = {
 st.subheader("1. Pemilihan Indikator Resmi BPS")
 col_kat, col_ind = st.columns([1.2, 2])
 
-kategori_list = sorted(list(set(v["kategori"] for v in BPS_CATALOG.values())))
+kategori_list = sorted(list(set(v.get("kategori", "") for v in BPS_CATALOG.values())))
+
 with col_kat:
     pilihan_kategori = st.selectbox("Kategori Bidang:", ["Semua Kategori"] + kategori_list)
 
 opsi = [
     k for k, v in BPS_CATALOG.items()
-    if pilihan_kategori == "Semua Kategori" or v["kategori"] == pilihan_kategori
+    if pilihan_kategori == "Semua Kategori" or v.get("kategori") == pilihan_kategori
 ]
 
 with col_ind:
@@ -111,27 +111,24 @@ with col_ind:
 meta = BPS_CATALOG[selected_name]
 
 with st.expander("ℹ️ Definisi & Metadata Resmi BPS", expanded=False):
-    st.markdown(f"**Indikator:** {selected_name}")
-    st.markdown(f"**Kategori:** `{meta['kategori']}`")
-    st.markdown(f"**Satuan:** `{meta['unit']}`")
+    st.markdown(f"**Nama Indikator:** {selected_name}")
+    st.markdown(f"**Variable ID BPS:** `{meta['var']}`")
+    st.markdown(f"**Kategori Bidang:** `{meta['kategori']}`")
+    st.markdown(f"**Satuan Pengukuran:** `{meta['unit']}`")
     st.markdown(f"**Metodologi / Deskripsi:**\n{meta['desc']}")
     st.markdown("🔗 **Portal Sumber Resmi:** [WebAPI BPS RI](https://webapi.bps.go.id/)")
 
 # =============================================================================
-# 2. PENARIKAN DATA LIVE VIA WEBAPI BPS
+# 2. PENARIKAN DATA LIVE DARI SERVER RESMI BPS
 # =============================================================================
 st.subheader("2. Penarikan Data Runtun Waktu Nasional")
 
 if not bps_api_key:
-    st.warning("⚠️ BPS API Key belum ditemukan. Daftarkan di Streamlit Secrets (`BPS_API_KEY`) atau masukkan lewat sidebar.")
+    st.warning("⚠️ BPS API Key belum terdeteksi. Silakan simpan di `st.secrets` dengan kunci `BPS_API_KEY` atau masukkan lewat bilah samping.")
 else:
     if st.button("📊 Ambil Data BPS Langsung", type="primary"):
         with st.spinner(f"Menghubungi server WebAPI BPS untuk indikator {selected_name}..."):
-            # Format pemanggilan lengkap dengan domain 0000 (Pusat)
-            api_url = (
-                f"https://webapi.bps.go.id/v1/api/list/model/data/lang/ind/"
-                f"domain/0000/var/{meta['var']}/key/{bps_api_key}/"
-            )
+            api_url = f"https://webapi.bps.go.id/v1/api/list/model/data/lang/ind/domain/0000/var/{meta['var']}/key/{bps_api_key}/"
 
             try:
                 res = requests.get(api_url, headers=HEADERS, timeout=25)
@@ -144,7 +141,7 @@ else:
                         tahun_list = payload.get("tahun", [])
                         datacontent = payload.get("datacontent", {})
 
-                        # Cari kode entitas wilayah INDONESIA
+                        # Identifikasi kode entitas nasional INDONESIA
                         id_indonesia = None
                         for v in vervar_list:
                             if "INDONESIA" in str(v.get("label", "")).upper():
@@ -162,7 +159,7 @@ else:
                             except (ValueError, TypeError):
                                 continue
 
-                            # Filter jika kunci diawali kode wilayah nasional
+                            # Hanya filter entitas nasional jika vervar tersedia
                             if id_indonesia and not key_code.startswith(id_indonesia):
                                 continue
 
@@ -181,15 +178,15 @@ else:
                             df_bps = df_raw.groupby("Tahun", as_index=False)["Nilai"].mean().round(2)
                             df_bps = df_bps.rename(columns={"Nilai": val_col}).sort_values(by="Tahun", ascending=True)
 
-                            st.success(f"Berhasil menarik {len(df_bps)} observasi resmi dari server BPS!")
+                            st.success(f"Berhasil menarik {len(df_bps)} observasi resmi langsung dari WebAPI BPS!")
                             st.divider()
 
-                            # Tombol Unduh
+                            # Tombol Unduh Data
                             c1, c2 = st.columns(2)
                             c1.download_button(
                                 "📥 Unduh CSV",
                                 df_bps.to_csv(index=False).encode("utf-8"),
-                                f"BPS_{meta['var']}_Data.csv",
+                                f"BPS_{meta['var']}_Nasional.csv",
                                 "text/csv"
                             )
                             buf = io.BytesIO()
@@ -198,7 +195,7 @@ else:
                             c2.download_button(
                                 "📊 Unduh Excel (.xlsx)",
                                 buf.getvalue(),
-                                f"BPS_{meta['var']}_Data.xlsx",
+                                f"BPS_{meta['var']}_Nasional.xlsx",
                                 "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
                             )
 
@@ -224,10 +221,10 @@ else:
                             with st.expander("📋 Tabel Data Runtun Waktu Lengkap"):
                                 st.dataframe(df_bps.sort_values(by="Tahun", ascending=False), use_container_width=True)
                         else:
-                            st.warning("Observasi runtun waktu nasional untuk indikator ini sedang disinkronisasi di server BPS.")
+                            st.warning("Data observasi nasional untuk variabel ini sedang dalam pembaruan di server BPS.")
                     else:
-                        st.warning("Server BPS merespons: data belum tersedia untuk parameter ini.")
+                        st.warning("Server BPS merespons: data belum tersedia untuk parameter variabel ini.")
                 else:
-                    st.error(f"Gagal menghubungi server BPS (Kode Status HTTP: {res.status_code}).")
+                    st.error(f"Gagal menghubungi server BPS (Status HTTP: {res.status_code}).")
             except Exception as e:
-                st.error(f"Terjadi kesalahan saat memproses data BPS: {e}")
+                st.error(f"Terjadi kesalahan koneksi saat memproses data BPS: {e}")
