@@ -94,7 +94,7 @@ st.success(f"Ditemukan **{len(seri_list)}** seri data Indonesia di FRED.")
 st.subheader("2. Pilih Seri Data")
 
 fred_options = {
-    f"{s['title']} | Frekuensi: {s.get('frequency', '-')} | Satuan: {s.get('units_short', '-')} | ({s['id']})": s
+    f"{s['title']} | Frekuensi: {s.get('frequency', '-')} | Satuan: {s.get('units_short', '-')}": s
     for s in seri_list
 }
 
@@ -217,7 +217,7 @@ if st.button("📊 Ambil Data FRED", type="primary"):
                 hovertemplate=f"%{{x|%d %b %Y}}<br>Nilai: %{{y:,.4f}} {satuan}<extra></extra>"
             ))
             fig.update_layout(
-                xaxis=dict(title="Tanggal", rangeslider=dict(visible=True), type="date"),
+                xaxis=dict(title="Tanggal", type="date"),
                 yaxis=dict(title=satuan),
                 hovermode="x unified",
                 margin=dict(l=20, r=20, t=30, b=20)
