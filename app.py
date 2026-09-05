@@ -1,4 +1,5 @@
 import streamlit as st
+import requests
 
 st.set_page_config(
     page_title="Indonesia Socio-Economic Data Hub",
@@ -58,4 +59,65 @@ st.markdown("""
 * **Format Terbuka:** Seluruh hasil penarikan data dapat diunduh langsung dalam format CSV dan Excel (`.xlsx`).
 """)
 
-st.info("Pilih modul di bilah navigasi sebelah kiri untuk memulai eksplorasi data.")
+st.info("💡 Pilih modul di bilah navigasi sebelah kiri untuk memulai eksplorasi data.")
+
+st.divider()
+
+# =============================================================================
+# KOTAK SARAN & PERMINTAAN DATA (LANGSUNG KE EMAIL)
+# =============================================================================
+st.subheader("📬 Kotak Saran & Permintaan Data Baru")
+st.markdown(
+    "Punya masukan, kritik, atau butuh indikator ekonomi/sosial lain yang ingin ditambahkan ke dashboard? "
+    "Kirimkan pesanmu langsung ke tim pengembang melalui formulir di bawah ini."
+)
+
+# GANTI DENGAN EMAIL KAMU DI SINI:
+TARGET_EMAIL = "indoecon.project@gmail.com"
+
+with st.form("feedback_form", clear_on_submit=True):
+    col_f1, col_f2 = st.columns(2)
+    with col_f1:
+        nama_pengirim = st.text_input("Nama Lengkap / Instansi*", placeholder="Contoh: Budi Santoso (Universitas Indonesia)")
+    with col_f2:
+        email_pengirim = st.text_input("Email Kamu*", placeholder="nama@email.com")
+        
+    tipe_pesan = st.selectbox(
+        "Kategori Pesan:",
+        ["Permintaan Indikator / Dataset Baru", "Laporan Masalah / Bug", "Kritik & Saran", "Lainnya"]
+    )
+    
+    isi_pesan = st.textarea(
+        "Pesan / Detail Permintaan Data*",
+        placeholder="Tuliskan nama indikator, sumber lembaga (misal BI, OJK, Kemendag), atau masukan perbaikan yang kamu harapkan...",
+        height=120
+    )
+    
+    submitted = st.form_submit_button("📩 Kirim ke Pengembang", type="primary")
+
+    if submitted:
+        if not nama_pengirim.strip() or not email_pengirim.strip() or not isi_pesan.strip():
+            st.error("Mohon lengkapi Nama, Email, dan Isi Pesan sebelum mengirim.")
+        elif "@" not in email_pengirim or "." not in email_pengirim:
+            st.error("Format email tidak valid. Mohon periksa kembali.")
+        else:
+            with st.spinner("Mengirimkan pesan ke email pengembang..."):
+                endpoint = f"https://formsubmit.co/{TARGET_EMAIL}"
+                payload = {
+                    "name": nama_pengirim,
+                    "email": email_pengirim,
+                    "category": tipe_pesan,
+                    "message": isi_pesan,
+                    "_subject": f"[{tipe_pesan}] Pesan Baru dari IndoEcon Explorer",
+                    "_captcha": "false"  # Matikan captcha agar mulus via Streamlit
+                }
+                headers = {"User-Agent": "Mozilla/5.0"}
+                
+                try:
+                    res = requests.post(endpoint, data=payload, headers=headers, timeout=15)
+                    if res.status_code in [200, 302]:
+                        st.success("🎉 Terima kasih! Masukan/permintaan data kamu telah berhasil dikirimkan ke email pengembang.")
+                    else:
+                        st.error(f"Gagal mengirim pesan (Kode status: {res.status_code}). Silakan coba lagi.")
+                except Exception as e:
+                    st.error(f"Terjadi kesalahan saat menghubungkan ke layanan pengiriman: {e}")
