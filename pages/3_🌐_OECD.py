@@ -8,62 +8,60 @@ st.set_page_config(page_title="OECD Data Explorer - Indonesia", layout="wide")
 
 st.title("🌐 OECD (Organisation for Economic Co-operation and Development)")
 st.write(
-    "Eksplorasi indikator ekonomi utama Indonesia dari **OECD Data API** "
-    "yang ditarik secara **100% langsung (*real-time live API*)** dari server resmi OECD."
+    "Eksplorasi indikator resmi Indonesia dari **OECD Data Explorer API** "
+    "yang ditarik secara langsung (*100% real-time live API*) tanpa data hardcoded."
 )
 
 HEADERS = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-    "Accept": "application/vnd.sdmx.data+json;version=1.0.0-wd"
+    "Accept": "application/vnd.sdmx.data+json;version=2.0.0"
 }
 
-# KATALOG DATAFLOW RESMI OECD UNTUK INDONESIA (KEY PARTNER: IDN)
+# KATALOG RESMI OECD DATA EXPLORER (ENDPOINT SDMX BARU)
 OECD_INDICATORS = {
-    "Consumer Price Index (CPI Inflation, % Change YoY)": {
-        "dataset": "PRICES_CPI",
-        "query": "IDN.CPALTT01.GY.A",
+    "Consumer Price Index (CPI All Items, YoY % Change)": {
+        "agency": "OECD.SDD.TPS",
+        "dataflow": "DF_DP_LIVE",
+        "key": "IDN.CPI.TOT.AG.A",
         "unit": "%",
         "kategori": "Inflasi & Harga",
-        "desc": "Tingkat inflasi tahunan (Indeks Harga Konsumen seluruh item) untuk Indonesia."
+        "desc": "Tingkat inflasi Indeks Harga Konsumen (IHK) tahunan resmi Indonesia dari OECD Data Explorer."
     },
-    "Core Inflation (CPI excluding Food and Energy, % YoY)": {
-        "dataset": "PRICES_CPI",
-        "query": "IDN.CPGRLE01.GY.A",
+    "Food Consumer Price Index (Food CPI, YoY % Change)": {
+        "agency": "OECD.SDD.TPS",
+        "dataflow": "DF_DP_LIVE",
+        "key": "IDN.CPI.FOOD.AG.A",
         "unit": "%",
         "kategori": "Inflasi & Harga",
-        "desc": "Inflasi inti yang mengecualikan komponen bergejolak seperti makanan dan energi."
+        "desc": "Perubahan harga tahunan untuk kelompok pengeluaran bahan makanan."
     },
     "Composite Leading Indicator (CLI, Normalised = 100)": {
-        "dataset": "MEI_CLI",
-        "query": "LOLITOAA.IDN.M",
-        "unit": "Indeks (100 = Tren Jangka Panjang)",
-        "kategori": "Siklus Bisnis & Aktivitas Ekonomi",
-        "desc": "Indikator komposit untuk mendeteksi titik balik siklus bisnis ekonomi Indonesia 6-9 bulan ke depan."
-    },
-    "Long-Term Government Bond Yields (10-Year, %)": {
-        "dataset": "MEI_FIN",
-        "query": "IRLTLT01.IDN.M",
-        "unit": "%",
-        "kategori": "Sektor Keuangan & Moneter",
-        "desc": "Imbal hasil (yield) obligasi pemerintah Indonesia tenor 10 tahun (Surat Berharga Negara)."
+        "agency": "OECD.SDD.STES",
+        "dataflow": "DF_CLI",
+        "key": "IDN.M.LI...AA...H",
+        "unit": "Index (100 = Long-term Trend)",
+        "kategori": "Aktivitas Ekonomi & Siklus Bisnis",
+        "desc": "Indikator komposit untuk memproyeksikan titik belok siklus ekonomi Indonesia 6-9 bulan ke depan."
     },
     "Short-Term Interest Rates (Money Market Rate, %)": {
-        "dataset": "MEI_FIN",
-        "query": "IR3TIB01.IDN.M",
+        "agency": "OECD.DAF",
+        "dataflow": "DF_FIN_MARKETS",
+        "key": "IDN.IR3TIB.M",
         "unit": "%",
-        "kategori": "Sektor Keuangan & Moneter",
-        "desc": "Suku bunga pasar uang antar bank jangka pendek 3 bulan."
+        "kategori": "Sektor Moneter & Keuangan",
+        "desc": "Suku bunga pasar uang antarbank jangka pendek 3 bulan untuk Indonesia."
     },
-    "Real GDP Growth (Quarterly / Annual Forecast, %)": {
-        "dataset": "EO",
-        "query": "IDN.GDPV_ANPPO.A",
+    "Long-Term Interest Rates (10-Year Government Bonds, %)": {
+        "agency": "OECD.DAF",
+        "dataflow": "DF_FIN_MARKETS",
+        "key": "IDN.IRLTLT.M",
         "unit": "%",
-        "kategori": "Pertumbuhan Ekonomi & Output",
-        "desc": "Pertumbuhan tahunan Produk Domestik Bruto riil Indonesia versi proyeksi resmi OECD Economic Outlook."
+        "kategori": "Sektor Moneter & Keuangan",
+        "desc": "Imbal hasil (yield) obligasi pemerintah acuan tenor 10 tahun (Surat Berharga Negara)."
     }
 }
 
-# 1. Kontrol Pemilihan Indikator
+# 1. Pemilihan Indikator
 st.subheader("1. Pemilihan Indikator Resmi OECD")
 col_kat, col_ind = st.columns([1.2, 2])
 
@@ -71,95 +69,115 @@ kategori_list = sorted(list(set(v["kategori"] for v in OECD_INDICATORS.values())
 with col_kat:
     pilihan_kategori = st.selectbox("Kategori Bidang:", ["Semua Kategori"] + kategori_list)
 
-opsi_indikator = [
+opsi = [
     k for k, v in OECD_INDICATORS.items()
     if pilihan_kategori == "Semua Kategori" or v["kategori"] == pilihan_kategori
 ]
 
 with col_ind:
-    selected_name = st.selectbox("Nama Indikator:", opsi_indikator)
+    selected_name = st.selectbox("Nama Indikator:", opsi)
 
 meta = OECD_INDICATORS[selected_name]
 
 with st.expander("ℹ️ Definisi & Metadata Resmi OECD", expanded=False):
     st.markdown(f"**Nama Seri:** {selected_name}")
-    st.markdown(f"**OECD Dataflow:** `{meta['dataset']}`")
-    st.markdown(f"**Query Parameter:** `{meta['query']}`")
-    st.markdown(f"**Satuan Pengukuran:** `{meta['unit']}`")
-    st.markdown(f"**Metodologi / Deskripsi:**\n{meta['desc']}")
-    st.markdown("🔗 **Basis Data:** [OECD Data Explorer Portal](https://data-explorer.oecd.org/)")
+    st.markdown(f"**Dataflow Agency:** `{meta['agency']}`")
+    st.markdown(f"**Dataflow ID:** `{meta['dataflow']}`")
+    st.markdown(f"**Series Key:** `{meta['key']}`")
+    st.markdown(f"**Satuan:** `{meta['unit']}`")
+    st.markdown(f"**Deskripsi:**\n{meta['desc']}")
+    st.markdown("🔗 **Portal Sumber:** [OECD Data Explorer Platform](https://data-explorer.oecd.org/)")
 
-# 2. Penarikan Data Live via SDMX-JSON API Resmi OECD
+# 2. Penarikan Data Live (SDMX v2 Endpoint Baru)
 st.subheader("2. Penarikan Data Runtun Waktu")
 
 if st.button("📊 Ambil Data OECD Indonesia", type="primary"):
-    with st.spinner(f"Menghubungi endpoint resmi OECD Paris untuk {selected_name}..."):
-        api_url = f"https://stats.oecd.org/SDMX-JSON/data/{meta['dataset']}/{meta['query']}/all?contentType=csv"
+    with st.spinner(f"Menghubungi server resmi OECD Data Explorer untuk {selected_name}..."):
+        # Endpoint SDMX REST API resmi terbaru milik OECD
+        api_url = f"https://sdmx.oecd.org/public/rest/data/{meta['agency']},{meta['dataflow']},1.0/{meta['key']}?format=jsondata"
         
         try:
-            # Mengambil data langsung dari endpoint CSV streaming OECD
-            r = requests.get(api_url, headers=HEADERS, timeout=25)
+            # Timeout ketat 10 detik agar tidak pernah membuat browser freeze
+            res = requests.get(api_url, headers=HEADERS, timeout=10)
+            records = []
             
-            if r.status_code == 200 and len(r.text.strip()) > 0:
-                raw_df = pd.read_csv(io.StringIO(r.text))
+            if res.status_code == 200:
+                data_json = res.json()
+                data_sets = data_json.get("data", {}).get("dataSets", [])
+                structure = data_json.get("data", {}).get("structure", {})
                 
-                # Standarisasi nama kolom dari respons resmi OECD
-                time_col = next((col for col in ["TIME_PERIOD", "Time", "Period"] if col in raw_df.columns), None)
-                val_col_raw = next((col for col in ["OBS_VALUE", "Value"] if col in raw_df.columns), None)
+                # Temukan dimensi waktu
+                time_periods = []
+                obs_dimensions = structure.get("dimensions", {}).get("observation", [])
+                for dim in obs_dimensions:
+                    if dim.get("id") in ["TIME_PERIOD", "TIME"]:
+                        time_periods = [v.get("id") for v in dim.get("values", [])]
+                        break
                 
-                if time_col and val_col_raw:
-                    df_oecd = raw_df[[time_col, val_col_raw]].dropna().rename(
-                        columns={time_col: "Waktu", val_col_raw: f"Indonesia ({meta['unit']})"}
-                    )
-                    df_oecd = df_oecd.sort_values(by="Waktu", ascending=True)
-                    val_col = f"Indonesia ({meta['unit']})"
+                # Parsing pasangan waktu dan nilai
+                if data_sets and time_periods:
+                    series_dict = data_sets[0].get("series", {})
+                    for _, s_val in series_dict.items():
+                        obs = s_val.get("observations", {})
+                        for t_idx_str, val_list in obs.items():
+                            try:
+                                t_idx = int(t_idx_str)
+                                if t_idx < len(time_periods) and val_list:
+                                    records.append({
+                                        "Periode": str(time_periods[t_idx]),
+                                        f"Nilai ({meta['unit']})": round(float(val_list[0]), 2)
+                                    })
+                            except (ValueError, TypeError, IndexError):
+                                continue
 
-                    st.success(f"Berhasil menarik {len(df_oecd)} data observasi langsung dari server OECD!")
-                    
-                    st.divider()
-                    st.markdown("🔗 **Tautan Resmi:** [OECD Data Explorer](https://data-explorer.oecd.org/)")
+            if records:
+                df_oecd = pd.DataFrame(records).drop_duplicates(subset=["Periode"]).sort_values(by="Periode", ascending=True)
+                val_col = f"Nilai ({meta['unit']})"
 
-                    # Tombol Unduh
-                    c1, c2 = st.columns(2)
-                    c1.download_button(
-                        "📥 Unduh CSV",
-                        df_oecd.to_csv(index=False).encode("utf-8"),
-                        f"OECD_{meta['dataset']}_IDN.csv",
-                        "text/csv"
-                    )
-                    buf = io.BytesIO()
-                    with pd.ExcelWriter(buf, engine="openpyxl") as writer:
-                        df_oecd.to_excel(writer, index=False, sheet_name="OECD Data")
-                    c2.download_button(
-                        "📊 Unduh Excel (.xlsx)",
-                        buf.getvalue(),
-                        f"OECD_{meta['dataset']}_IDN.xlsx",
-                        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-                    )
+                st.success(f"Berhasil menarik {len(df_oecd)} observasi data langsung dari OECD Data Explorer!")
+                st.divider()
 
-                    # Visualisasi Plotly
-                    fig = go.Figure()
-                    fig.add_trace(go.Scatter(
-                        x=df_oecd["Waktu"],
-                        y=df_oecd[val_col],
-                        mode="lines+markers",
-                        name="Indonesia (OECD)",
-                        line=dict(width=2.5, color="#002D62"),
-                        hovertemplate=f"Periode %{{x}}<br>Nilai: %{{y}} {meta['unit']}<extra></extra>"
-                    ))
-                    fig.update_layout(
-                        xaxis=dict(title="Periode Observasi"),
-                        yaxis=dict(title=meta["unit"]),
-                        hovermode="x unified",
-                        margin=dict(l=20, r=20, t=40, b=20)
-                    )
-                    st.plotly_chart(fig, use_container_width=True)
+                # Tombol Download Data
+                c1, c2 = st.columns(2)
+                c1.download_button(
+                    "📥 Unduh CSV",
+                    df_oecd.to_csv(index=False).encode("utf-8"),
+                    f"OECD_{meta['dataflow']}_IDN.csv",
+                    "text/csv"
+                )
+                buf = io.BytesIO()
+                with pd.ExcelWriter(buf, engine="openpyxl") as writer:
+                    df_oecd.to_excel(writer, index=False, sheet_name="OECD Data")
+                c2.download_button(
+                    "📊 Unduh Excel (.xlsx)",
+                    buf.getvalue(),
+                    f"OECD_{meta['dataflow']}_IDN.xlsx",
+                    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                )
 
-                    with st.expander("📋 Tabel Data Runtun Waktu Lengkap"):
-                        st.dataframe(df_oecd.sort_values(by="Waktu", ascending=False), use_container_width=True)
-                else:
-                    st.warning("Struktur data dari OECD tidak memiliki kolom waktu/nilai yang valid.")
+                # Plotly Visualisasi
+                fig = go.Figure()
+                fig.add_trace(go.Scatter(
+                    x=df_oecd["Periode"],
+                    y=df_oecd[val_col],
+                    mode="lines+markers",
+                    name="Indonesia (OECD)",
+                    line=dict(width=2.5, color="#002D62"),
+                    hovertemplate=f"Periode %{{x}}<br>Nilai: %{{y}} {meta['unit']}<extra></extra>"
+                ))
+                fig.update_layout(
+                    xaxis=dict(title="Periode Observasi"),
+                    yaxis=dict(title=meta["unit"]),
+                    hovermode="x unified",
+                    margin=dict(l=20, r=20, t=40, b=20)
+                )
+                st.plotly_chart(fig, use_container_width=True)
+
+                with st.expander("📋 Tabel Runtun Waktu Lengkap"):
+                    st.dataframe(df_oecd.sort_values(by="Periode", ascending=False), use_container_width=True)
             else:
-                st.warning("Data untuk seri ini sedang dalam pembaruan berkala di server OECD.")
+                st.warning("Observasi runtun waktu untuk seri ini sedang dalam sinkronisasi berkala di server OECD.")
+        except requests.exceptions.Timeout:
+            st.error("Waktu koneksi ke server OECD habis (Timeout). Server OECD sedang sibuk, silakan coba beberapa saat lagi.")
         except Exception as e:
-            st.error(f"Gagal terhubung ke endpoint resmi OECD: {e}")
+            st.error(f"Gagal mengambil data dari server OECD: {e}")
