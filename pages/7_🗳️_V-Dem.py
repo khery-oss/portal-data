@@ -12,12 +12,11 @@ st.markdown(
 )
 
 # =============================================================================
-# 1. MEMUAT DATASET V-DEM SECARA EFISIEN (KHUSUS INDONESIA)
+# 1. MEMUAT DATASET V-DEM & CODEBOOK
 # =============================================================================
 @st.cache_data(show_spinner=True)
-def load_and_filter_vdem():
+def load_vdem_data():
     try:
-        # Membaca file khusus Indonesia yang sudah dipotong ukurannya
         df_idn = pd.read_csv("vdem_data_IDN.csv", low_memory=False)
         return df_idn
     except Exception as e:
@@ -28,18 +27,25 @@ def load_and_filter_vdem():
 def load_codebook():
     try:
         df_cb = pd.read_csv("vdem_codebook.csv")
-        # Membersihkan spasi di nama kolom jika ada
         df_cb.columns = df_cb.columns.str.strip().str.lower()
         return df_cb
     except Exception:
         return None
 
-df_codebook = load_codebook()
+with st.spinner("Memuat basis data V-Dem dan menyelaraskan dengan Codebook..."):
+    df_idn = load_vdem_data()
+    df_codebook = load_codebook()
+
+if df_idn is None or df_idn.empty:
+    st.error(
+        "⚠️ File dataset V-Dem (`vdem_data_IDN.csv`) tidak ditemukan atau data Indonesia tidak terdeteksi.\n\n"
+        "Pastikan file tersebut sudah diunggah ke root folder repository GitHub kamu."
+    )
+    st.stop()
 
 # Buat kamus penjelasan dari Codebook secara fleksibel
 codebook_dict = {}
 if df_codebook is not None:
-    # Cari nama kolom secara otomatis
     col_var = next((c for c in df_codebook.columns if 'var' in c), None)
     col_desc = next((c for c in df_codebook.columns if 'desc' in c or 'def' in c), None)
     
@@ -47,22 +53,32 @@ if df_codebook is not None:
         for _, row in df_codebook.iterrows():
             codebook_dict[str(row[col_var]).strip()] = str(row[col_desc]).strip()
 
-with st.spinner("Memuat dan memfilter basis data V-Dem khusus untuk wilayah Indonesia..."):
-    df_idn = load_and_filter_vdem()
-    df_codebook = load_codebook()
-
-if df_idn is None or df_idn.empty:
-    st.error(
-        "⚠️ File dataset V-Dem (`vdem_data.csv`) tidak ditemukan atau data Indonesia tidak terdeteksi.\n\n"
-        "**Pastikan:**\n"
-        "1. File `vdem_data.csv` sudah diunggah ke root folder repository GitHub kamu.\n"
-        "2. Format kolom negara menggunakan kode standar `IDN` atau nama `Indonesia`."
-    )
-    st.stop()
-
 # =============================================================================
-# 2. SINKRONISASI INDIKATOR DENGAN CODEBOOK
+# 2. PEMILIHAN MODEPILIHAN INDIKATOR (UTAMA vs PENCARIAN BEBAS)
 # =============================================================================
+st.subheader("1. Pemilihan Indikator V-Dem & Sinkronisasi Codebook")
+
+# Daftar Indikator Utama / Kurasi Pilihan Peneliti
+CURATED_VDEM = {
+    "Indeks Demokrasi Liberal (Liberal Democracy Index)": "v2x_libdem",
+    "Indeks Demokrasi Elektoral (Electoral Democracy Index)": "v2x_polyarchy",
+    "Indeks Demokrasi Partisipatif (Participatory Democracy Index)": "v2x_partipdem",
+    "Indeks Demokrasi Deliberatif (Deliberative Democracy Index)": "v2x_delibdem",
+    "Indeks Demokrasi Egaliter (Egalitarian Democracy Index)": "v2x_egaldem",
+    "Indeks Korupsi Publik (Public Sector Corruption Index)": "v2excrptps",
+    "Indeks Korupsi Eksekutif (Executive Corruption Index)": "v2exorrpt",
+    "Indeks Kebebasan Pers & Alternatif Informasi (Freedom of Expression)": "v2x_freexp",
+    "Indeks Kebebasan Berorganisasi (Freedom of Association)": "v2x_frassoc_thick",
+    "Indeks Supremasi Hukum (Rule of Law Index)": "v2x_rule",
+    "Indeks Akuntabilitas Publik Vertikal (Vertical Accountability)": "v2x_veracc"
+}
+
+mode_pilihan = st.radio(
+    "Pilih Metode Pencarian Indikator:",
+    ["⭐ Indikator Utama (Kurasi Cepat)", "🔍 Eksplorasi Penuh (Semua Variabel Database)"],
+    horizontal=True
+)
+
 exclude_cols = [
     "country_name", "country_text_id", "country_id", "year", "historical_date", 
     "project", "historical", "histname", "codingstart", "codingend", "COWcode",
@@ -70,40 +86,33 @@ exclude_cols = [
     "gapstart1", "gapstart2", "gapstart3", "gapend1", "gapend2", "gapend3", "gap_index"
 ]
 
-available_indicators = [
-    c for c in df_idn.columns 
-    if c not in exclude_cols and pd.api.types.is_numeric_dtype(df_idn[c])
-]
+if mode_pilihan == "⭐ Indikator Utama (Kurasi Cepat)":
+    # Hanya tampilkan indikator utama yang tersedia di dataframe
+    valid_curated = {k: v for k, v in CURATED_VDEM.items() if v in df_idn.columns}
+    if not valid_curated:
+        valid_curated = CURATED_VDEM # Fallback jika nama kolom berbeda tipis
+    
+    selected_name = st.selectbox("Pilih Indikator Utama V-Dem:", list(valid_curated.keys()))
+    selected_indicator = valid_curated[selected_name]
+else:
+    available_indicators = [
+        c for c in df_idn.columns 
+        if c not in exclude_cols and pd.api.types.is_numeric_dtype(df_idn[c])
+    ]
+    search_term = st.text_input("🔍 Cari Indikator Bebas (ketik kata kunci, misal: libdem, corruption, freedom, rule):", "")
+    filtered_indicators = [
+        ind for ind in available_indicators
+        if not search_term.strip() or search_term.lower() in ind.lower() or search_term.lower() in codebook_dict.get(ind, "").lower()
+    ]
+    if not filtered_indicators:
+        st.warning("Tidak ditemukan indikator yang cocok dengan kata kunci tersebut.")
+        st.stop()
+    selected_indicator = st.selectbox(f"Pilih dari {len(filtered_indicators)} Indikator Tersedia:", filtered_indicators)
 
-# Buat kamus penjelasan dari Codebook
-codebook_dict = {}
-if df_codebook is not None and "variable" in df_codebook.columns and "description" in df_codebook.columns:
-    for _, row in df_codebook.iterrows():
-        codebook_dict[str(row["variable"]).strip()] = str(row["description"]).strip()
-
-st.subheader("1. Pemilihan Indikator & Sinkronisasi Codebook")
-st.caption(f"Tersedia {len(available_indicators)} variabel indikator V-Dem lengkap untuk Indonesia.")
-
-search_term = st.text_input("🔍 Cari Indikator V-Dem (ketik kata kunci, misal: libdem, corruption, freedom, rule, suffrage):", "")
-
-filtered_indicators = [
-    ind for ind in available_indicators
-    if not search_term.strip() or search_term.lower() in ind.lower() or search_term.lower() in codebook_dict.get(ind, "").lower()
-]
-
-if not filtered_indicators:
-    st.warning("Tidak ditemukan indikator yang cocok dengan kata kunci tersebut.")
-    st.stop()
-
-selected_indicator = st.selectbox(
-    f"Pilih dari {len(filtered_indicators)} Indikator Tersedia:",
-    filtered_indicators
-)
-
-# Ambil deskripsi dari codebook
+# Ambil deskripsi dari codebook (jika tidak ada di codebook, coba cari otomatis atau tampilkan keterangan default)
 indicator_description = codebook_dict.get(
     selected_indicator, 
-    "Definisi rinci untuk variabel ini dapat merujuk langsung pada dokumen resmi Codebook V-Dem Institute."
+    codebook_dict.get(selected_indicator.lower(), "Definisi rinci untuk variabel ini dapat merujuk langsung pada dokumen resmi Codebook V-Dem Institute.")
 )
 
 with st.expander("📖 Penjelasan & Metadata dari Codebook V-Dem", expanded=True):
