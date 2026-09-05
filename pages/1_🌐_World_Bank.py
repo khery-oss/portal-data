@@ -12,7 +12,6 @@ HEADERS = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/
 @st.cache_data(ttl=86400)
 def load_wb_indicators():
     indicators = []
-    # Memuat seluruh katalog World Bank secara penuh tanpa batasan
     url = "https://api.worldbank.org/v2/indicator?format=json&per_page=5000"
     try:
         res = requests.get(url, headers=HEADERS, timeout=25)
@@ -21,7 +20,6 @@ def load_wb_indicators():
             for item in data[1]:
                 ind_id = item.get("id")
                 ind_name = item.get("name")
-                # Menyaring format lama berkode angka di depan agar tetap bersih
                 if ind_id and ind_name and not ind_id.startswith("6.") and not ind_id.startswith("7."):
                     indicators.append({
                         "id": ind_id,
@@ -36,20 +34,25 @@ def load_wb_indicators():
 all_wb_indicators = load_wb_indicators()
 
 query_wb = st.text_input(
-    "🔍 Cari indikator World Bank (misal: 'GDP', 'Inflation', 'Poverty', 'Education', 'CO2'):",
-    value="GDP growth"
+    "🔍 Cari indikator World Bank (misal: 'GDP growth', 'Inflation', 'Poverty rate', 'Education'):",
+    value="gdp growth"
 ).strip()
 
 if query_wb and all_wb_indicators:
-    results_wb = [
-        ind for ind in all_wb_indicators
-        if query_wb.lower() in ind["name"].lower() or query_wb.lower() in ind["id"].lower()
-    ]
+    # Pencarian pintar multi-kata: memecah input spasi menjadi token terpisah
+    query_tokens = query_wb.lower().split()
+    results_wb = []
+    for ind in all_wb_indicators:
+        name_lower = ind["name"].lower()
+        id_lower = ind["id"].lower()
+        # Indikator lolos jika semua kata kunci yang diketik ada di dalam nama atau ID
+        if all(token in name_lower or token in id_lower for token in query_tokens):
+            results_wb.append(ind)
 
     if results_wb:
         st.success(f"Ditemukan {len(results_wb)} indikator pada katalog World Bank!")
         
-        # Tampilan dropdown bersih hanya nama indikator, dengan kode di belakang layar
+        # Tampilan dropdown bersih hanya nama indikator, kode disimpan di belakang layar
         options_wb = {ind['name']: ind for ind in results_wb}
         selected_wb_label = st.selectbox("Pilih Indikator:", list(options_wb.keys()))
         selected_wb = options_wb[selected_wb_label]
@@ -123,10 +126,10 @@ if query_wb and all_wb_indicators:
                         with st.expander("📋 Tabel Data Lengkap"):
                             st.dataframe(df_wb.sort_values(by="Tahun", ascending=False), use_container_width=True)
                     else:
-                        st.warning(f"Indikator ini terdaftar, tetapi observasi data runtun waktu untuk Indonesia tidak tersedia pada seri ini. Silakan pilih variasi indikator GDP lainnya.")
+                        st.warning(f"Indikator ini terdaftar, tetapi observasi data runtun waktu untuk Indonesia tidak tersedia pada seri ini.")
                 except Exception as e:
                     st.error(f"Gagal memuat data: {e}")
     else:
-        st.warning("Tidak ada indikator yang cocok dengan kata kunci tersebut.")
+        st.warning("Tidak ada indikator yang cocok dengan kata kunci tersebut. Coba kata kunci lain.")
 else:
     st.info("Memuat katalog indikator World Bank...")
