@@ -3,12 +3,12 @@ import requests
 import streamlit as st
 
 st.set_page_config(
-    page_title="Indonesia Socio-Economic Data Hub",
+    page_title="IndoEcon Explorer",
     page_icon="📊",
     layout="wide"
 )
 
-st.title("🇮🇩 Indonesia Socio-Economic & Development Data Hub")
+st.title("🇮🇩 IndoEcon Explorer")
 st.markdown(
     "Portal observasi data makroekonomi, ketenagakerjaan, sosial-pendidikan, dan pembangunan berkelanjutan "
     "Indonesia yang terintegrasi langsung dengan berbagai institusi resmi internasional dan nasional. "
@@ -20,16 +20,16 @@ st.markdown(
 # =============================================================================
 st.info(
     "🎯 **Tujuan Platform & Pedoman Penggunaan Akademis:**\n\n"
-    "Website ini dikembangkan secara independen untuk mendukung kebutuhan **peneliti, akademisi, dosen, dan mahasiswa** "
-    "dalam mengakses serta mengeksplorasi data runtun waktu resmi Indonesia secara cepat, transparan, dan terbuka.\n\n"
-    "* **Rekomendasi *Cross-check*:** Pengguna sangat disarankan untuk tetap melakukan verifikasi ulang (*cross-check*) "
-    "ke portal resmi masing-masing penyedia data utama sebagaimana tautan dokumentasi yang tertera pada setiap modul.\n"
-    "* **Standar Sitasi & Atribusi:** Dalam penulisan karya ilmiah, skripsi, tesis, jurnal, maupun laporan riset, "
-    "sitasi dan atribusi sumber data **tetap wajib merujuk kepada lembaga penyedia data primer aslinya** "
-    "(seperti *World Bank, Federal Reserve Bank of St. Louis (FRED), International Labour Organization (ILO), "
-    "United Nations (UNSD), UNESCO Institute for Statistics (UIS), atau Badan Pusat Statistik (BPS)*).\n"
-    "* **Koreksi & Masukan:** Apabila menemukan ketidaksesuaian angka, kegagalan pemanggilan API (*error*), "
-    "atau anomali data, mohon laporkan melalui formulir kontak di bawah agar dapat segera disesuaikan."
+    "Website ini dibuat untuk kebutuhan para **peneliti, akademisi, dosen, dan mahasiswa** "
+    "dalam mengakses serta mengeksplorasi data resmi Indonesia secara cepat, transparan, dan terbuka.\n\n"
+    "* **Rekomendasi Cross-check:** Pengguna sangat disarankan untuk tetap melakukan *cross-check* kembali "
+    "ke website utama sumber data resmi seperti yang tercantum pada masing-masing modul.\n"
+    "* **Standar Sitasi & Penulisan Sumber:** Dalam penulisan karya ilmiah, skripsi, tesis, jurnal, maupun laporan riset, "
+    "penulisan sumber **tetap menggunakan sumber asli** tempat data diterbitkan "
+    "(seperti *World Bank, FRED (Federal Reserve Bank of St. Louis), ILO (International Labour Organization), "
+    "UN SDGs (United Nations), UNESCO Institute for Statistics, atau BPS (Badan Pusat Statistik)*).\n"
+    "* **Koreksi & Masukan:** Apabila terdapat kekeliruan, kesalahan data, atau *error* pada penarikan API, "
+    "bisa langsung diberitahukan ke email tim pengembang melalui formulir kontak di bawah."
 )
 
 st.divider()
@@ -87,7 +87,7 @@ st.divider()
 st.subheader("📬 Kotak Saran, Laporan Kendala & Permintaan Data")
 st.markdown(
     "Menemukan kekeliruan data, *error* pada API, atau membutuhkan seri indikator baru untuk riset Anda? "
-    "Kirimkan masukan langsung ke tim pengembang melalui formulir di bawah ini."
+    "Kirimkan masukan langsung ke email kami melalui formulir di bawah ini."
 )
 
 TARGET_EMAIL = "indoecon.project@gmail.com"
@@ -95,7 +95,7 @@ TARGET_EMAIL = "indoecon.project@gmail.com"
 with st.form("feedback_form", clear_on_submit=True):
     col_f1, col_f2 = st.columns(2)
     with col_f1:
-        nama_pengirim = st.text_input("Nama Lengkap / Instansi Akademik*", placeholder="Contoh: Kherisya / Peneliti FEB UI")
+        nama_pengirim = st.text_input("Nama Lengkap / Instansi Akademik*", placeholder="Contoh: Budi Santoso (Universitas Indonesia)")
     with col_f2:
         email_pengirim = st.text_input("Alamat Email Pengirim*", placeholder="nama@email.com")
         
@@ -130,7 +130,7 @@ with st.form("feedback_form", clear_on_submit=True):
                     "email": email_pengirim,
                     "category": tipe_pesan,
                     "message": isi_pesan,
-                    "_subject": f"[{tipe_pesan}] Pesan dari IndoEcon Data Hub",
+                    "_subject": f"[{tipe_pesan}] Pesan dari IndoEcon Explorer",
                     "_captcha": "false"
                 }
                 headers = {"User-Agent": "Mozilla/5.0"}
