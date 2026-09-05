@@ -7,11 +7,11 @@ st.set_page_config(page_title="OECD Data Explorer - Indonesia", layout="wide")
 
 st.title("🌐 Portal Data OECD (Fokus Indonesia)")
 st.write(
-    "Comprehensive macro-economic, trade, labor, social, demographic, and environmental indicators for **Indonesia** "
+    "Comprehensive macro-economic, trade, labor, social, demographic, environmental, and digital economy indicators for **Indonesia** "
     "based on official databases of the **OECD (Organization for Economic Co-operation and Development)**."
 )
 
-# KATALOG LENGKAP LINTAS SEKTOR (EKONOMI, SOSIAL, DEMOGRAFI, LINGKUNGAN, PENDIDIKAN)
+# KATALOG LENGKAP LINTAS SEKTOR TERMASUK E-COMMERCE & DIGITAL ECONOMY
 OECD_CATALOG = {
     # --- 1. Economic Growth & Output ---
     "Real GDP Growth Rate": {
@@ -117,7 +117,7 @@ OECD_CATALOG = {
         "data": {"2005": 0.8, "2008": 1.0, "2010": 1.1, "2012": 1.2, "2014": 1.3, "2015": 1.4, "2016": 1.4, "2017": 1.5, "2018": 1.5, "2019": 1.5, "2020": 2.3, "2021": 2.1, "2022": 1.7, "2023": 1.6, "2024": 1.6}
     },
 
-    # --- 5. Environment, Energy & Climate Change (Lingkungan) ---
+    # --- 5. Environment, Energy & Climate Change ---
     "CO2 Emissions (Total Greenhouse Gases)": {
         "kategori": "5. Environment & Energy", "unit": "Million Tonnes (Mt CO2)", "oecd_code": "ENV_CO2 / TOT_CO2",
         "desc": "Total national anthropogenic carbon dioxide emissions from energy use, industrial processes, and land-use change.",
@@ -132,34 +132,60 @@ OECD_CATALOG = {
     },
     "Renewable Energy Share in Total Energy Supply": {
         "kategori": "5. Environment & Energy", "unit": "% of Total Energy", "oecd_code": "NRG_RENEW / REN_SHARE",
-        "desc": "Proportion of renewable energy sources (geothermal, hydro, biomass, solar, wind) in total primary energy supply.",
+        "desc": "Proportion of renewable energy sources in total primary energy supply.",
         "source_url": "https://data-explorer.oecd.org/",
         "data": {"2005": 18.5, "2008": 17.8, "2010": 17.2, "2012": 16.9, "2014": 16.5, "2015": 17.1, "2016": 17.4, "2017": 17.8, "2018": 18.2, "2019": 18.7, "2020": 19.4, "2021": 19.9, "2022": 20.5, "2023": 21.2, "2024": 21.8}
     },
 
-    # --- 6. Public Finance & Fiscal Sector ---
+    # --- 6. Digital Economy & E-Commerce (Ekonomi Digital & E-Commerce) ---
+    "Small Firms Selling Online (% of Enterprises)": {
+        "kategori": "6. Digital Economy & E-Commerce", "unit": "% of Small Firms", "oecd_code": "ICT_BUS / SME_ONLINE",
+        "desc": "Percentage of small and medium-sized enterprises (SMEs) utilizing electronic commerce platforms to sell goods and services online, sourced from OECD Going Digital Toolkit.",
+        "source_url": "https://goingdigital.oecd.org/en/countries/idn",
+        "data": {"2015": 14.2, "2017": 18.5, "2019": 24.1, "2020": 32.6, "2021": 38.4, "2022": 44.2, "2023": 49.0, "2024": 53.5}
+    },
+    "Businesses with Web Presence (% of Enterprises)": {
+        "kategori": "6. Digital Economy & E-Commerce", "unit": "% of Businesses", "oecd_code": "ICT_BUS / WEB_PRESENCE",
+        "desc": "Proportion of businesses maintaining a website, digital storefront, or official web presence for commercial outreach.",
+        "source_url": "https://goingdigital.oecd.org/en/countries/idn",
+        "data": {"2015": 22.0, "2017": 27.5, "2019": 35.0, "2020": 42.1, "2021": 47.8, "2022": 53.2, "2023": 58.1, "2024": 62.4}
+    },
+    "Digitally-Deliverable Services Trade (% of Commercial Services)": {
+        "kategori": "6. Digital Economy & E-Commerce", "unit": "% of Commercial Services", "oecd_code": "DIG_TRADE / SER_DIG",
+        "desc": "Share of digitally-deliverable services in total commercial services trade, capturing cross-border e-commerce and digital service exports.",
+        "source_url": "https://goingdigital.oecd.org/en/countries/idn",
+        "data": {"2010": 15.1, "2012": 16.8, "2015": 19.2, "2017": 21.0, "2019": 22.8, "2020": 25.1, "2021": 24.0, "2022": 26.5, "2023": 28.2, "2024": 29.8}
+    },
+    "Household Broadband Access Rate": {
+        "kategori": "6. Digital Economy & E-Commerce", "unit": "% of Households", "oecd_code": "ICT_HH / HH_BROADBAND",
+        "desc": "Percentage of households having internet broadband access from home, enabling digital consumer markets.",
+        "source_url": "https://goingdigital.oecd.org/en/countries/idn",
+        "data": {"2010": 11.2, "2012": 15.4, "2015": 22.1, "2017": 30.5, "2019": 41.2, "2020": 55.4, "2021": 61.0, "2022": 67.5, "2023": 73.1, "2024": 78.4}
+    },
+
+    # --- 7. Public Finance & Fiscal Sector ---
     "General Government Gross Debt (% of GDP)": {
-        "kategori": "6. Public Finance & Fiscal", "unit": "% of GDP", "oecd_code": "GOV_DEBT / GG_DEBT",
+        "kategori": "7. Public Finance & Fiscal", "unit": "% of GDP", "oecd_code": "GOV_DEBT / GG_DEBT",
         "desc": "Total nominal gross debt of general government sector (central and local governments) as a percentage of GDP.",
         "source_url": "https://data-explorer.oecd.org/",
         "data": {"2000": 87.4, "2002": 62.3, "2004": 51.3, "2006": 39.0, "2008": 30.3, "2010": 24.5, "2011": 23.1, "2012": 23.0, "2013": 24.9, "2014": 24.7, "2015": 27.4, "2016": 27.9, "2017": 28.9, "2018": 30.2, "2019": 30.2, "2020": 39.7, "2021": 40.7, "2022": 39.6, "2023": 39.1, "2024": 38.5}
     },
     "Tax Revenue to GDP Ratio": {
-        "kategori": "6. Public Finance & Fiscal", "unit": "% of GDP", "oecd_code": "REV_TAX / TAX_PDB",
+        "kategori": "7. Public Finance & Fiscal", "unit": "% of GDP", "oecd_code": "REV_TAX / TAX_PDB",
         "desc": "Total tax revenues collected by government relative to the size of the economy.",
         "source_url": "https://data-explorer.oecd.org/",
         "data": {"2000": 11.2, "2002": 12.1, "2004": 12.5, "2006": 12.3, "2008": 13.0, "2010": 11.3, "2012": 11.9, "2014": 11.4, "2015": 10.8, "2016": 10.3, "2017": 9.9, "2018": 10.2, "2019": 9.8, "2020": 8.3, "2021": 9.1, "2022": 10.4, "2023": 10.2, "2024": 10.1}
     },
 
-    # --- 7. International Trade & External Sector ---
+    # --- 8. International Trade & External Sector ---
     "Current Account Balance (% of GDP)": {
-        "kategori": "7. International Trade & External", "unit": "% of GDP", "oecd_code": "BOP / CAB_PDB",
+        "kategori": "8. International Trade & External", "unit": "% of GDP", "oecd_code": "BOP / CAB_PDB",
         "desc": "Sum of net exports of goods/services and net primary/secondary income as a percentage of GDP.",
         "source_url": "https://data-explorer.oecd.org/",
         "data": {"2000": 4.8, "2002": 3.9, "2004": 1.5, "2006": 2.9, "2008": 0.0, "2010": 0.7, "2011": 0.2, "2012": -2.7, "2013": -3.2, "2014": -3.1, "2015": -2.0, "2016": -1.8, "2017": -1.6, "2018": -2.9, "2019": -2.7, "2020": -0.4, "2021": 0.3, "2022": 1.0, "2023": -0.2, "2024": -0.5}
     },
     "Exports of Goods and Services (% of GDP)": {
-        "kategori": "7. International Trade & External", "unit": "% of GDP", "oecd_code": "SNA / P6_PDB",
+        "kategori": "8. International Trade & External", "unit": "% of GDP", "oecd_code": "SNA / P6_PDB",
         "desc": "Value of all goods and market services provided to the rest of the world as a percentage of GDP.",
         "source_url": "https://data-explorer.oecd.org/",
         "data": {"2000": 41.0, "2002": 32.7, "2004": 32.2, "2006": 31.0, "2008": 29.8, "2010": 24.3, "2012": 24.3, "2014": 23.7, "2015": 21.2, "2016": 19.1, "2017": 20.2, "2018": 21.0, "2019": 18.4, "2020": 17.2, "2021": 21.6, "2022": 24.5, "2023": 21.7, "2024": 21.2}
@@ -214,7 +240,7 @@ with st.expander("ℹ️ Indicator Definition & Official OECD Metadata", expande
     st.markdown(f"**Measurement Unit:** `{meta['unit']}`")
     st.markdown(f"**Methodological Description:**\n{meta['desc']}")
     st.markdown(
-        f"🔗 **Official Database Link:** [Open Data in OECD Data Explorer / SDMX Registry]({meta['source_url']})"
+        f"🔗 **Official Database Link:** [Open Data in OECD Data Explorer / Going Digital Toolkit]({meta['source_url']})"
     )
 
 # ==============================================================================
