@@ -8,7 +8,7 @@ st.set_page_config(
     layout="wide"
 )
 
-st.title("🇮🇩 IndoEcon Explorer")
+st.title("📊 IE IndoEcon Explorer")
 st.markdown(
     "Portal observasi data makroekonomi, ketenagakerjaan, sosial-pendidikan, kesehatan publik, institusi politik, "
     "dan demokrasi Indonesia yang terintegrasi langsung dengan berbagai institusi resmi internasional dan nasional."
