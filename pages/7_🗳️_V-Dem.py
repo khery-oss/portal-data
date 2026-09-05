@@ -27,11 +27,25 @@ def load_and_filter_vdem():
 @st.cache_data(show_spinner=False)
 def load_codebook():
     try:
-        # Memuat file codebook yang sudah diekstrak ringkas (kolom: variable, description)
         df_cb = pd.read_csv("vdem_codebook.csv")
+        # Membersihkan spasi di nama kolom jika ada
+        df_cb.columns = df_cb.columns.str.strip().str.lower()
         return df_cb
     except Exception:
         return None
+
+df_codebook = load_codebook()
+
+# Buat kamus penjelasan dari Codebook secara fleksibel
+codebook_dict = {}
+if df_codebook is not None:
+    # Cari nama kolom secara otomatis
+    col_var = next((c for c in df_codebook.columns if 'var' in c), None)
+    col_desc = next((c for c in df_codebook.columns if 'desc' in c or 'def' in c), None)
+    
+    if col_var and col_desc:
+        for _, row in df_codebook.iterrows():
+            codebook_dict[str(row[col_var]).strip()] = str(row[col_desc]).strip()
 
 with st.spinner("Memuat dan memfilter basis data V-Dem khusus untuk wilayah Indonesia..."):
     df_idn = load_and_filter_vdem()
