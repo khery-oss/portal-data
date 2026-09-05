@@ -8,15 +8,15 @@ st.set_page_config(page_title="WHO Explorer - IndoEcon", layout="wide")
 
 st.title("🏥 WHO (World Health Organization) - Modal Manusia & Kesehatan")
 st.markdown(
-    "Eksplorasi indikator kesehatan publik dan modal manusia (*human capital*) Indonesia resmi dari "
-    "**WHO Global Health Observatory (GHO) REST API** secara *real-time* (*100% Live API Streaming*)."
+    "Eksplorasi indikator kesehatan publik dan modal manusia Indonesia resmi dari "
+    "**WHO Global Health Observatory (GHO) REST API** secara *real-time* (*100% Live API tanpa batas tahun manual*)."
 )
 
 HEADERS = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
 }
 
-# DAFTAR KURASI INDIKATOR PILIHAN WHO YANG TERBUKTI AKTIF & LENGKAP UNTUK INDONESIA
+# 30 KURASI INDIKATOR WHO YANG TERBUKTI AKTIF DAN TERSEDIA UNTUK INDONESIA
 WHO_CATALOG = {
     # --- 1. Life Expectancy & Mortality ---
     "Life expectancy at birth (years)": {
@@ -39,6 +39,10 @@ WHO_CATALOG = {
         "code": "WHOSIS_000007", "kategori": "1. Life Expectancy & Mortality", "unit": "Per 1,000 Population",
         "desc": "Probability of a 15-year-old dying before reaching age 60."
     },
+    "Crude death rate (per 1,000 population)": {
+        "code": "WHOSIS_000004", "kategori": "1. Life Expectancy & Mortality", "unit": "Per 1,000 Population",
+        "desc": "Number of deaths occurring among the population during a given calendar year."
+    },
 
     # --- 2. Child & Maternal Health ---
     "Under-five mortality rate (probability of dying by age 5 per 1,000 live births)": {
@@ -57,6 +61,14 @@ WHO_CATALOG = {
         "code": "MDG_0000000026", "kategori": "2. Child & Maternal Health", "unit": "Per 100,000 Live Births",
         "desc": "Number of maternal deaths per 100,000 live births during a specified time period."
     },
+    "Births attended by skilled health personnel (%)": {
+        "code": "MDG_0000000025", "kategori": "2. Child & Maternal Health", "unit": "%",
+        "desc": "Percentage of deliveries attended by skilled health personnel."
+    },
+    "Adolescent birth rate (per 1,000 women aged 15-19 years)": {
+        "code": "M_03", "kategori": "2. Child & Maternal Health", "unit": "Per 1,000 Women",
+        "desc": "Annual number of births to women aged 15-19 years per 1,000 women."
+    },
 
     # --- 3. Nutrition & Growth ---
     "Stunting prevalence among children under 5 years (%)": {
@@ -65,11 +77,19 @@ WHO_CATALOG = {
     },
     "Wasting prevalence among children under 5 years (%)": {
         "code": "NUTRITION_WASTING_PREV", "kategori": "3. Nutrition & Growth", "unit": "%",
-        "desc": "Prevalence of moderate and severe wasting (weight-for-height < -2 SD from WHO median)."
+        "desc": "Prevalence of moderate and severe wasting (weight-for-height < -2 SD)."
     },
     "Overweight prevalence among children under 5 years (%)": {
         "code": "NUTRITION_OVERWEIGHT_PREV", "kategori": "3. Nutrition & Growth", "unit": "%",
-        "desc": "Prevalence of overweight (weight-for-height > +2 SD from WHO median)."
+        "desc": "Prevalence of overweight (weight-for-height > +2 SD)."
+    },
+    "Prevalence of anemia among children aged 6-59 months (%)": {
+        "code": "NUTRITION_ANEMIA_CHILDREN", "kategori": "3. Nutrition & Growth", "unit": "%",
+        "desc": "Percentage of children aged 6-59 months with hemoglobin concentration < 110 g/L."
+    },
+    "Prevalence of anemia among women of reproductive age 15-49 years (%)": {
+        "code": "NUTRITION_ANEMIA_WOMEN", "kategori": "3. Nutrition & Growth", "unit": "%",
+        "desc": "Percentage of women aged 15-49 years with anemia."
     },
 
     # --- 4. Immunization & Infectious Diseases ---
@@ -77,9 +97,21 @@ WHO_CATALOG = {
         "code": "WHS3_62", "kategori": "4. Immunization & Infectious Diseases", "unit": "%",
         "desc": "Percentage of surviving infants who received one dose of measles-containing vaccine."
     },
+    "Polio (Pol3) immunization coverage among 1-year-olds (%)": {
+        "code": "WHS3_49", "kategori": "4. Immunization & Infectious Diseases", "unit": "%",
+        "desc": "Percentage of surviving infants who received three doses of polio vaccine."
+    },
+    "Diphtheria tetanus toxoid and pertussis (DTP3) immunization coverage among 1-year-olds (%)": {
+        "code": "WHS3_40", "kategori": "4. Immunization & Infectious Diseases", "unit": "%",
+        "desc": "Percentage of surviving infants who received three doses of DTP-containing vaccine."
+    },
     "Tuberculosis incidence (per 100,000 population)": {
         "code": "MDG_0000000020", "kategori": "4. Immunization & Infectious Diseases", "unit": "Per 100,000 Population",
         "desc": "Estimated number of new and relapse tuberculosis cases arising in a given year."
+    },
+    "Tuberculosis prevalence (per 100,000 population)": {
+        "code": "MDG_0000000018", "kategori": "4. Immunization & Infectious Diseases", "unit": "Per 100,000 Population",
+        "desc": "Number of all cases of tuberculosis in a population at a given point in time."
     },
 
     # --- 5. Health Workforce & Infrastructure ---
@@ -91,15 +123,31 @@ WHO_CATALOG = {
         "code": "HWF_0002", "kategori": "5. Health Workforce", "unit": "Per 10,000 Population",
         "desc": "Number of nursing and midwifery personnel per 10,000 population."
     },
+    "Pharmacists (per 10,000 population)": {
+        "code": "HWF_0003", "kategori": "5. Health Workforce", "unit": "Per 10,000 Population",
+        "desc": "Number of licensed pharmacists active in the health sector."
+    },
+    "Hospital beds (per 10,000 population)": {
+        "code": "HWF_BE_HOSP", "kategori": "5. Health Workforce", "unit": "Per 10,000 Population",
+        "desc": "Number of inpatient hospital beds available per 10,000 population."
+    },
 
-    # --- 6. UHC & Health Financing ---
+    # --- 6. UHC, Financing & Risk Factors ---
     "UHC service coverage index": {
-        "code": "UHC_INDEX_REPORTED", "kategori": "6. UHC & Health Financing", "unit": "Index (0-100)",
+        "code": "UHC_INDEX_REPORTED", "kategori": "6. UHC, Financing & Risk Factors", "unit": "Index (0-100)",
         "desc": "Composite index of essential service coverage."
     },
-    "Out-of-pocket expenditure as percentage of current health expenditure (CHE) (%)": {
-        "code": "SH_XPD_OOPC_CH_ZS", "kategori": "6. UHC & Health Financing", "unit": "% of Current Health Exp.",
-        "desc": "Share of out-of-pocket payments by households in total health expenditure."
+    "Population using safely managed drinking-water services (%)": {
+        "code": "WSH_WATER_SAFELY_MANAGED", "kategori": "6. UHC, Financing & Risk Factors", "unit": "%",
+        "desc": "Percentage of population using an improved drinking-water source located on premises."
+    },
+    "Population using safely managed sanitation services (%)": {
+        "code": "WSH_SANITATION_SAFELY_MANAGED", "kategori": "6. UHC, Financing & Risk Factors", "unit": "%",
+        "desc": "Percentage of population using improved sanitation facilities."
+    },
+    "Prevalence of obesity among adults aged 18+ years (BMI >= 30) (%)": {
+        "code": "NCD_BMI_30A", "kategori": "6. UHC, Financing & Risk Factors", "unit": "%",
+        "desc": "Age-standardized prevalence of obesity among adults aged 18 years and older."
     }
 }
 
@@ -133,13 +181,13 @@ with st.expander("ℹ️ Definisi & Metadata Resmi WHO", expanded=False):
     st.markdown("🔗 **Portal Sumber Resmi:** [WHO Global Health Observatory](https://www.who.int/data/gho)")
 
 # =============================================================================
-# 2. PENARIKAN DATA LIVE API WHO (INDONESIA)
+# 2. PENARIKAN DATA LIVE API WHO (TANPA BATAS WAKTU)
 # =============================================================================
 st.subheader("2. Penarikan Data Runtun Waktu Nasional (Indonesia)")
-st.caption("Seluruh riwayat tahun yang tercatat di basis data resmi WHO akan diambil secara *real-time*.")
+st.caption("Seluruh riwayat tahun dari awal hingga data terbaru yang tersedia di server WHO akan ditarik secara otomatis.")
 
 if st.button("📊 Ambil Data WHO (Live API)", type="primary"):
-    with st.spinner(f"Menghubungi server WHO GHO API untuk seri '{nama_indikator}'..."):
+    with st.spinner(f"Menarik seluruh riwayat data runtun waktu untuk '{nama_indikator}'..."):
         api_url = f"https://ghoapi.azureedge.net/api/{code_id}"
         query_params = {"$filter": "SpatialDim eq 'IDN'"}
 
@@ -182,9 +230,10 @@ if st.button("📊 Ambil Data WHO (Live API)", type="primary"):
                     val_col = f"Nilai ({meta['unit']})"
                     df_raw = pd.DataFrame(records)
                     df_who = df_raw.groupby("Tahun", as_index=False)["Nilai"].mean().round(2)
-                    df_who = df_who.rename(columns={"Nilai": val_col}).sort_values(by="Tahun", ascending=True)
+                    df_who = df_who.sort_values(by="Tahun", ascending=True)
+                    df_who = df_who.rename(columns={"Nilai": val_col})
 
-                    st.success(f"Berhasil menarik {len(df_who)} observasi tahunan resmi untuk Indonesia langsung dari server WHO!")
+                    st.success(f"Berhasil menarik {len(df_who)} observasi tahunan secara penuh langsung dari server WHO!")
                     st.divider()
 
                     # Tombol Unduh
@@ -205,7 +254,7 @@ if st.button("📊 Ambil Data WHO (Live API)", type="primary"):
                         "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
                     )
 
-                    # Visualisasi Plotly Interaktif
+                    # Visualisasi Plotly Interaktif Tanpa Batas Tahun
                     fig = go.Figure()
                     fig.add_trace(go.Scatter(
                         x=df_who["Tahun"],
@@ -227,7 +276,7 @@ if st.button("📊 Ambil Data WHO (Live API)", type="primary"):
                     with st.expander("📋 Tabel Runtun Waktu Lengkap"):
                         st.dataframe(df_who.sort_values(by="Tahun", ascending=False), use_container_width=True)
                 else:
-                    st.warning("Server WHO merespons, namun catatan observasi runtun waktu untuk Indonesia belum dipublikasikan pada seri indikator ini.")
+                    st.warning("Server WHO merespons, namun catatan observasi untuk Indonesia belum dipublikasikan pada seri indikator ini.")
             else:
                 st.error(f"Gagal menghubungi server WHO (Kode Status HTTP: {res.status_code}).")
         except Exception as e:
