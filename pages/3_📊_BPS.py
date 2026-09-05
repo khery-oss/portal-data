@@ -1,236 +1,572 @@
-import streamlit as st
-import pandas as pd
+import math
+import io
 import requests
+import pandas as pd
+import streamlit as st
 import plotly.graph_objects as go
-from io import BytesIO
 
-# ==========================================
-# KONFIGURASI & KONSTANTA UTAMA
-# ==========================================
-st.set_page_config(page_title="BPS Live Analytics", page_icon="📊", layout="wide")
+# ──────────────────────────────────────────────────────────────────────────────
+# KONSTANTA
+# ──────────────────────────────────────────────────────────────────────────────
 
-DOMAIN = "0000" # Domain BPS Nasional
-API_KEY = st.secrets.get("BPS_APP_ID", "")
+BASE_URL  = "https://webapi.bps.go.id/v1/api/list"
+DOMAIN    = "0000"
+LANG      = "ind"
+YEAR_MIN  = 1971   # tahun terdini yang relevan secara umum di BPS
+YEAR_MAX  = 2030   # batas atas aman untuk slider UI
 
-if not API_KEY:
-    st.error("🚨 **Kritis:** API Key BPS tidak ditemukan. Pastikan `BPS_APP_ID` telah diset di `secrets.toml`.")
-    st.stop()
+# ──────────────────────────────────────────────────────────────────────────────
+# UTILITAS TAHUN
+# ──────────────────────────────────────────────────────────────────────────────
 
-# ==========================================
-# FUNGSI KONEKSI API & PARSING (DIDEFINISIKAN DI ATAS)
-# ==========================================
+def tahun_to_th(tahun: int) -> int:
+    """Konversi tahun Masehi ke ID internal BPS (th = tahun - 1900)."""
+    return tahun - 1900
+
+
+def th_to_tahun(th: int) -> int:
+    """Konversi ID internal BPS kembali ke tahun Masehi."""
+    return th + 1900
+
+
+def build_th_param(tahun_awal: int, tahun_akhir: int) -> str:
+    """
+    Bangun parameter `th` untuk endpoint data BPS.
+    Format rentang: '{th_awal}:{th_akhir}'
+    """
+    return f"{tahun_to_th(tahun_awal)}:{tahun_to_th(tahun_akhir)}"
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# LAYER HTTP — satu titik akses, penanganan error terpusat
+# ──────────────────────────────────────────────────────────────────────────────
+
+def _get(url: str, timeout: int = 20) -> dict:
+    """
+    GET ke endpoint BPS, kembalikan dict JSON mentah.
+    Lempar RuntimeError dengan pesan diagnostik asli jika gagal.
+    """
+    try:
+        resp = requests.get(url, timeout=timeout)
+        resp.raise_for_status()
+        return resp.json()
+    except requests.exceptions.HTTPError as e:
+        raise RuntimeError(f"HTTP {resp.status_code}: {resp.text[:300]}") from e
+    except requests.exceptions.ConnectionError as e:
+        raise RuntimeError(f"Koneksi gagal ke BPS: {e}") from e
+    except requests.exceptions.Timeout:
+        raise RuntimeError("Timeout: server BPS tidak merespons dalam batas waktu.")
+    except Exception as e:
+        raise RuntimeError(f"Error tak terduga: {e}") from e
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# LAYER KATALOG (dengan cache Streamlit)
+# ──────────────────────────────────────────────────────────────────────────────
 
 @st.cache_data(ttl=3600, show_spinner=False)
-def fetch_bps_subjects():
-    """Mengambil katalog subjek BPS dengan iterasi pagination dinamis."""
-    subjects = []
-    base_url = f"https://webapi.bps.go.id/v1/api/list/model/subject/domain/{DOMAIN}/key/{API_KEY}/page/"
-    
-    try:
-        res = requests.get(base_url + "1/").json()
-        if res.get("data-availability") == "available":
-            data_arr = res.get("data", [])
-            if len(data_arr) > 1:
-                subjects.extend(data_arr[1])
-            pages = data_arr[0].get("pages", 1) if len(data_arr) > 0 else 1
-            
-            for p in range(2, pages + 1):
-                res_p = requests.get(base_url + f"{p}/").json()
-                if res_p.get("data-availability") == "available":
-                    data_arr_p = res_p.get("data", [])
-                    if len(data_arr_p) > 1:
-                        subjects.extend(data_arr_p[1])
-        else:
-            st.error(f"Error API Subjek: {res.get('message', 'Unknown Error')}")
-    except Exception as e:
-        st.error(f"Koneksi gagal: {e}")
-        
+def fetch_all_subjects(api_key: str) -> list[dict]:
+    """
+    Tarik seluruh subjek BPS secara dinamis dengan iterasi pagination
+    berdasarkan atribut `pages` pada respons metadata.
+    Mengembalikan list dict: [{'subject_id': ..., 'label': ...}, ...]
+    """
+    subjects: list[dict] = []
+    page = 1
+
+    while True:
+        url = (
+            f"{BASE_URL}/model/subject/domain/{DOMAIN}"
+            f"/page/{page}/key/{api_key}/"
+        )
+        data = _get(url)
+
+        # BPS mengembalikan status 0 jika data tersedia
+        if str(data.get("status", "")) not in ("0", 0):
+            # Mungkin sudah melewati halaman terakhir, berhenti
+            break
+
+        items = data.get("data", [])
+        if not items:
+            break
+
+        for item in items:
+            # Struktur item subject BPS: {'subject_id': ..., 'subject': ...}
+            subjects.append({
+                "subject_id": str(item.get("subject_id", item.get("subjectid", ""))),
+                "label":      item.get("subject", item.get("label", str(item))),
+            })
+
+        # Hitung total halaman dari metadata
+        # BPS meletakkan info pagination di level atas respons
+        total_pages = int(data.get("data-availability", {}).get("pages", 1))
+        if page >= total_pages:
+            break
+
+        # Fallback: jika metadata pages tidak ditemukan di sana, cek kunci lain
+        if total_pages == 1 and page == 1:
+            # Coba kunci alternatif yang umum digunakan BPS
+            alt_pages = data.get("pages", data.get("totalpage", 1))
+            total_pages = int(alt_pages)
+
+        if page >= total_pages:
+            break
+        page += 1
+
     return subjects
 
+
 @st.cache_data(ttl=3600, show_spinner=False)
-def fetch_bps_variables(sub_id, max_pages=5):
-    """Mengambil katalog variabel berdasarkan subjek dengan batasan halaman."""
-    variables = []
-    base_url = f"https://webapi.bps.go.id/v1/api/list/model/var/domain/{DOMAIN}/subject/{sub_id}/key/{API_KEY}/page/"
-    
-    try:
-        for p in range(1, max_pages + 1):
-            res = requests.get(base_url + f"{p}/").json()
-            if res.get("data-availability") == "available":
-                var_data = res.get("data", [])
-                if len(var_data) > 1:
-                    variables.extend(var_data[1])
-            else:
-                break
-    except Exception as e:
-        st.error(f"Koneksi gagal: {e}")
-        
+def fetch_variables(api_key: str, subject_id: str, max_pages: int = 5) -> list[dict]:
+    """
+    Tarik variabel/indikator untuk subjek tertentu.
+    max_pages=5 sebagai batas aman; ubah jika subjek memiliki lebih banyak variabel.
+    Mengembalikan list dict: [{'var_id': ..., 'label': ...}, ...]
+    """
+    variables: list[dict] = []
+
+    for page in range(1, max_pages + 1):
+        url = (
+            f"{BASE_URL}/model/var/domain/{DOMAIN}"
+            f"/subject/{subject_id}/page/{page}/key/{api_key}/"
+        )
+        data = _get(url)
+
+        if str(data.get("status", "")) not in ("0", 0):
+            break
+
+        items = data.get("data", [])
+        if not items:
+            break
+
+        for item in items:
+            variables.append({
+                "var_id": str(item.get("var_id", item.get("vervar_id", ""))),
+                "label":  item.get("title", item.get("label", str(item))),
+            })
+
+        # Cek apakah masih ada halaman berikutnya
+        total_pages = int(
+            data.get("data-availability", {}).get("pages",
+            data.get("pages", data.get("totalpage", 1)))
+        )
+        if page >= total_pages:
+            break
+
     return variables
 
-def fetch_bps_data(var_id, start_year, end_year):
-    """Mengambil data deret waktu murni dengan aturan parameter th BPS."""
-    th_start = start_year - 1900
-    th_end = end_year - 1900
-    th_param = f"{th_start}:{th_end}"
-    
-    url = f"https://webapi.bps.go.id/v1/api/list/model/data/lang/ind/domain/{DOMAIN}/var/{var_id}/th/{th_param}/key/{API_KEY}/"
-    
-    res = requests.get(url)
-    if res.status_code != 200:
-        st.error(f"HTTP Error {res.status_code}: Endpoint tidak dapat diakses.")
-        return pd.DataFrame()
-        
-    data_json = res.json()
-    availability = data_json.get("data-availability")
-    if availability not in ["available", "list-available"]:
-        st.warning(f"Respon BPS: {data_json.get('message', 'Data tidak tersedia untuk parameter yang diminta.')}")
-        return pd.DataFrame()
 
-    try:
-        raw_data = data_json.get("data", [])
-        if len(raw_data) < 2:
-            st.warning("Format struktur data BPS tidak lengkap untuk variabel ini.")
-            return pd.DataFrame()
+# ──────────────────────────────────────────────────────────────────────────────
+# LAYER DATA DERET WAKTU
+# ──────────────────────────────────────────────────────────────────────────────
 
-        datacontent = raw_data[0].get("datacontent", {})
-        metadata = raw_data[1]
-        
-        vervar_list = metadata.get("vervar", [])
-        turvar_list = metadata.get("turvar", [])
-        tahun_list = metadata.get("tahun", [])
-        turth_list = metadata.get("turth", [])
-        
-        records = []
-        vervar_iter = vervar_list if vervar_list else [{'val': '', 'label': 'Nasional'}]
-        turvar_iter = turvar_list if turvar_list else [{'val': '', 'label': 'Total'}]
-        turth_iter = turth_list if turth_list else [{'val': '', 'label': 'Tahunan'}]
-        
-        for v_var in vervar_iter:
-            for t_var in turvar_iter:
-                for th in tahun_list:
-                    for t_th in turth_iter:
-                        v_val = v_var.get('val', '')
-                        t_val = t_var.get('val', '')
-                        th_val = th.get('val', '')
-                        tth_val = t_th.get('val', '')
-                        
-                        komposit_key = f"{var_id}{t_val}{th_val}{tth_val}{v_val}"
-                        val = datacontent.get(komposit_key, None)
-                        
-                        records.append({
-                            "Tahun": int(th['label']),
-                            "Periode": t_th.get('label', 'Tahunan'),
-                            "Kategori (Vervar)": v_var.get('label', 'Nasional'),
-                            "Rincian (Turvar)": t_var.get('label', 'Total'),
-                            "Nilai": val
-                        })
-                        
-        df = pd.DataFrame(records)
-        df["Nilai"] = pd.to_numeric(df["Nilai"], errors="coerce")
-        df = df.sort_values(by=["Tahun"])
-        return df
+@st.cache_data(ttl=1800, show_spinner=False)
+def fetch_timeseries(
+    api_key:     str,
+    var_id:      str,
+    tahun_awal:  int,
+    tahun_akhir: int,
+) -> tuple[pd.DataFrame, dict]:
+    """
+    Tarik data deret waktu dari endpoint model/data BPS.
 
-    except Exception as e:
-        st.error(f"Gagal memparsing struktur JSON BPS: {e}")
-        return pd.DataFrame()
+    Mengembalikan:
+      - df     : DataFrame pivot bersih (Tahun × Kategori)
+      - meta   : dict metadata mentah dari respons BPS
 
-# ==========================================
-# ANTARMUKA PENGGUNA (UI)
-# ==========================================
-st.title("📊 Dashboard Analitik Ekonomi (BPS WebAPI Live)")
-st.markdown("""
-Dashboard ini terkoneksi secara ***real-time*** ke WebAPI BPS RI. 
-Integritas data dijaga ketat: **Tidak ada interpolasi data.**
-""")
-st.divider()
+    Nilai null/kosong dari datacontent dijaga sebagai NaN (tidak diestimasi).
+    """
+    th_param = build_th_param(tahun_awal, tahun_akhir)
+    url = (
+        f"{BASE_URL}/model/data/lang/{LANG}/domain/{DOMAIN}"
+        f"/var/{var_id}/th/{th_param}/key/{api_key}/"
+    )
+    raw = _get(url)
 
-col1, col2, col3 = st.columns([1, 1, 1])
+    if str(raw.get("status", "")) not in ("0", 0):
+        msg = raw.get("message", raw.get("msg", str(raw)))
+        raise RuntimeError(f"BPS mengembalikan status error: {msg}")
 
-with col1:
-    with st.spinner("Memuat Subjek BPS..."):
-        subjects_data = fetch_bps_subjects()
-        if subjects_data:
-            subject_dict = {f"{s['sub_id']} - {s['title']}": s['sub_id'] for s in subjects_data}
-            selected_subject_str = st.selectbox("1. Pilih Subjek", options=list(subject_dict.keys()))
-            selected_subject_id = subject_dict[selected_subject_str]
+    # ── Ekstrak komponen struktural respons BPS ──
+    data_payload = raw.get("data", [])
+    if not data_payload or len(data_payload) < 2:
+        raise RuntimeError("Respons data BPS tidak mengandung payload yang diharapkan.")
+
+    # BPS mengembalikan data[0] sebagai dict metadata (vervar, tahun, turvar, dll.)
+    # dan data[1] sebagai dict datacontent (nilai flat dengan kode komposit).
+    # Namun struktur persis bisa bervariasi antar variabel.
+    # Kita telusuri list untuk menemukan metadata dan datacontent.
+
+    meta_block     = None
+    content_block  = None
+
+    for block in data_payload:
+        if isinstance(block, dict):
+            if "vervar" in block or "tahun" in block:
+                meta_block = block
+            if "datacontent" in block:
+                content_block = block
+
+    if meta_block is None or content_block is None:
+        # Fallback: asumsikan urutan klasik BPS [meta, content]
+        if len(data_payload) >= 2:
+            meta_block    = data_payload[0] if isinstance(data_payload[0], dict) else {}
+            content_block = data_payload[1] if isinstance(data_payload[1], dict) else {}
         else:
-            st.selectbox("1. Pilih Subjek", ["- Kosong -"])
-            selected_subject_id = None
+            raise RuntimeError("Struktur respons data BPS tidak dapat diparsing.")
 
-with col2:
-    if selected_subject_id:
-        with st.spinner("Memuat Variabel..."):
-            vars_data = fetch_bps_variables(selected_subject_id)
-            if vars_data:
-                var_dict = {f"{v['var_id']} - {v['title']}": v['var_id'] for v in vars_data}
-                selected_var_str = st.selectbox("2. Pilih Indikator/Variabel", options=list(var_dict.keys()))
-                selected_var_id = var_dict[selected_var_str]
-            else:
-                st.selectbox("2. Pilih Indikator/Variabel", ["- Tidak ada variabel di subjek ini -"])
-                selected_var_id = None
-    else:
-        st.selectbox("2. Pilih Indikator/Variabel", ["- Tunggu Subjek -"])
-        selected_var_id = None
+    vervar_list   = meta_block.get("vervar", [])    # daftar rincian/kategori
+    tahun_list    = meta_block.get("tahun", [])      # daftar tahun (dengan th_id)
+    datacontent   = content_block.get("datacontent", {})
 
-with col3:
-    col_yr1, col_yr2 = st.columns(2)
-    with col_yr1:
-        start_year = st.number_input("Tahun Awal", min_value=1950, max_value=2050, value=2015, step=1)
-    with col_yr2:
-        end_year = st.number_input("Tahun Akhir", min_value=1950, max_value=2050, value=2024, step=1)
+    if not tahun_list:
+        raise RuntimeError("BPS tidak mengembalikan daftar tahun pada rentang yang dipilih.")
 
-if st.button("🚀 Tarik Data Real-Time", type="primary", use_container_width=True):
-    if not selected_var_id:
-        st.warning("Pilih indikator terlebih dahulu.")
-    elif start_year > end_year:
-        st.error("Tahun awal tidak boleh lebih besar dari tahun akhir.")
-    else:
-        with st.spinner(f"Menarik observasi untuk {start_year}-{end_year} via API..."):
-            df = fetch_bps_data(selected_var_id, start_year, end_year)
-            
-            if not df.empty and not df['Nilai'].isna().all():
-                st.success("Data berhasil ditarik dan diparsing dari server BPS!")
-                df['Grup'] = df['Kategori (Vervar)'] + " | " + df['Rincian (Turvar)'] + " (" + df['Periode'] + ")"
-                
-                tab1, tab2, tab3 = st.tabs(["📈 Visualisasi Tren", "🗃️ Tabel Data Mentah", "💾 Ekspor Data"])
-                
-                with tab1:
-                    fig = go.Figure()
-                    for grup_name, group_df in df.groupby('Grup'):
-                        fig.add_trace(go.Scatter(
-                            x=group_df['Tahun'], 
-                            y=group_df['Nilai'],
-                            mode='lines+markers',
-                            name=grup_name,
-                            connectgaps=False
-                        ))
-                    fig.update_layout(
-                        title=f"Tren: {selected_var_str.split(' - ', 1)[1]}",
-                        xaxis_title="Tahun Observasi",
-                        yaxis_title="Nilai Observasi",
-                        hovermode="x unified",
-                        template="plotly_white",
-                        legend=dict(orientation="h", y=-0.2)
+    # ── Bangun mapping ──
+    # vervar_map: {vervar_id_str: label}
+    vervar_map = {}
+    for v in vervar_list:
+        vid   = str(v.get("vervar_id", v.get("val", "")))
+        label = v.get("text", v.get("label", vid))
+        vervar_map[vid] = label
+
+    # tahun_map: {th_id_str: tahun_masehi}
+    tahun_map = {}
+    for t in tahun_list:
+        tid        = str(t.get("th_id", t.get("val", "")))
+        tahun_masehi = th_to_tahun(int(tid)) if tid.lstrip("-").isdigit() else tid
+        tahun_map[tid] = tahun_masehi
+
+    # ── Parsing datacontent (format kode komposit BPS) ──
+    # Kode komposit umum: "{vervar_id}{turvar_id}{th_id}{period_id}"
+    # Namun panjang dan urutan segmen bervariasi. Strategi: kita iterasi
+    # semua kunci datacontent dan cocokkan dengan pola yang diketahui.
+
+    # Ambil turvar (periode) — biasanya "1" untuk tahunan
+    turvar_list = meta_block.get("turvar", [{"val": "1", "text": "Tahunan"}])
+    turvar_ids  = [str(tv.get("val", "1")) for tv in turvar_list]
+    default_turvar = turvar_ids[0] if turvar_ids else "1"
+
+    # Coba decode kunci datacontent
+    records = []  # [{tahun_masehi: ..., kategori: ..., nilai: ...}]
+
+    for composite_key, raw_val in datacontent.items():
+        # Coba semua kombinasi vervar × tahun × turvar untuk mencocokkan kunci
+        matched = False
+        for vid, vlabel in vervar_map.items():
+            for tid, tahun_masehi in tahun_map.items():
+                for tvid in turvar_ids:
+                    # Bentuk kunci komposit tipikal BPS
+                    # Format: vervar_id + turvar_id + th_id + "1" (sub-periode)
+                    for suffix in ["1", "0", ""]:
+                        candidate = f"{vid}{tvid}{tid}{suffix}"
+                        if composite_key == candidate:
+                            nilai = _parse_nilai(raw_val)
+                            records.append({
+                                "Tahun":     tahun_masehi,
+                                "Kategori":  vlabel,
+                                "Nilai":     nilai,
+                            })
+                            matched = True
+                            break
+                    if matched:
+                        break
+                if matched:
+                    break
+
+    if not records:
+        # Fallback ringan: jika parsing kunci komposit gagal total,
+        # sajikan datacontent mentah tanpa interpretasi agar tetap transparan.
+        raise RuntimeError(
+            "Tidak dapat mem-parsing kode komposit datacontent BPS untuk variabel ini. "
+            "Struktur kode mungkin berbeda dari pola umum. "
+            f"Contoh kunci pertama: {next(iter(datacontent), 'N/A')}"
+        )
+
+    df_raw = pd.DataFrame(records)
+
+    # Pivot: baris = Tahun, kolom = Kategori
+    df_pivot = (
+        df_raw
+        .drop_duplicates(subset=["Tahun", "Kategori"])
+        .pivot(index="Tahun", columns="Kategori", values="Nilai")
+        .sort_index()
+    )
+    df_pivot.index.name = "Tahun"
+    df_pivot.columns.name = None
+
+    return df_pivot, raw
+
+
+def _parse_nilai(raw_val) -> float | None:
+    """
+    Konversi nilai dari datacontent BPS ke float.
+    Kembalikan None (→ NaN di DataFrame) jika nilai kosong, '-', atau tidak bisa diparse.
+    Tidak ada estimasi atau substitusi — nilai kosong tetap kosong.
+    """
+    if raw_val is None:
+        return None
+    s = str(raw_val).strip()
+    if s in ("", "-", "N/A", "n/a", "null", "NULL"):
+        return None
+    # Bersihkan pemisah ribuan (titik) dan desimal (koma) gaya Indonesia
+    s = s.replace(".", "").replace(",", ".")
+    try:
+        return float(s)
+    except ValueError:
+        return None
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# KOMPONEN UI PEMBANTU
+# ──────────────────────────────────────────────────────────────────────────────
+
+def render_timeseries_chart(df: pd.DataFrame, judul_var: str) -> None:
+    """Render grafik tren deret waktu Plotly dengan connectgaps=False."""
+    fig = go.Figure()
+
+    for col in df.columns:
+        fig.add_trace(go.Scatter(
+            x            = df.index.astype(str),
+            y            = df[col],
+            mode         = "lines+markers",
+            name         = col,
+            connectgaps  = False,   # garis terputus di nilai NaN — ATURAN KETAT
+            hovertemplate= "<b>%{x}</b><br>%{y:,.2f}<extra>%{fullData.name}</extra>",
+        ))
+
+    fig.update_layout(
+        title       = judul_var,
+        xaxis_title = "Tahun",
+        yaxis_title = "Nilai",
+        legend      = dict(orientation="h", yanchor="bottom", y=-0.35),
+        hovermode   = "x unified",
+        height      = 480,
+        margin      = dict(l=40, r=20, t=50, b=120),
+    )
+    st.plotly_chart(fig, use_container_width=True)
+
+
+def render_table(df: pd.DataFrame) -> None:
+    """
+    Tampilkan DataFrame dengan nilai NaN diformat sebagai '-'
+    untuk kejelasan bahwa data memang tidak tersedia dari BPS.
+    """
+    df_display = df.copy()
+    # Format angka ribuan, NaN → '-'
+    for col in df_display.columns:
+        df_display[col] = df_display[col].apply(
+            lambda x: f"{x:,.2f}" if pd.notna(x) else "-"
+        )
+    st.dataframe(df_display, use_container_width=True)
+
+
+def render_download_buttons(df: pd.DataFrame, var_label: str) -> None:
+    """Tombol unduh CSV dan Excel (.xlsx)."""
+    safe_label = "".join(c if c.isalnum() or c in " _-" else "_" for c in var_label)[:50]
+
+    col_csv, col_xlsx = st.columns(2)
+
+    # ── CSV ──
+    csv_bytes = df.to_csv().encode("utf-8-sig")
+    col_csv.download_button(
+        label        = "⬇ Unduh CSV",
+        data         = csv_bytes,
+        file_name    = f"BPS_{safe_label}.csv",
+        mime         = "text/csv",
+        use_container_width=True,
+    )
+
+    # ── Excel ──
+    xlsx_buf = io.BytesIO()
+    with pd.ExcelWriter(xlsx_buf, engine="openpyxl") as writer:
+        df.to_excel(writer, sheet_name="Data BPS")
+    xlsx_bytes = xlsx_buf.getvalue()
+
+    col_xlsx.download_button(
+        label        = "⬇ Unduh Excel (.xlsx)",
+        data         = xlsx_bytes,
+        file_name    = f"BPS_{safe_label}.xlsx",
+        mime         = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        use_container_width=True,
+    )
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# HALAMAN UTAMA
+# ──────────────────────────────────────────────────────────────────────────────
+
+def main() -> None:
+    st.set_page_config(
+        page_title = "BPS Live — Dashboard Analitik Ekonomi",
+        page_icon  = "📊",
+        layout     = "wide",
+    )
+
+    st.title("📊 Dashboard Analitik Ekonomi — Data Live BPS RI")
+    st.caption(
+        "Semua data ditarik real-time dari WebAPI resmi BPS (domain nasional 0000). "
+        "Nilai kosong dari server ditampilkan apa adanya, tanpa estimasi atau interpolasi."
+    )
+
+    # ── Autentikasi ──
+    try:
+        api_key = st.secrets["BPS_APP_ID"]
+    except (KeyError, FileNotFoundError):
+        st.error(
+            "**API Key tidak ditemukan.** "
+            "Tambahkan `BPS_APP_ID` ke file `.streamlit/secrets.toml`:\n\n"
+            "```toml\nBPS_APP_ID = \"kunci-api-bps-anda\"\n```"
+        )
+        st.stop()
+
+    # ─────────────────────────────────────────────────────────────────────────
+    # PANEL FILTER (sidebar)
+    # ─────────────────────────────────────────────────────────────────────────
+    with st.sidebar:
+        st.header("🔍 Filter Data")
+
+        # ── 1. Subjek BPS ──
+        st.subheader("Subjek")
+        with st.spinner("Memuat daftar subjek dari BPS…"):
+            try:
+                subjects = fetch_all_subjects(api_key)
+            except RuntimeError as e:
+                st.error(f"Gagal memuat subjek BPS:\n\n`{e}`")
+                st.stop()
+
+        if not subjects:
+            st.error("Tidak ada subjek yang dikembalikan oleh BPS.")
+            st.stop()
+
+        subject_options = {s["label"]: s["subject_id"] for s in subjects}
+        selected_subject_label = st.selectbox(
+            "Pilih Subjek BPS",
+            options=list(subject_options.keys()),
+            index=0,
+        )
+        selected_subject_id = subject_options[selected_subject_label]
+
+        # ── 2. Variabel/Indikator ──
+        st.subheader("Indikator / Variabel")
+        with st.spinner(f"Memuat variabel untuk subjek '{selected_subject_label}'…"):
+            try:
+                variables = fetch_variables(api_key, selected_subject_id)
+            except RuntimeError as e:
+                st.error(f"Gagal memuat variabel BPS:\n\n`{e}`")
+                st.stop()
+
+        if not variables:
+            st.warning("Tidak ada variabel yang tersedia untuk subjek ini.")
+            st.stop()
+
+        var_options = {v["label"]: v["var_id"] for v in variables}
+        selected_var_label = st.selectbox(
+            "Pilih Indikator",
+            options=list(var_options.keys()),
+            index=0,
+        )
+        selected_var_id = var_options[selected_var_label]
+
+        # ── 3. Rentang Tahun ──
+        st.subheader("Rentang Tahun")
+        tahun_awal  = st.number_input(
+            "Tahun Awal",
+            min_value = YEAR_MIN,
+            max_value = YEAR_MAX - 1,
+            value     = 2015,
+            step      = 1,
+        )
+        tahun_akhir = st.number_input(
+            "Tahun Akhir",
+            min_value = int(tahun_awal) + 1,
+            max_value = YEAR_MAX,
+            value     = 2024,
+            step      = 1,
+        )
+
+        st.divider()
+        tarik_data = st.button("🔄 Tarik Data dari BPS", use_container_width=True, type="primary")
+
+    # ─────────────────────────────────────────────────────────────────────────
+    # AREA KONTEN UTAMA
+    # ─────────────────────────────────────────────────────────────────────────
+    if not tarik_data:
+        st.info(
+            "Pilih subjek, indikator, dan rentang tahun di panel kiri, "
+            "lalu klik **Tarik Data dari BPS**."
+        )
+        return
+
+    # ── Ambil data ──
+    with st.spinner(
+        f"Mengambil data '{selected_var_label}' ({tahun_awal}–{tahun_akhir}) dari BPS…"
+    ):
+        try:
+            df, raw_response = fetch_timeseries(
+                api_key      = api_key,
+                var_id       = selected_var_id,
+                tahun_awal   = int(tahun_awal),
+                tahun_akhir  = int(tahun_akhir),
+            )
+        except RuntimeError as e:
+            st.error(f"**Gagal mengambil data dari BPS:**\n\n`{e}`")
+            with st.expander("Tampilkan respons mentah BPS (diagnostik)"):
+                try:
+                    # Coba tampilkan respons mentah jika tersedia
+                    th_param = build_th_param(int(tahun_awal), int(tahun_akhir))
+                    url_diag = (
+                        f"{BASE_URL}/model/data/lang/{LANG}/domain/{DOMAIN}"
+                        f"/var/{selected_var_id}/th/{th_param}/key/{api_key}/"
                     )
-                    st.plotly_chart(fig, use_container_width=True)
-                    
-                with tab2:
-                    df_display = df.drop(columns=['Grup'])
-                    st.dataframe(df_display.style.format(na_rep='-'), use_container_width=True, hide_index=True)
-                    
-                with tab3:
-                    st.markdown("### Unduh Data Instan")
-                    df_export = df.drop(columns=['Grup'])
-                    col_dl1, col_dl2 = st.columns(2)
-                    
-                    csv = df_export.to_csv(index=False).encode('utf-8')
-                    with col_dl1:
-                        st.download_button("📥 Unduh CSV", csv, f"BPS_{selected_var_id}.csv", "text/csv", use_container_width=True)
-                    
-                    excel_buffer = BytesIO()
-                    with pd.ExcelWriter(excel_buffer, engine='xlsxwriter') as writer:
-                        df_export.to_excel(writer, index=False, sheet_name='Data BPS')
-                    with col_dl2:
-                        st.download_button("📥 Unduh Excel", excel_buffer.getvalue(), f"BPS_{selected_var_id}.xlsx", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", use_container_width=True)
-            else:
-                st.info("Kueri dieksekusi, namun tidak ada nilai angka yang dikembalikan oleh BPS pada rentang tahun dan variabel tersebut.")
+                    raw_diag = _get(url_diag)
+                    st.json(raw_diag)
+                except Exception as e2:
+                    st.write(str(e2))
+            return
+
+    # ── Informasi indikator ──
+    st.subheader(selected_var_label)
+    st.caption(
+        f"Subjek: **{selected_subject_label}** | "
+        f"Var ID: `{selected_var_id}` | "
+        f"Rentang: {tahun_awal}–{tahun_akhir} | "
+        f"Sumber: WebAPI BPS RI (Domain `{DOMAIN}`)"
+    )
+
+    if df.empty or df.isnull().all().all():
+        st.warning(
+            "BPS mengembalikan data kosong untuk kombinasi variabel dan rentang tahun ini. "
+            "Coba perluas rentang tahun atau pilih variabel lain."
+        )
+        with st.expander("Respons mentah BPS"):
+            st.json(raw_response)
+        return
+
+    # ── Grafik tren ──
+    render_timeseries_chart(df, selected_var_label)
+
+    # ── Statistik ringkas ──
+    with st.expander("📈 Statistik Deskriptif"):
+        st.dataframe(df.describe().applymap(lambda x: f"{x:,.2f}" if pd.notna(x) else "-"),
+                     use_container_width=True)
+
+    # ── Tabel observasi ──
+    st.subheader("Tabel Observasi")
+    render_table(df)
+
+    # ── Unduh ──
+    st.subheader("Unduh Data")
+    render_download_buttons(df, selected_var_label)
+
+    # ── Ekspander respons mentah (transparansi) ──
+    with st.expander("🔎 Respons JSON mentah dari BPS (untuk verifikasi)"):
+        st.json(raw_response)
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# ENTRY POINT
+# ──────────────────────────────────────────────────────────────────────────────
+
+if __name__ == "__main__":
+    main()
