@@ -146,3 +146,18 @@ with st.form("feedback_form", clear_on_submit=True):
                         st.error(f"Gagal mengirim pesan (Status HTTP: {res.status_code}). Silakan coba lagi.")
                 except Exception as e:
                     st.error(f"Terjadi kendala saat menghubungi server pengiriman: {e}")
+
+# =============================================================================
+# FOOTER PROFESIONAL (METADATA & COPYRIGHT)
+# =============================================================================
+st.markdown("---")
+col_foot1, col_foot2, col_foot3 = st.columns(3)
+with col_foot1:
+    st.markdown("**IE IndoEcon Explorer**")
+    st.markdown("Platform Riset & Observasi Data Publik")
+with col_foot2:
+    st.markdown("**Pengembang & Periset**")
+    st.markdown("👩‍💻 **Kherisya Nevilia**")
+with col_foot3:
+    st.markdown("**Arsip Akademik**")
+    st.markdown("© 2025–2026 • Dirilis Sejak Juli 2025")
