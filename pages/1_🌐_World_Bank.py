@@ -31,14 +31,11 @@ def load_all_indicators():
     data = res.json()
     if len(data) > 1 and data[1]:
       for item in data[1]:
-        ind_id = item.get("id")
-        # Menyaring format lama berkode angka di depan agar bersih dari error
-        if ind_id and not ind_id.startswith("6.") and not ind_id.startswith("7."):
-          indicators.append({
-              "id": ind_id,
-              "name": item.get("name"),
-              "sourceNote": item.get("sourceNote", ""),
-          })
+        indicators.append({
+            "id": item.get("id"),
+            "name": item.get("name"),
+            "sourceNote": item.get("sourceNote", ""),
+        })
   except Exception:
     pass
   return indicators
@@ -69,8 +66,8 @@ if query and all_indicators:
         " langsung dari World Bank!"
     )
 
-    # Format pilihan di dropdown bersih TANPA menampilkan kode API di antarmuka
-    options_map = {ind['name']: ind for ind in results}
+    # Format pilihan di dropdown
+    options_map = {f"{ind['name']} ({ind['id']})": ind for ind in results}
     selected_label = st.selectbox(
         "Pilih Indikator Hasil Pencarian:", list(options_map.keys())
     )
@@ -83,7 +80,7 @@ if query and all_indicators:
         st.write(selected_ind["sourceNote"])
 
     if st.button("📊 Ambil Data Indonesia", type="primary"):
-      with st.spinner("Mengunduh time series untuk indikator terpilih..."):
+      with st.spinner(f"Mengunduh time series untuk {kode_indikator}..."):
         data_url = f"https://api.worldbank.org/v2/country/IDN/indicator/{kode_indikator}?format=json&per_page=120"
         try:
           r_data = requests.get(data_url, headers=HEADERS, timeout=15)
@@ -144,7 +141,7 @@ if query and all_indicators:
               )
           else:
             st.warning(
-                f"Indikator ini tercatat di World Bank, namun"
+                f"Indikator '{kode_indikator}' tercatat di World Bank, namun"
                 " Indonesia tidak memiliki observasi data untuk variabel ini."
             )
         except Exception as e:
