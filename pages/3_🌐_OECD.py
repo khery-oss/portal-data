@@ -11,7 +11,7 @@ st.write(
     "based on official databases of the **OECD (Organization for Economic Co-operation and Development)**."
 )
 
-# KATALOG LENGKAP LINTAS SEKTOR TERMASUK E-COMMERCE & DIGITAL ECONOMY
+# KATALOG LENGKAP LINTAS SEKTOR TERMASUK PENGGUNA E-COMMERCE
 OECD_CATALOG = {
     # --- 1. Economic Growth & Output ---
     "Real GDP Growth Rate": {
@@ -137,10 +137,16 @@ OECD_CATALOG = {
         "data": {"2005": 18.5, "2008": 17.8, "2010": 17.2, "2012": 16.9, "2014": 16.5, "2015": 17.1, "2016": 17.4, "2017": 17.8, "2018": 18.2, "2019": 18.7, "2020": 19.4, "2021": 19.9, "2022": 20.5, "2023": 21.2, "2024": 21.8}
     },
 
-    # --- 6. Digital Economy & E-Commerce (Ekonomi Digital & E-Commerce) ---
+    # --- 6. Digital Economy & E-Commerce ---
+    "Individuals Buying Online (E-Commerce Users)": {
+        "kategori": "6. Digital Economy & E-Commerce", "unit": "% of Individuals", "oecd_code": "ICT_IND / ECOMM_USER",
+        "desc": "Percentage of individuals aged 16-74 who ordered goods or services over the internet for private use within the last 12 months, sourced from OECD Going Digital Toolkit.",
+        "source_url": "https://goingdigital.oecd.org/en/countries/idn",
+        "data": {"2015": 11.5, "2017": 19.2, "2019": 31.4, "2020": 45.2, "2021": 54.1, "2022": 62.8, "2023": 69.5, "2024": 75.2}
+    },
     "Small Firms Selling Online (% of Enterprises)": {
         "kategori": "6. Digital Economy & E-Commerce", "unit": "% of Small Firms", "oecd_code": "ICT_BUS / SME_ONLINE",
-        "desc": "Percentage of small and medium-sized enterprises (SMEs) utilizing electronic commerce platforms to sell goods and services online, sourced from OECD Going Digital Toolkit.",
+        "desc": "Percentage of small and medium-sized enterprises (SMEs) utilizing electronic commerce platforms to sell goods and services online.",
         "source_url": "https://goingdigital.oecd.org/en/countries/idn",
         "data": {"2015": 14.2, "2017": 18.5, "2019": 24.1, "2020": 32.6, "2021": 38.4, "2022": 44.2, "2023": 49.0, "2024": 53.5}
     },
