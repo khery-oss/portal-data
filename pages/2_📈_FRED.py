@@ -1,167 +1,234 @@
-import pandas as pd
-import plotly.express as px
-import requests
 import streamlit as st
+import pandas as pd
+import plotly.graph_objects as go
+import requests
+import io
 
-st.set_page_config(
-    page_title="📈 Federal Reserve Economic Data (FRED)",
-    page_icon="📈",
-    layout="wide"
-)
-
-st.title("📈 FRED Economic Data Module")
+st.set_page_config(page_title="FRED - Portal Data Indonesia", layout="wide")
+st.title("📈 Federal Reserve Economic Data (FRED) - Indonesia")
 st.markdown(
-    "Modul interaktif penarikan data ekonomi makro global, suku bunga, nilai tukar, komoditas strategis, "
-    "dan indikator moneter internasional bersumber langsung dari **Federal Reserve Economic Data (FRED)** API."
+    "Eksplorasi seri data ekonomi Indonesia dari **Federal Reserve Bank of St. Louis (FRED)** "
+    "secara *real-time*. Seluruh hasil pencarian otomatis difilter khusus untuk seri yang berkaitan dengan **Indonesia**."
 )
 
+HEADERS = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"}
+
 # =============================================================================
-# 1. AMAN KUNCI API (SAFE API KEY CHECK & FALLBACK)
+# API KEY — dengan error handling ramah jika key tidak ada
 # =============================================================================
-fred_api_key = None
 try:
-    if "FRED_API_KEY" in st.secrets:
-        fred_api_key = st.secrets["FRED_API_KEY"]
-except Exception:
-    pass
-
-if not fred_api_key:
-    st.warning(
-        "⚠️ **Perhatian: Kunci API FRED (FRED_API_KEY) belum terdeteksi di secrets sistem.**\n\n"
-        "Untuk mengaktifkan penarikan data *live* secara penuh, silakan daftarkan diri secara gratis di [FRED API Key Generator](https://fred.stlouisfed.org/docs/api/api_key.html) "
-        "dan masukkan kuncinya ke dalam file `.streamlit/secrets.toml` dengan format:\n"
-        "```toml\nFRED_API_KEY = \"your_api_key_here\"\n```\n"
-        "*(Saat ini sistem menggunakan mode pratinjau aman / simulasi koneksi terbatas).* "
+    FRED_API_KEY = st.secrets["FRED_API_KEY"]
+except (KeyError, FileNotFoundError):
+    st.error(
+        "⚠️ **FRED API Key tidak ditemukan.**\n\n"
+        "Tambahkan `FRED_API_KEY` ke file `secrets.toml` atau Streamlit Cloud Secrets:\n"
+        "```\nFRED_API_KEY = 'your_api_key_here'\n```\n"
+        "Dapatkan API Key gratis di: https://fred.stlouisfed.org/docs/api/api_key.html"
     )
-    # Kunci demo/publik sementara atau mode simulasi jika kosong agar tidak crash total
-    fred_api_key = "abcdef1234567890" 
+    st.stop()
 
 # =============================================================================
-# 2. PILIHAN SERI UTAMA RELEVAN (KONSEKSTUAL INDONESIA & GLOBAL)
+# 1. PENCARIAN SERI — OTOMATIS FILTER INDONESIA
 # =============================================================================
-st.subheader("🌐 Seri Data Rekomendasi (Relevansi Makro & Komoditas)")
-st.markdown("Pilih indikator global dan moneter strategis yang sering digunakan dalam analisis ekonomi terbuka Indonesia:")
+st.subheader("1. Pencarian Indikator FRED (Indonesia)")
 
-default_series = {
-    "DEXINUS (Nilai Tukar Rupiah per USD - Monthly)": "DEXINUS",
-    "FEDFUNDS (Suku Bunga Acuan The Fed / Effective Federal Funds Rate)": "FEDFUNDS",
-    "DCOILWTICO (Harga Minyak Mentah Dunia / WTI Crude Oil)": "DCOILWTICO",
-    "PPOILUSDM (Indeks Harga Minyak Kelapa Sawit / Palm Oil World Price)": "PPOILUSDM",
-    "CPIAUCSL (Indeks Harga Konsumen / US Inflation Proxy)": "CPIAUCSL"
+INDONESIA_KEYWORDS = ["indonesia"]
+
+col_search, col_hint = st.columns([2, 1])
+with col_search:
+    query_tambahan = st.text_input(
+        "🔍 Tambahkan kata kunci topik (opsional):",
+        placeholder="Contoh: exchange rate, inflation, interest rate, M2, GDP",
+        value=""
+    ).strip()
+
+with col_hint:
+    st.markdown("**Contoh topik yang tersedia:**")
+    st.caption("exchange rate · inflation · interest rate · M2 · GDP · trade · bonds · rupiah")
+
+# Gabungkan query: selalu sertakan "Indonesia" + kata kunci tambahan user
+if query_tambahan:
+    query_final = f"Indonesia {query_tambahan}"
+else:
+    query_final = "Indonesia"
+
+@st.cache_data(ttl=3600, show_spinner=False)
+def search_fred(query: str, api_key: str):
+    search_url = (
+        f"https://api.stlouisfed.org/fred/series/search"
+        f"?search_text={query}&api_key={api_key}&file_type=json&limit=100"
+        f"&order_by=popularity&sort_order=desc"
+    )
+    try:
+        res = requests.get(search_url, headers=HEADERS, timeout=15)
+        data = res.json()
+        seri_all = data.get("seriess", [])
+        # Filter ketat: hanya tampilkan seri yang title/id-nya mengandung "indonesia" (case-insensitive)
+        seri_filtered = [
+            s for s in seri_all
+            if any(kw in s.get("title", "").lower() or kw in s.get("id", "").lower() for kw in INDONESIA_KEYWORDS)
+        ]
+        return seri_filtered, None
+    except Exception as e:
+        return [], str(e)
+
+with st.spinner(f"Mencari seri FRED untuk: '{query_final}'..."):
+    seri_list, err = search_fred(query_final, FRED_API_KEY)
+
+if err:
+    st.error(f"Gagal terhubung ke server FRED: {err}")
+    st.stop()
+
+if not seri_list:
+    st.warning(
+        f"Tidak ditemukan seri FRED yang berkaitan dengan Indonesia untuk kata kunci **'{query_tambahan}'**.\n\n"
+        "Coba kata kunci lain seperti: `exchange rate`, `inflation`, `interest rate`, `rupiah`, `trade`."
+    )
+    st.stop()
+
+st.success(f"Ditemukan **{len(seri_list)}** seri data Indonesia di FRED.")
+
+# =============================================================================
+# 2. PEMILIHAN SERI
+# =============================================================================
+st.subheader("2. Pilih Seri Data")
+
+fred_options = {
+    f"{s['title']} | Frekuensi: {s.get('frequency', '-')} | Satuan: {s.get('units_short', '-')} | ({s['id']})": s
+    for s in seri_list
 }
 
-selected_label = st.selectbox("Pilih Seri Indikator Siap Pakai:", list(default_series.keys()))
-series_id_input = default_series[selected_label]
+selected_fred_label = st.selectbox("Pilih Seri Data FRED:", list(fred_options.keys()))
+selected_fred = fred_options[selected_fred_label]
+series_id = selected_fred["id"]
 
-# Opsi input manual jika ingin mencari kode seri lain
-with st.expander("🔍 Cari Seri FRED Lainnya (Advanced Search)"):
-    search_query = st.text_input("Kata Kunci Pencarian Seri (Contoh: Indonesia GDP, Exchange Rate, Interest Rate)", value="")
-    if search_query and fred_api_key:
-        with st.spinner("Mencari seri data di database FRED..."):
-            search_url = f"https://api.stlouisfed.org/fred/series/search?search_text={search_query}&api_key={fred_api_key}&file_type=json&limit=100"
-            try:
-                s_res = requests.get(search_url, timeout=10)
-                if s_res.status_code == 200:
-                    s_data = s_res.json().get("seri", [])
-                    if s_data:
-                        series_options = {f"{item['id']} - {item['title']}": item['id'] for item in s_data}
-                        chosen_label = st.selectbox("Hasil Pencarian:", list(series_options.keys()))
-                        series_id_input = series_options[chosen_label]
-                    else:
-                        st.info("Tidak ditemukan seri data yang cocok dengan kata kunci tersebut.")
-                else:
-                    st.error("Gagal terhubung ke mesin pencari FRED API.")
-            except Exception as e:
-                st.error(f"Terjadi kesalahan koneksi: {e}")
-
-st.markdown(f"**Series ID Aktif:** `{series_id_input}`")
+with st.expander("ℹ️ Detail Metadata & Sumber Resmi", expanded=False):
+    col_m1, col_m2 = st.columns(2)
+    with col_m1:
+        st.markdown(f"**Judul Seri:** {selected_fred.get('title')}")
+        st.markdown(f"**ID Seri:** `{series_id}`")
+        st.markdown(f"**Frekuensi:** {selected_fred.get('frequency')}")
+        st.markdown(f"**Satuan:** {selected_fred.get('units')}")
+    with col_m2:
+        st.markdown(f"**Rentang Observasi:** {selected_fred.get('observation_start')} s.d. {selected_fred.get('observation_end')}")
+        st.markdown(f"**Terakhir Diperbarui:** {selected_fred.get('last_updated', '-')}")
+        st.markdown(f"🔗 [Lihat di FRED](https://fred.stlouisfed.org/series/{series_id})")
+    catatan = selected_fred.get('notes', '')
+    if catatan:
+        st.markdown(f"**Catatan Metodologi:**\n{catatan}")
 
 # =============================================================================
-# 3. FITUR PILIHAN FREKUENSI & RESAMPLING DATA
+# 3. PENARIKAN DATA & OPSI RESAMPLE
 # =============================================================================
-col_opt1, col_opt2 = st.columns(2)
+st.subheader("3. Penarikan & Visualisasi Data")
+
+frekuensi_asli = selected_fred.get("frequency", "").lower()
+tampilkan_resample = any(f in frekuensi_asli for f in ["daily", "weekly", "harian", "mingguan", "business"])
+
+col_opt1, col_opt2 = st.columns([1, 2])
 with col_opt1:
-    resample_option = st.selectbox(
-        "Pilih Agregasi / Resampling Waktu:",
-        ["Data Asli (Native Frequency)", "Rata-rata Bulanan (Monthly Resample)", "Rata-rata Tahunan (Annual Resample)"]
-    )
-with col_opt2:
-    st.markdown("<br>", unsafe_allow_html=True)
-    fetch_btn = st.button("🚀 Tarik Data Live FRED", type="primary")
+    if tampilkan_resample:
+        resample_pilihan = st.selectbox(
+            "Agregasi Frekuensi:",
+            ["Asli (tanpa agregasi)", "Bulanan (rata-rata)", "Kuartalan (rata-rata)", "Tahunan (rata-rata)"]
+        )
+    else:
+        resample_pilihan = "Asli (tanpa agregasi)"
+        st.caption(f"Frekuensi data: **{selected_fred.get('frequency', '-')}**")
 
-# =============================================================================
-# 4. EKSEKUSI PENARIKAN API & VISUALISASI PLOTLY
-# =============================================================================
-if fetch_btn:
-    with st.spinner(f"Menarik data seri `{series_id_input}` secara real-time dari server FRED..."):
-        api_url = f"https://api.stlouisfed.org/fred/series/observations?series_id={series_id_input}&api_key={fred_api_key}&file_type=json"
-        
+if st.button("📊 Ambil Data FRED", type="primary"):
+    with st.spinner(f"Mengambil seluruh observasi untuk '{selected_fred['title']}'..."):
+        obs_url = (
+            f"https://api.stlouisfed.org/fred/series/observations"
+            f"?series_id={series_id}&api_key={FRED_API_KEY}&file_type=json"
+        )
         try:
-            response = requests.get(api_url, timeout=15)
-            if response.status_code == 200:
-                data = response.json()
-                observations = data.get("observations", [])
-                
-                if observations:
-                    df = pd.DataFrame(observations)[['date', 'value']]
-                    df['date'] = pd.to_datetime(df['date'], errors='coerce')
-                    df['value'] = pd.to_numeric(df['value'], errors='coerce')
-                    df = df.dropna().sort_values('date')
-                    df.set_index('date', inplace=True)
-                    
-                    # Terapkan Resampling jika dipilih untuk meredam kepadatan grafik harian/mingguan
-                    if "Monthly" in resample_option:
-                        df = df.resample('M').mean()
-                    elif "Annual" in resample_option:
-                        df = df.resample('A').mean()
-                    
-                    df = df.reset_index()
-                    
-                    st.success(f"Berhasil memuat {len(df)} observasi data!")
-                    
-                    # Visualisasi Interaktif menggunakan Plotly (Menggantikan st.line_chart biasa)
-                    fig = px.line(
-                        df, 
-                        x='date', 
-                        y='value', 
-                        title=f"Grafik Tren Waktu: {series_id_input} ({resample_option})",
-                        labels={'date': 'Tahun / Periode Waktu', 'value': 'Nilai Indikator'},
-                        template='plotly_white'
-                    )
-                    fig.update_traces(line=dict(color='#1f77b4', width=2))
-                    fig.update_layout(
-                        margin=dict(l=20, r=20, t=40, b=20),
-                        hovermode='x unified'
-                    )
-                    st.plotly_chart(fig, use_container_width=True)
-                    
-                    # Tombol Unduh Ekspor Data Terbuka (CSV & Excel)
-                    st.divider()
-                    st.subheader("📥 Ekspor Dataset")
-                    
-                    col_dl1, col_dl2 = st.columns(2)
-                    with col_dl1:
-                        csv_data = df.to_csv(index=False).encode('utf-8')
-                        st.download_button(
-                            label="📥 Unduh sebagai CSV",
-                            data=csv_data,
-                            file_name=f"FRED_{series_id_input}.csv",
-                            mime="text/csv"
-                        )
-                    with col_dl2:
-                        output = io.BytesIO()
-                        with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
-                            df.to_excel(writer, index=False, sheet_name='FRED_Data')
-                        excel_data = output.getvalue()
-                        st.download_button(
-                            label="📊 Unduh sebagai Excel (.xlsx)",
-                            data=excel_data,
-                            file_name=f"FRED_{series_id_input}.xlsx",
-                            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-                        )
-                else:
-                    st.warning("Data observasi kosong untuk kode seri tersebut.")
-            else:
-                st.error(f"Gagal mengambil data dari server FRED (Kode HTTP: {response.status_code}). Periksa kembali API Key Anda.")
+            r_obs = requests.get(obs_url, headers=HEADERS, timeout=20)
+            obs_json = r_obs.json()
+
+            if "error_message" in obs_json:
+                st.error(f"FRED API Error: {obs_json['error_message']}")
+                st.stop()
+
+            raw_obs = obs_json.get("observations", [])
+
+            records_fred = []
+            for row in raw_obs:
+                tgl = row.get("date")
+                val_str = row.get("value")
+                try:
+                    records_fred.append({"Tanggal": tgl, "Nilai": float(val_str)})
+                except (ValueError, TypeError):
+                    # Skip nilai "." yang berarti missing di FRED
+                    continue
+
+            if not records_fred:
+                st.warning("Data observasi tidak ditemukan atau seluruh nilai kosong untuk seri ini.")
+                st.stop()
+
+            df_fred = pd.DataFrame(records_fred)
+            df_fred["Tanggal"] = pd.to_datetime(df_fred["Tanggal"])
+            df_fred = df_fred.sort_values(by="Tanggal", ascending=True).reset_index(drop=True)
+
+            # Resample jika dipilih
+            if resample_pilihan == "Bulanan (rata-rata)":
+                df_fred = df_fred.set_index("Tanggal").resample("ME").mean().round(4).reset_index()
+            elif resample_pilihan == "Kuartalan (rata-rata)":
+                df_fred = df_fred.set_index("Tanggal").resample("QE").mean().round(4).reset_index()
+            elif resample_pilihan == "Tahunan (rata-rata)":
+                df_fred = df_fred.set_index("Tanggal").resample("YE").mean().round(4).reset_index()
+
+            satuan = selected_fred.get("units_short", "Nilai")
+            judul_seri = selected_fred["title"]
+
+            st.success(f"Berhasil memuat **{len(df_fred)}** observasi dari FRED!")
+            st.divider()
+
+            # Link resmi
+            st.markdown(f"🔗 **Halaman Resmi FRED:** [{judul_seri}](https://fred.stlouisfed.org/series/{series_id})")
+
+            # Tombol Download
+            cf1, cf2 = st.columns(2)
+            cf1.download_button(
+                "📥 Unduh CSV",
+                df_fred.to_csv(index=False).encode("utf-8"),
+                f"{series_id}_fred.csv",
+                "text/csv"
+            )
+            buf_fred = io.BytesIO()
+            with pd.ExcelWriter(buf_fred, engine="openpyxl") as writer:
+                df_fred.to_excel(writer, index=False, sheet_name="FRED Data")
+            cf2.download_button(
+                "📊 Unduh Excel (.xlsx)",
+                buf_fred.getvalue(),
+                f"{series_id}_fred.xlsx",
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            )
+
+            # Plotly Interaktif
+            fig = go.Figure()
+            fig.add_trace(go.Scatter(
+                x=df_fred["Tanggal"],
+                y=df_fred["Nilai"],
+                mode="lines+markers",
+                name=judul_seri,
+                line=dict(width=2.5, color="#1f77b4"),
+                marker=dict(size=5),
+                hovertemplate=f"%{{x|%d %b %Y}}<br>Nilai: %{{y:,.4f}} {satuan}<extra></extra>"
+            ))
+            fig.update_layout(
+                xaxis=dict(title="Tanggal", rangeslider=dict(visible=True), type="date"),
+                yaxis=dict(title=satuan),
+                hovermode="x unified",
+                margin=dict(l=20, r=20, t=30, b=20)
+            )
+            st.plotly_chart(fig, use_container_width=True)
+
+            with st.expander("📋 Tabel Data Lengkap"):
+                st.dataframe(
+                    df_fred.sort_values(by="Tanggal", ascending=False),
+                    use_container_width=True
+                )
+
         except Exception as e:
-                st.error(f"Terjadi kendala teknis saat menghubungi API FRED: {e}")
+            st.error(f"Gagal mengambil data dari server FRED: {e}")
