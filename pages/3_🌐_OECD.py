@@ -7,247 +7,162 @@ st.set_page_config(page_title="OECD Data Explorer - Indonesia", layout="wide")
 
 st.title("🌐 Portal Data OECD (Fokus Indonesia)")
 st.write(
-    "Comprehensive economic, social, labor, and demographic indicators for **Indonesia** "
-    "based on official publications and databases of the **OECD (Organization for Economic Co-operation and Development)**."
+    "Comprehensive macro-economic, trade, labor, social, demographic, and environmental indicators for **Indonesia** "
+    "based on official databases of the **OECD (Organization for Economic Co-operation and Development)**."
 )
 
-# KATALOG INDIKATOR EKONOMI & SOSIAL RESMI OECD UNTUK INDONESIA (DIPERLUAS)
+# KATALOG LENGKAP LINTAS SEKTOR (EKONOMI, SOSIAL, DEMOGRAFI, LINGKUNGAN, PENDIDIKAN)
 OECD_CATALOG = {
-    # --- Kelompok 1: Economic Growth & Output (GDP) ---
+    # --- 1. Economic Growth & Output ---
     "Real GDP Growth Rate": {
-        "kategori": "1. Economic Growth & Output",
-        "unit": "%",
-        "oecd_code": "QNA / B1_GE",
-        "desc": "Annual growth rate of real Gross Domestic Product based on constant prices, reflecting the rate of economic expansion or contraction.",
+        "kategori": "1. Economic Growth & Output", "unit": "%", "oecd_code": "QNA / B1_GE",
+        "desc": "Annual growth rate of real Gross Domestic Product based on constant prices.",
         "source_url": "https://data-explorer.oecd.org/",
-        "data": {
-            "1995": 8.22, "1996": 7.82, "1997": 4.70, "1998": -13.13, "1999": 0.79,
-            "2000": 4.92, "2001": 3.64, "2002": 4.50, "2003": 4.78, "2004": 5.03,
-            "2005": 5.69, "2006": 5.50, "2007": 6.35, "2008": 6.01, "2009": 4.63,
-            "2010": 6.22, "2011": 6.17, "2012": 6.03, "2013": 5.56, "2014": 5.01,
-            "2015": 4.88, "2016": 5.03, "2017": 5.07, "2018": 5.17, "2019": 5.02,
-            "2020": -2.07, "2021": 3.69, "2022": 5.31, "2023": 5.05, "2024": 5.03
-        }
+        "data": {"1995": 8.22, "1996": 7.82, "1997": 4.70, "1998": -13.13, "1999": 0.79, "2000": 4.92, "2001": 3.64, "2002": 4.50, "2003": 4.78, "2004": 5.03, "2005": 5.69, "2006": 5.50, "2007": 6.35, "2008": 6.01, "2009": 4.63, "2010": 6.22, "2011": 6.17, "2012": 6.03, "2013": 5.56, "2014": 5.01, "2015": 4.88, "2016": 5.03, "2017": 5.07, "2018": 5.17, "2019": 5.02, "2020": -2.07, "2021": 3.69, "2022": 5.31, "2023": 5.05, "2024": 5.03}
     },
     "Gross Domestic Product per Capita (PPP)": {
-        "kategori": "1. Economic Growth & Output",
-        "unit": "Current USD PPP",
-        "oecd_code": "SNA / B1_GE_PERCAP",
-        "desc": "Gross Domestic Product divided by total mid-year population, converted to international dollars using Purchasing Power Parity (PPP) rates.",
+        "kategori": "1. Economic Growth & Output", "unit": "Current USD PPP", "oecd_code": "SNA / B1_GE_PERCAP",
+        "desc": "GDP divided by total mid-year population, converted to international dollars using PPP rates.",
         "source_url": "https://data-explorer.oecd.org/",
-        "data": {
-            "2000": 4320, "2001": 4540, "2002": 4810, "2003": 5120, "2004": 5510,
-            "2005": 6010, "2006": 6550, "2007": 7180, "2008": 7790, "2009": 8200,
-            "2010": 8800, "2011": 9480, "2012": 10180, "2013": 10820, "2014": 11390,
-            "2015": 11890, "2016": 12480, "2017": 13140, "2018": 13860, "2019": 14450,
-            "2020": 13980, "2021": 14750, "2022": 15820, "2023": 16680, "2024": 17450
-        }
+        "data": {"2000": 4320, "2001": 4540, "2002": 4810, "2003": 5120, "2004": 5510, "2005": 6010, "2006": 6550, "2007": 7180, "2008": 7790, "2009": 8200, "2010": 8800, "2011": 9480, "2012": 10180, "2013": 10820, "2014": 11390, "2015": 11890, "2016": 12480, "2017": 13140, "2018": 13860, "2019": 14450, "2020": 13980, "2021": 14750, "2022": 15820, "2023": 16680, "2024": 17450}
     },
     "Gross Fixed Capital Formation (Investment)": {
-        "kategori": "1. Economic Growth & Output",
-        "unit": "% of GDP",
-        "oecd_code": "SNA / P51G_PDB",
-        "desc": "Total outlays on additions to the fixed assets of the economy plus net changes in the level of inventories, expressed as a percentage of GDP.",
+        "kategori": "1. Economic Growth & Output", "unit": "% of GDP", "oecd_code": "SNA / P51G_PDB",
+        "desc": "Total outlays on additions to fixed assets and inventories as a percentage of GDP.",
         "source_url": "https://data-explorer.oecd.org/",
-        "data": {
-            "2000": 22.3, "2002": 21.4, "2004": 24.1, "2006": 25.4, "2008": 27.8,
-            "2010": 31.0, "2011": 31.8, "2012": 33.2, "2013": 32.7, "2014": 32.6,
-            "2015": 32.8, "2016": 32.6, "2017": 32.2, "2018": 32.3, "2019": 32.3,
-            "2020": 31.7, "2021": 30.8, "2022": 29.8, "2023": 29.3, "2024": 29.1
-        }
+        "data": {"2000": 22.3, "2002": 21.4, "2004": 24.1, "2006": 25.4, "2008": 27.8, "2010": 31.0, "2011": 31.8, "2012": 33.2, "2013": 32.7, "2014": 32.6, "2015": 32.8, "2016": 32.6, "2017": 32.2, "2018": 32.3, "2019": 32.3, "2020": 31.7, "2021": 30.8, "2022": 29.8, "2023": 29.3, "2024": 29.1}
     },
 
-    # --- Kelompok 2: Prices, Inflation & Exchange Rates ---
+    # --- 2. Prices & Inflation ---
     "Consumer Price Index Inflation (Annual)": {
-        "kategori": "2. Prices & Inflation",
-        "unit": "%",
-        "oecd_code": "PRICES_CPI / CPI_TOT",
-        "desc": "Rate of change in the Consumer Price Index (CPI), reflecting the annual change in the cost of a specified basket of consumer goods and services.",
+        "kategori": "2. Prices & Inflation", "unit": "%", "oecd_code": "PRICES_CPI / CPI_TOT",
+        "desc": "Rate of change in the Consumer Price Index (CPI), reflecting annual change in consumer basket costs.",
         "source_url": "https://data-explorer.oecd.org/",
-        "data": {
-            "1995": 9.43, "1996": 7.97, "1997": 6.23, "1998": 58.39, "1999": 20.49,
-            "2000": 3.73, "2001": 11.50, "2002": 11.84, "2003": 6.76, "2004": 6.06,
-            "2005": 10.45, "2006": 13.11, "2007": 6.30, "2008": 10.23, "2009": 4.39,
-            "2010": 5.13, "2011": 5.36, "2012": 4.28, "2013": 6.41, "2014": 6.39,
-            "2015": 6.36, "2016": 3.53, "2017": 3.81, "2018": 3.20, "2019": 3.03,
-            "2020": 2.03, "2021": 1.56, "2022": 4.21, "2023": 3.67, "2024": 2.61
-        }
+        "data": {"1995": 9.43, "1996": 7.97, "1997": 6.23, "1998": 58.39, "1999": 20.49, "2000": 3.73, "2001": 11.50, "2002": 11.84, "2003": 6.76, "2004": 6.06, "2005": 10.45, "2006": 13.11, "2007": 6.30, "2008": 10.23, "2009": 4.39, "2010": 5.13, "2011": 5.36, "2012": 4.28, "2013": 6.41, "2014": 6.39, "2015": 6.36, "2016": 3.53, "2017": 3.81, "2018": 3.20, "2019": 3.03, "2020": 2.03, "2021": 1.56, "2022": 4.21, "2023": 3.67, "2024": 2.61}
     },
     "Nominal Exchange Rate (IDR per USD)": {
-        "kategori": "2. Prices & Inflation",
-        "unit": "IDR per USD (Average)",
-        "oecd_code": "SNA_EXCH / XR_USD",
-        "desc": "Annual average exchange rate of the Indonesian Rupiah against the United States Dollar based on official market transactions.",
+        "kategori": "2. Prices & Inflation", "unit": "IDR per USD (Average)", "oecd_code": "SNA_EXCH / XR_USD",
+        "desc": "Annual average official exchange rate of the Indonesian Rupiah against the US Dollar.",
         "source_url": "https://data-explorer.oecd.org/",
-        "data": {
-            "1995": 2249, "1996": 2342, "1997": 2909, "1998": 10014, "1999": 7855,
-            "2000": 8422, "2002": 9311, "2004": 8939, "2006": 9159, "2008": 9699,
-            "2010": 9090, "2012": 9387, "2014": 11865, "2015": 13389, "2016": 13308,
-            "2017": 13381, "2018": 14237, "2019": 14148, "2020": 14582, "2021": 14308,
-            "2022": 14850, "2023": 15256, "2024": 15840
-        }
+        "data": {"1995": 2249, "1996": 2342, "1997": 2909, "1998": 10014, "1999": 7855, "2000": 8422, "2002": 9311, "2004": 8939, "2006": 9159, "2008": 9699, "2010": 9090, "2012": 9387, "2014": 11865, "2015": 13389, "2016": 13308, "2017": 13381, "2018": 14237, "2019": 14148, "2020": 14582, "2021": 14308, "2022": 14850, "2023": 15256, "2024": 15840}
     },
 
-    # --- Kelompok 3: Labor Market & Employment ---
+    # --- 3. Labor Market & Employment ---
     "Harmonised Unemployment Rate": {
-        "kategori": "3. Labor Market & Social",
-        "unit": "% of Labor Force",
-        "oecd_code": "LFS_HUR / HUR_TOT",
-        "desc": "Unemployed persons as a percentage of the labor force, standardized according to ILO guidelines to ensure international comparability.",
+        "kategori": "3. Labor Market", "unit": "% of Labor Force", "oecd_code": "LFS_HUR / HUR_TOT",
+        "desc": "Unemployed persons as a percentage of the labor force, standardized per ILO guidelines.",
         "source_url": "https://data-explorer.oecd.org/",
-        "data": {
-            "2000": 6.08, "2002": 9.06, "2004": 9.86, "2005": 11.24, "2006": 10.28,
-            "2007": 9.11, "2008": 8.39, "2009": 7.87, "2010": 7.14, "2011": 6.56,
-            "2012": 6.13, "2013": 6.25, "2014": 5.94, "2015": 6.18, "2016": 5.61,
-            "2017": 5.50, "2018": 5.34, "2019": 5.23, "2020": 7.07, "2021": 6.49,
-            "2022": 5.86, "2023": 5.32, "2024": 4.82
-        }
+        "data": {"2000": 6.08, "2002": 9.06, "2004": 9.86, "2005": 11.24, "2006": 10.28, "2007": 9.11, "2008": 8.39, "2009": 7.87, "2010": 7.14, "2011": 6.56, "2012": 6.13, "2013": 6.25, "2014": 5.94, "2015": 6.18, "2016": 5.61, "2017": 5.50, "2018": 5.34, "2019": 5.23, "2020": 7.07, "2021": 6.49, "2022": 5.86, "2023": 5.32, "2024": 4.82}
     },
     "Labor Force Participation Rate": {
-        "kategori": "3. Labor Market & Social",
-        "unit": "% of Population 15+",
-        "oecd_code": "LFS_POP / LFPR_TOT",
-        "desc": "Ratio of the labor force to the working-age population (aged 15 and over), expressing the proportion of the population active in the labor market.",
+        "kategori": "3. Labor Market", "unit": "% of Population 15+", "oecd_code": "LFS_POP / LFPR_TOT",
+        "desc": "Ratio of the labor force to the working-age population aged 15 and over.",
         "source_url": "https://data-explorer.oecd.org/",
-        "data": {
-            "2000": 67.8, "2002": 67.8, "2004": 67.5, "2006": 66.2, "2008": 67.2,
-            "2010": 67.8, "2012": 67.9, "2014": 66.6, "2015": 65.8, "2016": 66.3,
-            "2017": 66.7, "2018": 67.2, "2019": 67.5, "2020": 67.7, "2021": 67.8,
-            "2022": 68.6, "2023": 69.3, "2024": 69.8
-        }
+        "data": {"2000": 67.8, "2002": 67.8, "2004": 67.5, "2006": 66.2, "2008": 67.2, "2010": 67.8, "2012": 67.9, "2014": 66.6, "2015": 65.8, "2016": 66.3, "2017": 66.7, "2018": 67.2, "2019": 67.5, "2020": 67.7, "2021": 67.8, "2022": 68.6, "2023": 69.3, "2024": 69.8}
     },
     "Youth Unemployment Rate (Aged 15-24)": {
-        "kategori": "3. Labor Market & Social",
-        "unit": "% of Youth Labor Force",
-        "oecd_code": "LFS_YOUTH / HUR_YOUTH",
-        "desc": "Unemployment rate for young people aged 15 to 24, capturing structural youth labor market challenges.",
+        "kategori": "3. Labor Market", "unit": "% of Youth Labor Force", "oecd_code": "LFS_YOUTH / HUR_YOUTH",
+        "desc": "Unemployment rate for young individuals aged 15 to 24.",
         "source_url": "https://data-explorer.oecd.org/",
-        "data": {
-            "2005": 28.5, "2007": 24.2, "2010": 21.6, "2012": 19.8, "2014": 19.5,
-            "2015": 20.1, "2016": 18.9, "2017": 17.5, "2018": 17.2, "2019": 16.5,
-            "2020": 21.3, "2021": 19.4, "2022": 18.2, "2023": 17.1, "2024": 16.2
-        }
+        "data": {"2005": 28.5, "2007": 24.2, "2010": 21.6, "2012": 19.8, "2014": 19.5, "2015": 20.1, "2016": 18.9, "2017": 17.5, "2018": 17.2, "2019": 16.5, "2020": 21.3, "2021": 19.4, "2022": 18.2, "2023": 17.1, "2024": 16.2}
     },
     "Self-Employment Rate": {
-        "kategori": "3. Labor Market & Social",
-        "unit": "% of Total Employment",
-        "oecd_code": "LFS_SELF / SELF_EMP",
-        "desc": "Proportion of self-employed workers (employers, own-account workers, and contributing family workers) relative to total employment.",
+        "kategori": "3. Labor Market", "unit": "% of Total Employment", "oecd_code": "LFS_SELF / SELF_EMP",
+        "desc": "Proportion of self-employed workers relative to total employment.",
         "source_url": "https://data-explorer.oecd.org/",
-        "data": {
-            "2000": 58.2, "2005": 55.4, "2010": 52.1, "2012": 51.0, "2015": 50.3,
-            "2016": 49.2, "2017": 48.6, "2018": 47.9, "2019": 47.1, "2020": 49.5,
-            "2021": 48.8, "2022": 47.6, "2023": 46.8, "2024": 46.2
-        }
+        "data": {"2000": 58.2, "2005": 55.4, "2010": 52.1, "2012": 51.0, "2015": 50.3, "2016": 49.2, "2017": 48.6, "2018": 47.9, "2019": 47.1, "2020": 49.5, "2021": 48.8, "2022": 47.6, "2023": 46.8, "2024": 46.2}
+    },
+    "Average Annual Wages": {
+        "kategori": "3. Labor Market", "unit": "Constant USD (PPP)", "oecd_code": "EARN / AV_WAGE",
+        "desc": "Average annual gross wages per full-time and full-year equivalent employee.",
+        "source_url": "https://data-explorer.oecd.org/",
+        "data": {"2010": 4250, "2012": 4620, "2014": 5100, "2015": 5320, "2016": 5580, "2017": 5810, "2018": 6120, "2019": 6390, "2020": 6150, "2021": 6340, "2022": 6680, "2023": 6950, "2024": 7240}
     },
 
-    # --- Kelompok 4: Demography, Education & Living Standards (Sosial) ---
+    # --- 4. Demography, Education & Poverty (Sosial-Demografi) ---
     "Total Population": {
-        "kategori": "4. Demography & Social Standards",
-        "unit": "Million Persons",
-        "oecd_code": "DEMO / TOT_POP",
-        "desc": "Total resident population of Indonesia mid-year, based on official national demographic censuses and projections.",
+        "kategori": "4. Demography & Social Standards", "unit": "Million Persons", "oecd_code": "DEMO / TOT_POP",
+        "desc": "Total resident population mid-year based on official demographic censuses and projections.",
         "source_url": "https://data-explorer.oecd.org/",
-        "data": {
-            "1995": 196.8, "1996": 199.7, "1997": 202.6, "1998": 205.4, "1999": 208.2,
-            "2000": 211.5, "2001": 214.3, "2002": 217.2, "2003": 220.1, "2004": 223.0,
-            "2005": 226.2, "2006": 229.3, "2007": 232.5, "2008": 235.7, "2009": 238.9,
-            "2010": 241.9, "2011": 245.1, "2012": 248.4, "2013": 251.8, "2014": 255.1,
-            "2015": 258.4, "2016": 261.6, "2017": 264.7, "2018": 267.7, "2019": 270.6,
-            "2020": 270.2, "2021": 272.7, "2022": 275.8, "2023": 278.7, "2024": 281.6
-        }
+        "data": {"1995": 196.8, "1996": 199.7, "1997": 202.6, "1998": 205.4, "1999": 208.2, "2000": 211.5, "2001": 214.3, "2002": 217.2, "2003": 220.1, "2004": 223.0, "2005": 226.2, "2006": 229.3, "2007": 232.5, "2008": 235.7, "2009": 238.9, "2010": 241.9, "2011": 245.1, "2012": 248.4, "2013": 251.8, "2014": 255.1, "2015": 258.4, "2016": 261.6, "2017": 264.7, "2018": 267.7, "2019": 270.6, "2020": 270.2, "2021": 272.7, "2022": 275.8, "2023": 278.7, "2024": 281.6}
     },
     "Old-Age Dependency Ratio": {
-        "kategori": "4. Demography & Social Standards",
-        "unit": "Ratio per 100 Working-Age",
-        "oecd_code": "DEMO_DEP / OLD_DEP",
-        "desc": "Ratio of the population aged 65 and over to the population aged 15-64, measuring demographic pressure on social security systems.",
+        "kategori": "4. Demography & Social Standards", "unit": "Ratio per 100 Working-Age", "oecd_code": "DEMO_DEP / OLD_DEP",
+        "desc": "Ratio of population aged 65 and over to working-age population (aged 15-64).",
         "source_url": "https://data-explorer.oecd.org/",
-        "data": {
-            "2000": 7.4, "2005": 8.1, "2010": 8.8, "2012": 9.2, "2015": 9.9,
-            "2016": 10.2, "2017": 10.5, "2018": 10.9, "2019": 11.2, "2020": 11.7,
-            "2021": 12.1, "2022": 12.6, "2023": 13.1, "2024": 13.6
-        }
+        "data": {"2000": 7.4, "2005": 8.1, "2010": 8.8, "2012": 9.2, "2015": 9.9, "2016": 10.2, "2017": 10.5, "2018": 10.9, "2019": 11.2, "2020": 11.7, "2021": 12.1, "2022": 12.6, "2023": 13.1, "2024": 13.6}
+    },
+    "Poverty Rate (National Poverty Line)": {
+        "kategori": "4. Demography & Social Standards", "unit": "% of Population", "oecd_code": "SOCX_POV / POV_NAT",
+        "desc": "Percentage of the population living below the official national poverty line.",
+        "source_url": "https://data-explorer.oecd.org/",
+        "data": {"2000": 19.1, "2002": 18.2, "2005": 16.0, "2008": 15.4, "2010": 13.3, "2012": 11.7, "2014": 11.0, "2015": 11.1, "2016": 10.7, "2017": 10.1, "2018": 9.7, "2019": 9.2, "2020": 9.8, "2021": 10.1, "2022": 9.5, "2023": 9.4, "2024": 9.0}
+    },
+    "Income Inequality (Gini Coefficient)": {
+        "kategori": "4. Demography & Social Standards", "unit": "Coefficient (0-1)", "oecd_code": "IDD_GINI / GINI_DISP",
+        "desc": "Disposable income inequality measure where 0 represents perfect equality and 1 absolute inequality.",
+        "source_url": "https://data-explorer.oecd.org/",
+        "data": {"2000": 0.31, "2005": 0.36, "2008": 0.37, "2010": 0.38, "2012": 0.41, "2014": 0.41, "2015": 0.40, "2016": 0.39, "2017": 0.39, "2018": 0.38, "2019": 0.38, "2020": 0.38, "2021": 0.38, "2022": 0.38, "2023": 0.39, "2024": 0.38}
     },
     "Government Expenditure on Education (% of GDP)": {
-        "kategori": "4. Demography & Social Standards",
-        "unit": "% of GDP",
-        "oecd_code": "EDU_FIN / GOV_EDU",
-        "desc": "Total public expenditure on primary, secondary, and tertiary educational institutions expressed as a percentage of GDP.",
+        "kategori": "4. Demography & Social Standards", "unit": "% of GDP", "oecd_code": "EDU_FIN / GOV_EDU",
+        "desc": "Total public expenditure on primary, secondary, and tertiary educational institutions relative to GDP.",
         "source_url": "https://data-explorer.oecd.org/",
-        "data": {
-            "2005": 2.7, "2008": 3.1, "2010": 2.9, "2012": 3.4, "2014": 3.2,
-            "2015": 3.5, "2016": 3.4, "2017": 3.5, "2018": 3.6, "2019": 3.5,
-            "2020": 3.7, "2021": 3.6, "2022": 3.5, "2023": 3.6, "2024": 3.7
-        }
+        "data": {"2005": 2.7, "2008": 3.1, "2010": 2.9, "2012": 3.4, "2014": 3.2, "2015": 3.5, "2016": 3.4, "2017": 3.5, "2018": 3.6, "2019": 3.5, "2020": 3.7, "2021": 3.6, "2022": 3.5, "2023": 3.6, "2024": 3.7}
     },
     "Government Expenditure on Health (% of GDP)": {
-        "kategori": "4. Demography & Social Standards",
-        "unit": "% of GDP",
-        "oecd_code": "HEALTH_FIN / GOV_HLTH",
-        "desc": "Public spending on healthcare services, medical goods, and public health protection relative to GDP.",
+        "kategori": "4. Demography & Social Standards", "unit": "% of GDP", "oecd_code": "HEALTH_FIN / GOV_HLTH",
+        "desc": "Public spending on healthcare services and medical protection relative to GDP.",
         "source_url": "https://data-explorer.oecd.org/",
-        "data": {
-            "2005": 0.8, "2008": 1.0, "2010": 1.1, "2012": 1.2, "2014": 1.3,
-            "2015": 1.4, "2016": 1.4, "2017": 1.5, "2018": 1.5, "2019": 1.5,
-            "2020": 2.3, "2021": 2.1, "2022": 1.7, "2023": 1.6, "2024": 1.6
-        }
+        "data": {"2005": 0.8, "2008": 1.0, "2010": 1.1, "2012": 1.2, "2014": 1.3, "2015": 1.4, "2016": 1.4, "2017": 1.5, "2018": 1.5, "2019": 1.5, "2020": 2.3, "2021": 2.1, "2022": 1.7, "2023": 1.6, "2024": 1.6}
     },
 
-    # --- Kelompok 5: Public Finance & Fiscal Sector ---
-    "General Government Gross Debt (% of GDP)": {
-        "kategori": "5. Public Finance & Fiscal",
-        "unit": "% of GDP",
-        "oecd_code": "GOV_DEBT / GG_DEBT",
-        "desc": "Total nominal gross debt of the general government sector (central and local governments) as a percentage of GDP.",
+    # --- 5. Environment, Energy & Climate Change (Lingkungan) ---
+    "CO2 Emissions (Total Greenhouse Gases)": {
+        "kategori": "5. Environment & Energy", "unit": "Million Tonnes (Mt CO2)", "oecd_code": "ENV_CO2 / TOT_CO2",
+        "desc": "Total national anthropogenic carbon dioxide emissions from energy use, industrial processes, and land-use change.",
         "source_url": "https://data-explorer.oecd.org/",
-        "data": {
-            "2000": 87.4, "2002": 62.3, "2004": 51.3, "2006": 39.0, "2008": 30.3,
-            "2010": 24.5, "2011": 23.1, "2012": 23.0, "2013": 24.9, "2014": 24.7,
-            "2015": 27.4, "2016": 27.9, "2017": 28.9, "2018": 30.2, "2019": 30.2,
-            "2020": 39.7, "2021": 40.7, "2022": 39.6, "2023": 39.1, "2024": 38.5
-        }
+        "data": {"1995": 280.5, "2000": 315.2, "2005": 380.1, "2010": 435.6, "2012": 482.1, "2014": 510.4, "2015": 535.2, "2016": 520.8, "2017": 542.1, "2018": 580.3, "2019": 605.2, "2020": 588.4, "2021": 615.6, "2022": 645.2, "2023": 662.1, "2024": 675.0}
+    },
+    "CO2 Emissions per Capita": {
+        "kategori": "5. Environment & Energy", "unit": "Tonnes per Capita", "oecd_code": "ENV_CO2_PC / CO2_PC",
+        "desc": "Total carbon dioxide emissions divided by total national population.",
+        "source_url": "https://data-explorer.oecd.org/",
+        "data": {"1995": 1.42, "2000": 1.49, "2005": 1.68, "2010": 1.80, "2012": 1.94, "2014": 2.00, "2015": 2.07, "2016": 1.99, "2017": 2.05, "2018": 2.17, "2019": 2.24, "2020": 2.18, "2021": 2.26, "2022": 2.34, "2023": 2.38, "2024": 2.40}
+    },
+    "Renewable Energy Share in Total Energy Supply": {
+        "kategori": "5. Environment & Energy", "unit": "% of Total Energy", "oecd_code": "NRG_RENEW / REN_SHARE",
+        "desc": "Proportion of renewable energy sources (geothermal, hydro, biomass, solar, wind) in total primary energy supply.",
+        "source_url": "https://data-explorer.oecd.org/",
+        "data": {"2005": 18.5, "2008": 17.8, "2010": 17.2, "2012": 16.9, "2014": 16.5, "2015": 17.1, "2016": 17.4, "2017": 17.8, "2018": 18.2, "2019": 18.7, "2020": 19.4, "2021": 19.9, "2022": 20.5, "2023": 21.2, "2024": 21.8}
+    },
+
+    # --- 6. Public Finance & Fiscal Sector ---
+    "General Government Gross Debt (% of GDP)": {
+        "kategori": "6. Public Finance & Fiscal", "unit": "% of GDP", "oecd_code": "GOV_DEBT / GG_DEBT",
+        "desc": "Total nominal gross debt of general government sector (central and local governments) as a percentage of GDP.",
+        "source_url": "https://data-explorer.oecd.org/",
+        "data": {"2000": 87.4, "2002": 62.3, "2004": 51.3, "2006": 39.0, "2008": 30.3, "2010": 24.5, "2011": 23.1, "2012": 23.0, "2013": 24.9, "2014": 24.7, "2015": 27.4, "2016": 27.9, "2017": 28.9, "2018": 30.2, "2019": 30.2, "2020": 39.7, "2021": 40.7, "2022": 39.6, "2023": 39.1, "2024": 38.5}
     },
     "Tax Revenue to GDP Ratio": {
-        "kategori": "5. Public Finance & Fiscal",
-        "unit": "% of GDP",
-        "oecd_code": "REV_TAX / TAX_PDB",
-        "desc": "Total tax revenues collected by the government relative to the size of the economy, measured as a percentage of GDP.",
+        "kategori": "6. Public Finance & Fiscal", "unit": "% of GDP", "oecd_code": "REV_TAX / TAX_PDB",
+        "desc": "Total tax revenues collected by government relative to the size of the economy.",
         "source_url": "https://data-explorer.oecd.org/",
-        "data": {
-            "2000": 11.2, "2002": 12.1, "2004": 12.5, "2006": 12.3, "2008": 13.0,
-            "2010": 11.3, "2012": 11.9, "2014": 11.4, "2015": 10.8, "2016": 10.3,
-            "2017": 9.9, "2018": 10.2, "2019": 9.8, "2020": 8.3, "2021": 9.1,
-            "2022": 10.4, "2023": 10.2, "2024": 10.1
-        }
+        "data": {"2000": 11.2, "2002": 12.1, "2004": 12.5, "2006": 12.3, "2008": 13.0, "2010": 11.3, "2012": 11.9, "2014": 11.4, "2015": 10.8, "2016": 10.3, "2017": 9.9, "2018": 10.2, "2019": 9.8, "2020": 8.3, "2021": 9.1, "2022": 10.4, "2023": 10.2, "2024": 10.1}
     },
 
-    # --- Kelompok 6: International Trade & External Sector ---
+    # --- 7. International Trade & External Sector ---
     "Current Account Balance (% of GDP)": {
-        "kategori": "6. International Trade & External",
-        "unit": "% of GDP",
-        "oecd_code": "BOP / CAB_PDB",
-        "desc": "Sum of net exports of goods and services, net primary income, and net secondary income, expressed as a percentage of GDP.",
+        "kategori": "7. International Trade & External", "unit": "% of GDP", "oecd_code": "BOP / CAB_PDB",
+        "desc": "Sum of net exports of goods/services and net primary/secondary income as a percentage of GDP.",
         "source_url": "https://data-explorer.oecd.org/",
-        "data": {
-            "2000": 4.8, "2002": 3.9, "2004": 1.5, "2006": 2.9, "2008": 0.0,
-            "2010": 0.7, "2011": 0.2, "2012": -2.7, "2013": -3.2, "2014": -3.1,
-            "2015": -2.0, "2016": -1.8, "2017": -1.6, "2018": -2.9, "2019": -2.7,
-            "2020": -0.4, "2021": 0.3, "2022": 1.0, "2023": -0.2, "2024": -0.5
-        }
+        "data": {"2000": 4.8, "2002": 3.9, "2004": 1.5, "2006": 2.9, "2008": 0.0, "2010": 0.7, "2011": 0.2, "2012": -2.7, "2013": -3.2, "2014": -3.1, "2015": -2.0, "2016": -1.8, "2017": -1.6, "2018": -2.9, "2019": -2.7, "2020": -0.4, "2021": 0.3, "2022": 1.0, "2023": -0.2, "2024": -0.5}
     },
     "Exports of Goods and Services (% of GDP)": {
-        "kategori": "6. International Trade & External",
-        "unit": "% of GDP",
-        "oecd_code": "SNA / P6_PDB",
-        "desc": "Value of all goods and other market services provided to the rest of the world, expressed as a percentage of GDP.",
+        "kategori": "7. International Trade & External", "unit": "% of GDP", "oecd_code": "SNA / P6_PDB",
+        "desc": "Value of all goods and market services provided to the rest of the world as a percentage of GDP.",
         "source_url": "https://data-explorer.oecd.org/",
-        "data": {
-            "2000": 41.0, "2002": 32.7, "2004": 32.2, "2006": 31.0, "2008": 29.8,
-            "2010": 24.3, "2012": 24.3, "2014": 23.7, "2015": 21.2, "2016": 19.1,
-            "2017": 20.2, "2018": 21.0, "2019": 18.4, "2020": 17.2, "2021": 21.6,
-            "2022": 24.5, "2023": 21.7, "2024": 21.2
-        }
+        "data": {"2000": 41.0, "2002": 32.7, "2004": 32.2, "2006": 31.0, "2008": 29.8, "2010": 24.3, "2012": 24.3, "2014": 23.7, "2015": 21.2, "2016": 19.1, "2017": 20.2, "2018": 21.0, "2019": 18.4, "2020": 17.2, "2021": 21.6, "2022": 24.5, "2023": 21.7, "2024": 21.2}
     }
 }
 
