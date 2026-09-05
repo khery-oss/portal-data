@@ -7,72 +7,85 @@ st.set_page_config(page_title="V-Dem Explorer - IndoEcon", layout="wide")
 
 st.title("🗳️ V-Dem (Varieties of Democracy) - Institusi & Demokrasi")
 st.markdown(
-    "Eksplorasi indeks kualitas demokrasi, tata kelola pemerintahan, korupsi, dan institusi politik Indonesia "
+    "Eksplorasi mendalam indeks kualitas demokrasi, tata kelola pemerintahan, korupsi, dan institusi politik Indonesia "
     "berbasis basis data resmi **V-Dem Institute** yang disinkronkan langsung dengan *Codebook* penjelas."
 )
 
 # =============================================================================
-# 1. MEMUAT DATASET V-DEM & CODEBOOK LOKAL SECARA EFISIEN
+# 1. MEMUAT DATASET V-DEM SECARA EFISIEN (KHUSUS INDONESIA)
 # =============================================================================
-@st.cache_data(show_spinner=False)
-def load_vdem_data():
+@st.cache_data(show_spinner=True)
+def load_and_filter_vdem():
     try:
-        # Sesuaikan nama file CSV dataset V-Dem kamu di direktori proyek
-        df = pd.read_csv("vdem_data.csv", low_memory=False)
-        return df
-    except Exception:
+        # Membaca dataset besar dan langsung menyaring baris Indonesia untuk menghemat RAM
+        # Kolom pengenal negara di V-Dem biasanya 'country_text_id' ('IDN') atau 'country_name' ('Indonesia')
+        df_iter = pd.read_csv("vdem_data.csv", low_memory=False, chunksize=10000)
+        chunks = []
+        for chunk in df_iter:
+            # Filter baris khusus Indonesia
+            if "country_text_id" in chunk.columns:
+                sub = chunk[chunk["country_text_id"] == "IDN"]
+            elif "country_name" in chunk.columns:
+                sub = chunk[chunk["country_name"].str.contains("Indonesia", case=False, na=False)]
+            else:
+                sub = pd.DataFrame()
+            if not sub.empty:
+                chunks.append(sub)
+        
+        if chunks:
+            return pd.concat(chunks, ignore_index=True)
+        return None
+    except Exception as e:
+        st.error(f"Gagal membaca file `vdem_data.csv`: {e}")
         return None
 
 @st.cache_data(show_spinner=False)
 def load_codebook():
     try:
-        # Sesuaikan nama file CSV codebook V-Dem kamu di direktori proyek
+        # Memuat file codebook yang sudah diekstrak ringkas (kolom: variable, description)
         df_cb = pd.read_csv("vdem_codebook.csv")
         return df_cb
     except Exception:
         return None
 
-with st.spinner("Memuat basis data V-Dem dan menyelaraskan dengan Codebook..."):
-    df_vdem = load_vdem_data()
+with st.spinner("Memuat dan memfilter basis data V-Dem khusus untuk wilayah Indonesia..."):
+    df_idn = load_and_filter_vdem()
     df_codebook = load_codebook()
 
-# Fallback jika file lokal belum diunggah ke folder repository
-if df_vdem is None:
+if df_idn is None or df_idn.empty:
     st.error(
-        "⚠️ File dataset V-Dem (`vdem_data.csv`) belum ditemukan di direktori repository GitHub kamu.\n\n"
-        "**Cara Memperbaiki:**\n"
-        "1. Unduh dataset V-Dem versi CSV dari situs resmi V-Dem.\n"
-        "2. Unggah file tersebut dengan nama `vdem_data.csv` dan file codebook-nya sebagai `vdem_codebook.csv` ke dalam folder utama repository Streamlit Cloud kamu."
+        "⚠️ File dataset V-Dem (`vdem_data.csv`) tidak ditemukan atau data Indonesia tidak terdeteksi.\n\n"
+        "**Pastikan:**\n"
+        "1. File `vdem_data.csv` sudah diunggah ke root folder repository GitHub kamu.\n"
+        "2. Format kolom negara menggunakan kode standar `IDN` atau nama `Indonesia`."
     )
     st.stop()
 
-# Filter khusus untuk wilayah Indonesia (IDN atau Country Text ID)
-col_country = "country_text_id" if "country_text_id" in df_vdem.columns else ("country_name" if "country_name" in df_vdem.columns else None)
-if col_country:
-    df_idn = df_vdem[df_vdem[col_country].isin(["IDN", "Indonesia"])]
-else:
-    df_idn = df_vdem.head(0)
-
-if df_idn.empty:
-    st.warning("Data untuk wilayah Indonesia tidak ditemukan di dalam berkas CSV yang diunggah.")
-    st.stop()
-
 # =============================================================================
-# 2. SINKRONISASI VARIABEL DENGAN CODEBOOK
+# 2. SINKRONISASI INDIKATOR DENGAN CODEBOOK
 # =============================================================================
-# Mendapatkan daftar kolom numerik/indikator yang tersedia
-exclude_cols = ["country_name", "country_text_id", "country_id", "year", "historical_date", "codingstart", "codingend", "gapstart", "gapend"]
-available_indicators = [c for c in df_idn.columns if c not in exclude_cols and pd.api.types.is_numeric_dtype(df_idn[c])]
+exclude_cols = [
+    "country_name", "country_text_id", "country_id", "year", "historical_date", 
+    "project", "historical", "histname", "codingstart", "codingend", "COWcode",
+    "codingstart_contemp", "codingend_contemp", "codingstart_hist", "codingend_hist",
+    "gapstart1", "gapstart2", "gapstart3", "gapend1", "gapend2", "gapend3", "gap_index"
+]
 
-# Buat kamus penjelasan dari Codebook jika tersedia, jika tidak gunakan nama kolom
+available_indicators = [
+    c for c in df_idn.columns 
+    if c not in exclude_cols and pd.api.types.is_numeric_dtype(df_idn[c])
+]
+
+# Buat kamus penjelasan dari Codebook
 codebook_dict = {}
 if df_codebook is not None and "variable" in df_codebook.columns and "description" in df_codebook.columns:
     for _, row in df_codebook.iterrows():
-        codebook_dict[str(row["variable"])] = str(row["description"])
+        codebook_dict[str(row["variable"]).strip()] = str(row["description"]).strip()
 
 st.subheader("1. Pemilihan Indikator & Sinkronisasi Codebook")
+st.caption(f"Tersedia {len(available_indicators)} variabel indikator V-Dem lengkap untuk Indonesia.")
 
-search_term = st.text_input("🔍 Cari Indikator V-Dem (ketik kata kunci, misal: libdem, corruption, freedom, rule):", "")
+search_term = st.text_input("🔍 Cari Indikator V-Dem (ketik kata kunci, misal: libdem, corruption, freedom, rule, suffrage):", "")
 
 filtered_indicators = [
     ind for ind in available_indicators
@@ -88,8 +101,11 @@ selected_indicator = st.selectbox(
     filtered_indicators
 )
 
-# Ambil deskripsi langsung dari codebook yang disinkronkan
-indicator_description = codebook_dict.get(selected_indicator, "Penjelasan rinci untuk variabel ini dapat merujuk langsung pada dokumen Codebook V-Dem resmi.")
+# Ambil deskripsi dari codebook
+indicator_description = codebook_dict.get(
+    selected_indicator, 
+    "Definisi rinci untuk variabel ini dapat merujuk langsung pada dokumen resmi Codebook V-Dem Institute."
+)
 
 with st.expander("📖 Penjelasan & Metadata dari Codebook V-Dem", expanded=True):
     st.markdown(f"**Nama Variabel (Kode):** `{selected_indicator}`")
@@ -97,11 +113,11 @@ with st.expander("📖 Penjelasan & Metadata dari Codebook V-Dem", expanded=True
     st.markdown("🔗 **Sumber Dokumen:** [V-Dem Codebook & Methodology](https://www.v-dem.net/data/reference-documents/)")
 
 # =============================================================================
-# 3. PENARIKAN & VISUALISASI RUNTUN WAKTU INDONESIA
+# 3. PENARIKAN & VISUALISASI RUNTUN WAKTU INDONESIA (TANPA BATAS TAHUN)
 # =============================================================================
 st.subheader("2. Visualisasi Runtun Waktu Historis Indonesia")
+st.caption("Menampilkan seluruh riwayat tahun penuh yang tercatat di dalam dataset V-Dem untuk Indonesia.")
 
-# Ambil data tahun dan nilai indikator terpilih tanpa batasan tahun
 df_plot = df_idn[["year", selected_indicator]].dropna().sort_values(by="year", ascending=True)
 df_plot = df_plot.rename(columns={"year": "Tahun", selected_indicator: "Nilai Skor"})
 
