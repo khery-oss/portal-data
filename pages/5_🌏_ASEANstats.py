@@ -6,10 +6,11 @@ import streamlit as st
 
 st.set_page_config(page_title="ASEANstats Data Explorer - Indonesia & Regional", layout="wide")
 
-st.title("🌏 ASEANstats - Portal Data Regional Asia Tenggara")
+st.title("🌏 ASEANstats Data Portal - Indonesia & Regional ASEAN")
 st.write(
-    "Eksplorasi indikator resmi dari **ASEANstats Data Portal** (Sekretariat ASEAN) "
-    "khusus untuk **Indonesia** dan perbandingan negara anggota ASEAN yang ditarik secara **100% langsung (*real-time live API*)**."
+    "Eksplorasi indikator makroekonomi, sektoral, dan **ASEAN SDG Indicators** dari "
+    "**ASEANstats Data Portal (Sekretariat ASEAN, Jakarta)** yang ditarik secara **100% live API** "
+    "langsung dari server resmi `data.aseanstats.org`."
 )
 
 HEADERS = {
@@ -17,97 +18,186 @@ HEADERS = {
     "Accept": "application/json"
 }
 
-# KATALOG KODE INDIKATOR RESMI REST API DATA.ASEANSTATS.ORG
-ASEAN_API_CATALOG = {
-    # --- Transportasi & Infrastruktur ---
+# KATALOG RESMI ASEANSTATS: MAKROEKONOMI, SEKTORAL & ASEAN SDG INDICATORS
+ASEANSTATS_CATALOG = {
+    # =========================================================================
+    # 1. Makroekonomi & PDB (ASEAN Key Statistics)
+    # =========================================================================
+    "GDP Growth in ASEAN (Year-on-Year %)": {
+        "code": "AST.STC.TBL.6",
+        "kategori": "1. Makroekonomi & PDB",
+        "unit": "%",
+        "desc": "Laju pertumbuhan tahunan Produk Domestik Bruto riil di negara anggota ASEAN."
+    },
+    "Inflation Rates in ASEAN (Year-on-Year Average %)": {
+        "code": "AST.STC.TBL.8",
+        "kategori": "1. Makroekonomi & PDB",
+        "unit": "%",
+        "desc": "Laju inflasi rata-rata tahunan berdasarkan Indeks Harga Konsumen (IHK)."
+    },
+
+    # =========================================================================
+    # 2. ASEAN Sustainable Development Goals (data.aseanstats.org/sdg)
+    # =========================================================================
+    "SDG 1.1.1: Proportion of Population Below International Poverty Line (%)": {
+        "code": "SDG.1.1.1",
+        "kategori": "2. ASEAN SDG Indicators",
+        "unit": "%",
+        "desc": "Persentase penduduk yang hidup di bawah garis kemiskinan internasional di kawasan ASEAN."
+    },
+    "SDG 1.2.1: Proportion of Population Living Below National Poverty Line (%)": {
+        "code": "SDG.1.2.1",
+        "kategori": "2. ASEAN SDG Indicators",
+        "unit": "%",
+        "desc": "Persentase penduduk yang hidup di bawah garis kemiskinan nasional masing-masing negara."
+    },
+    "SDG 8.2.1: Annual Growth Rate of Real GDP per Employed Person (%)": {
+        "code": "SDG.8.2.1",
+        "kategori": "2. ASEAN SDG Indicators",
+        "unit": "%",
+        "desc": "Laju pertumbuhan tahunan PDB riil per tenaga kerja yang bekerja (produktivitas tenaga kerja regional)."
+    },
+    "SDG 8.5.2: Unemployment Rate by Sex and Age (%)": {
+        "code": "SDG.8.5.2",
+        "kategori": "2. ASEAN SDG Indicators",
+        "unit": "%",
+        "desc": "Tingkat pengangguran terbuka nasional yang dipantau dalam kerangka SDGs ASEAN."
+    },
+    "SDG 9.2.1: Manufacturing Value Added as a Proportion of GDP (%)": {
+        "code": "SDG.9.2.1",
+        "kategori": "2. ASEAN SDG Indicators",
+        "unit": "% of GDP",
+        "desc": "Nilai tambah sektor industri manufaktur sebagai proporsi dari total PDB negara anggota."
+    },
+    "SDG 7.2.1: Renewable Energy Share in the Total Final Energy Consumption (%)": {
+        "code": "SDG.7.2.1",
+        "kategori": "2. ASEAN SDG Indicators",
+        "unit": "%",
+        "desc": "Pangsa energi terbarukan dalam total konsumsi energi akhir di negara-negara ASEAN."
+    },
+
+    # =========================================================================
+    # 3. Ketenagakerjaan & Tenaga Kerja Informal
+    # =========================================================================
+    "Rate of Informal Employment by Sex (%)": {
+        "code": "LNK.IEMP.1.RATE.02",
+        "kategori": "3. Ketenagakerjaan & Sektor Informal",
+        "unit": "%",
+        "desc": "Tingkat partisipasi pekerja sektor informal terhadap total angkatan kerja yang bekerja."
+    },
+
+    # =========================================================================
+    # 4. Konektivitas & Infrastruktur Regional (Transport Statistics)
+    # =========================================================================
     "Total Registered Road Motor Vehicles (Thousand Units)": {
-        "code": "ASE.TRP.ROD.B.005", "kategori": "1. Transportasi & Infrastruktur", "unit": "Ribu Unit",
-        "desc": "Jumlah total kendaraan bermotor yang terdaftar resmi dan beroperasi di jalan umum."
+        "code": "ASE.TRP.ROD.B.005",
+        "kategori": "4. Konektivitas & Infrastruktur Regional",
+        "unit": "Ribu Unit",
+        "desc": "Jumlah total kendaraan bermotor yang terdaftar resmi dan beroperasi di jalan darat."
     },
     "Total Road Network Length (Kilometer)": {
-        "code": "ASE.TRP.ROD.A.001", "kategori": "1. Transportasi & Infrastruktur", "unit": "Km",
-        "desc": "Panjang total jaringan jalan raya nasional."
-    },
-    "Number of International Ports (Count)": {
-        "code": "ASE.TRP.WTR.A.202", "kategori": "1. Transportasi & Infrastruktur", "unit": "Pelabuhan",
-        "desc": "Jumlah pelabuhan laut internasional yang beroperasi melayani perdagangan antarnegara."
+        "code": "ASE.TRP.ROD.A.001",
+        "kategori": "4. Konektivitas & Infrastruktur Regional",
+        "unit": "Km",
+        "desc": "Panjang total jaringan jalan raya nasional di negara anggota ASEAN."
     },
     "International Aircraft Traffic (Flight Movements)": {
-        "code": "ASE.TRP.AIR.C.312", "kategori": "1. Transportasi & Infrastruktur", "unit": "Penerbangan",
-        "desc": "Frekuensi lalu lintas pergerakan pesawat udara rute penerbangan internasional."
+        "code": "ASE.TRP.AIR.C.312",
+        "kategori": "4. Konektivitas & Infrastruktur Regional",
+        "unit": "Pergerakan Penerbangan",
+        "desc": "Total frekuensi pergerakan pesawat udara untuk rute penerbangan internasional."
     },
     "International Passengers in Transit (Thousand Persons)": {
-        "code": "ASE.TRP.AIR.C.309", "kategori": "1. Transportasi & Infrastruktur", "unit": "Ribu Orang",
-        "desc": "Volume penumpang penerbangan internasional yang transit di bandara negara bersangkutan."
+        "code": "ASE.TRP.AIR.C.309",
+        "kategori": "4. Konektivitas & Infrastruktur Regional",
+        "unit": "Ribu Orang",
+        "desc": "Volume penumpang internasional yang transit di bandara negara bersangkutan."
     },
-
-    # --- Keselamatan Transportasi ---
-    "Road Traffic Accident Injuries (Persons)": {
-        "code": "ASE.TRP.ROD.E.031", "kategori": "2. Keselamatan Transportasi", "unit": "Orang",
-        "desc": "Jumlah korban luka-luka akibat kecelakaan lalu lintas darat."
-    },
-
-    # --- Ketenagakerjaan & Sosial ---
-    "Rate of Informal Employment by Sex (%)": {
-        "code": "LNK.IEMP.1.RATE.02", "kategori": "3. Ketenagakerjaan & Sosial", "unit": "%",
-        "desc": "Proporsi tenaga kerja di sektor informal terhadap total angkatan kerja yang bekerja."
+    "Number of International Ports (Count)": {
+        "code": "ASE.TRP.WTR.A.202",
+        "kategori": "4. Konektivitas & Infrastruktur Regional",
+        "unit": "Pelabuhan",
+        "desc": "Jumlah pelabuhan laut internasional yang beroperasi melayani perdagangan laut global."
     }
 }
 
-# 1. Pemilihan Indikator
-st.subheader("1. Pemilihan Indikator Resmi ASEANstats")
+# =============================================================================
+# 1. KONTROL PEMILIHAN INDIKATOR
+# =============================================================================
+st.subheader("1. Pemilihan Indikator ASEANstats")
 col_kat, col_ind = st.columns([1.2, 2])
 
-daftar_kategori = sorted(list(set(v["kategori"] for v in ASEAN_API_CATALOG.values())))
+daftar_kategori = sorted(list(set(v["kategori"] for v in ASEANSTATS_CATALOG.values())))
 with col_kat:
-    pilih_kategori = st.selectbox("Kategori Bidang:", ["Semua Kategori"] + daftar_kategori)
+    pilih_kategori = st.selectbox("Kategori Bidang / Modul:", ["Semua Kategori"] + daftar_kategori)
 
-opsi = [
-    k for k, v in ASEAN_API_CATALOG.items()
+opsi_indikator = [
+    k for k, v in ASEANSTATS_CATALOG.items()
     if pilih_kategori == "Semua Kategori" or v["kategori"] == pilih_kategori
 ]
 
 with col_ind:
-    nama_indikator = st.selectbox("Pilih Indikator:", opsi)
+    nama_indikator = st.selectbox(f"Nama Indikator ({len(opsi_indikator)} Tersedia):", opsi_indikator)
 
-meta = ASEAN_API_CATALOG[nama_indikator]
+meta = ASEANSTATS_CATALOG[nama_indikator]
 kode_api = meta["code"]
 
 with st.expander("ℹ️ Definisi & Metadata Resmi ASEANstats", expanded=False):
     st.markdown(f"**Indikator:** {nama_indikator}")
-    st.markdown(f"**Kode API Resmi:** `{kode_api}`")
-    st.markdown(f"**Kategori:** `{meta['kategori']}`")
-    st.markdown(f"**Satuan:** `{meta['unit']}`")
-    st.markdown(f"**Deskripsi:**\n{meta['desc']}")
-    st.markdown("🔗 **Portal Sumber:** [ASEANstats Data Portal](https://data.aseanstats.org/)")
+    st.markdown(f"**Kode Seri API:** `{kode_api}`")
+    st.markdown(f"**Kategori / Modul:** `{meta['kategori']}`")
+    st.markdown(f"**Satuan Pengukuran:** `{meta['unit']}`")
+    st.markdown(f"**Metodologi / Deskripsi:**\n{meta['desc']}")
+    st.markdown("🔗 **Portal Sumber:** [ASEANstats Data Portal](https://data.aseanstats.org/) | [ASEAN SDG Portal](https://data.aseanstats.org/sdg)")
 
-# 2. Pengambilan Data Live dari REST API ASEANstats
+# =============================================================================
+# 2. PENARIKAN DATA LIVE VIA REST API DATA.ASEANSTATS.ORG
+# =============================================================================
 st.subheader("2. Penarikan Data Runtun Waktu")
 
 if st.button("📊 Ambil Data ASEANstats", type="primary"):
     with st.spinner(f"Menghubungi endpoint resmi ASEANstats Jakarta untuk seri {kode_api}..."):
         api_url = f"https://data.aseanstats.org/api/indicator/{kode_api}"
+        records = []
         
         try:
             res = requests.get(api_url, headers=HEADERS, timeout=25)
             
-            records = []
             if res.status_code == 200:
                 payload = res.json()
-                # Tangani variasi struktur respon JSON ASEANstats
                 data_list = payload if isinstance(payload, list) else payload.get("data", [])
                 
+                # Standarisasi pemetaan kode negara ASEAN
+                MAP_NEGARA = {
+                    "ID": "Indonesia", "IDN": "Indonesia", "Indonesia": "Indonesia",
+                    "MY": "Malaysia", "MYS": "Malaysia", "Malaysia": "Malaysia",
+                    "SG": "Singapore", "SGP": "Singapore", "Singapore": "Singapore",
+                    "TH": "Thailand", "THA": "Thailand", "Thailand": "Thailand",
+                    "VN": "Viet Nam", "VNM": "Viet Nam", "Viet Nam": "Viet Nam", "Vietnam": "Viet Nam",
+                    "PH": "Philippines", "PHL": "Philippines", "Philippines": "Philippines",
+                    "BN": "Brunei Darussalam", "BRN": "Brunei Darussalam",
+                    "KH": "Cambodia", "KHM": "Cambodia",
+                    "LA": "Lao PDR", "LAO": "Lao PDR",
+                    "MM": "Myanmar", "MMR": "Myanmar"
+                }
+
                 for item in data_list:
-                    negara = item.get("country") or item.get("country_name") or item.get("country_code")
-                    thn = item.get("period") or item.get("year") or item.get("time_period")
-                    val = item.get("value") or item.get("indicator_value")
+                    raw_country = (
+                        item.get("country_name") or 
+                        item.get("country") or 
+                        item.get("country_code") or 
+                        item.get("Country")
+                    )
+                    thn = item.get("period") or item.get("year") or item.get("time_period") or item.get("Year")
+                    val = item.get("value") or item.get("indicator_value") or item.get("Value")
                     
-                    if negara and thn is not None and val is not None:
+                    if raw_country and thn is not None and val is not None:
+                        clean_country_name = MAP_NEGARA.get(str(raw_country).strip(), str(raw_country).strip())
                         try:
                             clean_thn = int(str(thn)[:4])
-                            clean_val = float(str(val).replace(",", "").strip())
+                            clean_val = float(str(val).replace(",", "").replace("<", "").replace(">", "").strip())
                             records.append({
-                                "Negara": str(negara).strip(),
+                                "Negara": clean_country_name,
                                 "Tahun": clean_thn,
                                 "Nilai": clean_val
                             })
@@ -117,14 +207,11 @@ if st.button("📊 Ambil Data ASEANstats", type="primary"):
             if records:
                 raw_df = pd.DataFrame(records)
                 
-                # Standarisasi nama Indonesia
-                raw_df["Negara"] = raw_df["Negara"].replace({
-                    "ID": "Indonesia",
-                    "IDN": "Indonesia"
-                })
-                
+                # Rata-rata jika ada breakdown gender/wilayah pada tahun yang sama
+                raw_df = raw_df.groupby(["Negara", "Tahun"], as_index=False)["Nilai"].mean().round(2)
+
                 daftar_negara = sorted(raw_df["Negara"].unique())
-                default_selection = ["Indonesia"] if "Indonesia" in daftar_negara else [daftar_negara[0]]
+                default_sel = ["Indonesia"] if "Indonesia" in daftar_negara else [daftar_negara[0]]
 
                 st.success(f"Berhasil menarik {len(raw_df)} observasi data langsung dari server ASEANstats!")
                 st.divider()
@@ -133,21 +220,19 @@ if st.button("📊 Ambil Data ASEANstats", type="primary"):
                 pilihan_negara = st.multiselect(
                     "Pilih Negara Anggota ASEAN untuk Ditampilkan:",
                     options=daftar_negara,
-                    default=default_selection
+                    default=default_sel
                 )
 
                 if pilihan_negara:
                     df_filtered = raw_df[raw_df["Negara"].isin(pilihan_negara)]
                     
-                    # Pivot untuk visualisasi dan tabel
                     df_pivot = df_filtered.pivot_table(
                         index="Tahun",
                         columns="Negara",
-                        values="Nilai",
-                        aggfunc="mean"
+                        values="Nilai"
                     ).sort_index(ascending=True).reset_index()
 
-                    # Tombol Unduh Data
+                    # Tombol Unduh
                     c1, c2 = st.columns(2)
                     c1.download_button(
                         "📥 Unduh CSV",
@@ -157,7 +242,7 @@ if st.button("📊 Ambil Data ASEANstats", type="primary"):
                     )
                     buf = io.BytesIO()
                     with pd.ExcelWriter(buf, engine="openpyxl") as writer:
-                        df_pivot.to_excel(writer, index=False, sheet_name="ASEANstats")
+                        df_pivot.to_excel(writer, index=False, sheet_name="ASEANstats Data")
                     c2.download_button(
                         "📊 Unduh Excel (.xlsx)",
                         buf.getvalue(),
@@ -165,17 +250,31 @@ if st.button("📊 Ambil Data ASEANstats", type="primary"):
                         "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
                     )
 
-                    # Visualisasi Plotly Interaktif
+                    # Visualisasi Plotly
+                    WARNA_NEGARA = {
+                        "Indonesia": "#DC241F",
+                        "Singapore": "#9B0000",
+                        "Malaysia": "#003399",
+                        "Viet Nam": "#D4AF37",
+                        "Thailand": "#4A90E2",
+                        "Philippines": "#50B848",
+                        "Brunei Darussalam": "#F1C40F",
+                        "Cambodia": "#8E44AD",
+                        "Lao PDR": "#E67E22",
+                        "Myanmar": "#16A085"
+                    }
+
                     fig = go.Figure()
                     for c in pilihan_negara:
                         if c in df_pivot.columns:
                             is_indo = (c == "Indonesia")
+                            warna = WARNA_NEGARA.get(c, None)
                             fig.add_trace(go.Scatter(
                                 x=df_pivot["Tahun"],
                                 y=df_pivot[c],
                                 mode="lines+markers",
                                 name=c,
-                                line=dict(width=3.5 if is_indo else 2.0),
+                                line=dict(width=3.5 if is_indo else 2.0, color=warna),
                                 marker=dict(size=8 if is_indo else 5),
                                 connectgaps=False,
                                 hovertemplate=f"<b>{c}</b><br>Tahun %{{x}}<br>Nilai: %{{y:,.2f}} {meta['unit']}<extra></extra>"
@@ -195,6 +294,6 @@ if st.button("📊 Ambil Data ASEANstats", type="primary"):
                 else:
                     st.warning("Pilih setidaknya satu negara untuk melihat visualisasi.")
             else:
-                st.warning("Observasi runtun waktu untuk indikator ini belum dilaporkan atau sedang dalam pembaruan berkala di server ASEANstats.")
+                st.warning("Observasi data untuk indikator ini belum dilaporkan atau sedang dalam pembaruan berkala di server ASEANstats.")
         except Exception as e:
             st.error(f"Gagal menghubungi server ASEANstats: {e}")
