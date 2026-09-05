@@ -12,23 +12,18 @@ HEADERS = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/
 @st.cache_data(ttl=86400)
 def load_wb_indicators():
     indicators = []
-    # Mengambil indikator World Bank dengan paginasi penuh agar mencakup seluruh seri valid
-    url = "https://api.worldbank.org/v2/indicator?format=json&per_page=5000"
+    url = "https://api.worldbank.org/v2/indicator?format=json&per_page=4000"
     try:
         res = requests.get(url, headers=HEADERS, timeout=25)
         data = res.json()
         if len(data) > 1 and data[1]:
             for item in data[1]:
-                ind_id = item.get("id")
-                ind_name = item.get("name")
-                # Filter hanya indikator yang memiliki format kode standar World Bank (mengandung titik)
-                if ind_id and ind_name and "." in ind_id:
-                    indicators.append({
-                        "id": ind_id,
-                        "name": ind_name,
-                        "sourceNote": item.get("sourceNote", ""),
-                        "sourceOrg": item.get("sourceOrganization", "World Bank")
-                    })
+                indicators.append({
+                    "id": item.get("id"),
+                    "name": item.get("name"),
+                    "sourceNote": item.get("sourceNote", ""),
+                    "sourceOrg": item.get("sourceOrganization", "World Bank")
+                })
     except Exception:
         pass
     return indicators
@@ -36,8 +31,8 @@ def load_wb_indicators():
 all_wb_indicators = load_wb_indicators()
 
 query_wb = st.text_input(
-    "🔍 Cari indikator World Bank (misal: 'GDP', 'Inflation', 'Poverty', 'Education', 'CO2'):",
-    value="GDP growth"
+    "🔍 Cari indikator World Bank (misal: 'gdp', 'inflation', 'education', 'health', 'co2', 'poverty'):",
+    value="inflation"
 ).strip()
 
 if query_wb and all_wb_indicators:
@@ -59,7 +54,7 @@ if query_wb and all_wb_indicators:
 
         if st.button("📊 Ambil Data World Bank", type="primary"):
             with st.spinner(f"Menarik time-series untuk {kode_wb}..."):
-                data_url = f"https://api.worldbank.org/v2/country/IDN/indicator/{kode_wb}?format=json&per_page=100"
+                data_url = f"https://api.worldbank.org/v2/country/IDN/indicator/{kode_wb}?format=json&per_page=120"
                 try:
                     r_data = requests.get(data_url, headers=HEADERS, timeout=15)
                     data_json = r_data.json()
@@ -99,7 +94,7 @@ if query_wb and all_wb_indicators:
                             "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
                         )
 
-                        # Visualisasi Interaktif Plotly
+                        # Visualisasi Interaktif Plotly yang konsisten
                         fig = go.Figure()
                         fig.add_trace(go.Scatter(
                             x=df_wb["Tahun"],
@@ -125,3 +120,5 @@ if query_wb and all_wb_indicators:
                     st.error(f"Gagal memuat data: {e}")
     else:
         st.warning("Tidak ada indikator yang cocok dengan kata kunci tersebut.")
+else:
+    st.info("Memuat katalog indikator World Bank...")
