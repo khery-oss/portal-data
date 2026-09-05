@@ -20,8 +20,9 @@ def load_wb_indicators():
             for item in data[1]:
                 ind_id = item.get("id")
                 ind_name = item.get("name")
-                # Hanya ambil indikator dengan format kode standar World Bank (mengandung titik dan bukan format lama berkode angka di depan)
-                if ind_id and ind_name and not ind_id.startswith("6.") and not ind_id.startswith("7."):
+                # Hanya ambil indikator standar World Bank yang murni berupa huruf dan titik (misal: SE.PRM.ENRL, NY.GDP...)
+                # Ini otomatis menyaring kode tematik lama yang tidak ada datanya untuk Indonesia.
+                if ind_id and ind_name and ind_id.replace(".", "").isalpha():
                     indicators.append({
                         "id": ind_id,
                         "name": ind_name,
@@ -35,8 +36,8 @@ def load_wb_indicators():
 all_wb_indicators = load_wb_indicators()
 
 query_wb = st.text_input(
-    "🔍 Cari indikator World Bank (misal: 'GDP', 'Inflation', 'Poverty', 'Education', 'CO2'):",
-    value="GDP growth"
+    "🔍 Cari indikator World Bank khusus Indonesia (misal: 'GDP', 'Inflation', 'Poverty', 'Education', 'CO2'):",
+    value="education"
 ).strip()
 
 if query_wb and all_wb_indicators:
@@ -46,7 +47,7 @@ if query_wb and all_wb_indicators:
     ]
 
     if results_wb:
-        st.success(f"Ditemukan {len(results_wb)} indikator pada katalog World Bank!")
+        st.success(f"Ditemukan {len(results_wb)} indikator valid pada katalog World Bank!")
         options_wb = {f"{ind['name']} ({ind['id']})": ind for ind in results_wb}
         selected_wb_label = st.selectbox("Pilih Indikator:", list(options_wb.keys()))
         selected_wb = options_wb[selected_wb_label]
@@ -123,6 +124,6 @@ if query_wb and all_wb_indicators:
                 except Exception as e:
                     st.error(f"Gagal memuat data: {e}")
     else:
-        st.warning("Tidak ada indikator yang cocok dengan kata kunci tersebut.")
+        st.warning("Tidak ada indikator valid yang cocok dengan kata kunci tersebut.")
 else:
     st.info("Memuat katalog indikator World Bank...")
