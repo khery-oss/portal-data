@@ -17,26 +17,11 @@ st.markdown(
 @st.cache_data(show_spinner=True)
 def load_and_filter_vdem():
     try:
-        # Membaca dataset besar dan langsung menyaring baris Indonesia untuk menghemat RAM
-        # Kolom pengenal negara di V-Dem biasanya 'country_text_id' ('IDN') atau 'country_name' ('Indonesia')
-        df_iter = pd.read_csv("vdem_data.csv", low_memory=False, chunksize=10000)
-        chunks = []
-        for chunk in df_iter:
-            # Filter baris khusus Indonesia
-            if "country_text_id" in chunk.columns:
-                sub = chunk[chunk["country_text_id"] == "IDN"]
-            elif "country_name" in chunk.columns:
-                sub = chunk[chunk["country_name"].str.contains("Indonesia", case=False, na=False)]
-            else:
-                sub = pd.DataFrame()
-            if not sub.empty:
-                chunks.append(sub)
-        
-        if chunks:
-            return pd.concat(chunks, ignore_index=True)
-        return None
+        # Membaca file khusus Indonesia yang sudah dipotong ukurannya
+        df_idn = pd.read_csv("vdem_data_IDN.csv", low_memory=False)
+        return df_idn
     except Exception as e:
-        st.error(f"Gagal membaca file `vdem_data.csv`: {e}")
+        st.error(f"Gagal membaca file `vdem_data_IDN.csv`: {e}")
         return None
 
 @st.cache_data(show_spinner=False)
