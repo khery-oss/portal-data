@@ -157,7 +157,7 @@ with col_foot1:
     st.markdown("Platform Riset & Observasi Data Publik")
 with col_foot2:
     st.markdown("**Pengembang & Periset**")
-    st.markdown("👩‍💻 **K. N. Phane**")
+    st.markdown("**K. N. Phane**")
 with col_foot3:
     st.markdown("**Arsip Akademik**")
     st.markdown("© 2025–2026 • Pengembangan Aktif")
