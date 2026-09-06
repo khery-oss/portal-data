@@ -13,29 +13,6 @@ st.markdown(
 )
 
 # =============================================================================
-# PANDUAN SETUP FILE (tampil hanya jika file belum ada)
-# =============================================================================
-with st.expander("📂 Panduan Setup File V-Dem (klik jika file belum tersedia)", expanded=False):
-    st.markdown("""
-    Modul ini membutuhkan **2 file CSV** yang diunggah ke root folder repository GitHub:
-
-    **1. `vdem_data_IDN.csv`** — Dataset V-Dem khusus Indonesia
-    - Unduh dataset lengkap dari: [V-Dem Institute](https://www.v-dem.net/data/the-v-dem-dataset/)
-    - Filter hanya baris `country_text_id == 'IDN'` lalu simpan sebagai `vdem_data_IDN.csv`
-    - Atau gunakan skrip Python berikut:
-    ```python
-    import pandas as pd
-    df = pd.read_csv("V-Dem-CY-Full+Others-v14.csv", low_memory=False)
-    df[df["country_text_id"] == "IDN"].to_csv("vdem_data_IDN.csv", index=False)
-    ```
-
-    **2. `vdem_codebook.csv`** — Codebook penjelas variabel V-Dem
-    - Unduh dari: [V-Dem Codebook](https://www.v-dem.net/data/reference-documents/)
-    - Konversi ke CSV dan simpan sebagai `vdem_codebook.csv`
-    - Kolom minimal yang dibutuhkan: kolom nama variabel (mengandung kata `var`) dan kolom deskripsi (mengandung kata `desc` atau `def`)
-    """)
-
-# =============================================================================
 # 1. MEMUAT DATASET V-DEM & CODEBOOK
 # =============================================================================
 @st.cache_data(show_spinner=False)
