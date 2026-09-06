@@ -34,7 +34,7 @@ st.info(
 st.divider()
 
 st.subheader("📚 Arsitektur Modul Data")
-st.markdown("Berikut adalah rincian lengkap cakupan variabel dan sumber resmi dari masing-feira modul yang tersedia di bilah navigasi kiri:")
+st.markdown("Berikut adalah rincian lengkap cakupan variabel dan sumber resmi dari masing-masing modul yang tersedia di bilah navigasi kiri:")
 
 col1, col2 = st.columns(2)
 
@@ -70,13 +70,17 @@ with col2:
     ### 🗳️ 7. V-Dem (Varieties of Democracy)
     * **Cakupan:** Kualitas demokrasi elektoral, liberal, partisipatif, deliberatif, egaliter, korupsi sektor publik, supremasi hukum, dan kebebasan sipil.
     * **Penyedia:** V-Dem Institute Dataset (Terintegrasi sinkronisasi *Codebook* penjelas & rumus matematis turunan).
+
+    ### 💻 8. Digital Society & Economy
+    * **Cakupan:** Inklusi keuangan (Global Findex), kesiapan ekonomi digital (UNCTAD), disinformasi, sensor internet, pemadaman jaringan, dan kebebasan digital (DSP).
+    * **Penyedia:** World Bank Findex, UNCTAD, & Digital Society Project (DSP).
     """)
 
 st.divider()
 
 st.subheader("⚙️ Prinsip Integritas & Transparansi Data")
 st.markdown("""
-* **Live API & Curated Local Database:** Sebagian besar modul memanfaatkan penarikan *real-time* via API resmi, sementara modul spesifik berukuran masif (seperti V-Dem) menggunakan arsip data terkurasi resmi yang dioptimalkan secara lokal untuk menjamin kecepatan akses web publik.
+* **Live API & Curated Local Database:** Sebagian besar modul memanfaatkan penarikan *real-time* via API resmi, sementara modul spesifik berukuran masif (seperti V-Dem dan DSP) menggunakan arsip data terkurasi resmi yang dioptimalkan secara lokal untuk menjamin kecepatan akses web publik.
 * **Bebas Manipulasi:** Tidak ada data buatan atau tiruan (*zero hardcoding*). Seluruh angka bersumber mutlak dari publikasi lembaga aslinya.
 * **Ekspor Terbuka:** Seluruh data yang ditampilkan dapat diunduh seketika dalam format CSV dan Excel (`.xlsx`) untuk diolah kembali di Stata, R, Python, maupun SPSS.
 * **Pengembangan Berkelanjutan:** Platform ini terus berada dalam masa pengembangan aktif guna meningkatkan kemudahan pencarian variabel, memperkaya fitur eksplorasi, serta menyederhanakan pemanfaatan dataset bagi seluruh kalangan akademisi.
@@ -156,7 +160,7 @@ with st.form("feedback_form", clear_on_submit=True):
                 except Exception as e:
                     st.warning(
                         "Koneksi ke server pengiriman laporan dibatasi oleh jaringan. "
-                        f"Silakan kirimkan masukan secara langsung ke email: `{TARGET_EMAIL}`"
+                        f"Silakan kirimkan masukan secara langsung melalui email: `{TARGET_EMAIL}`"
                     )
 
 # =============================================================================
@@ -169,7 +173,7 @@ with col_foot1:
     st.markdown("Platform Riset & Observasi Data Publik")
 with col_foot2:
     st.markdown("**Pengembang & Periset**")
-    st.markdown("👩‍💻 **K. N. Phane**")
+    st.markdown("**K. N. Phane**")
 with col_foot3:
     st.markdown("**Arsip Akademik**")
     st.markdown("© 2025–2026 • Pengembangan Aktif")
