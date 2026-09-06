@@ -16,7 +16,11 @@ HEADERS = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
 }
 
-# 30 KURASI INDIKATOR WHO YANG TERBUKTI AKTIF DAN TERSEDIA UNTUK INDONESIA
+# Kode dimensi yang menunjukkan data agregat total (bukan disagregasi gender/usia)
+TOTAL_DIM_CODES = {
+    "BTSX", "TOTAL", "SEX_BTSX", "MLE_FMLE", "_T", "TOTL", "ALL"
+}
+
 WHO_CATALOG = {
     # --- 1. Life Expectancy & Mortality ---
     "Life expectancy at birth (years)": {
@@ -114,7 +118,7 @@ WHO_CATALOG = {
         "desc": "Number of all cases of tuberculosis in a population at a given point in time."
     },
 
-    # --- 5. Health Workforce & Infrastructure ---
+    # --- 5. Health Workforce ---
     "Medical doctors (per 10,000 population)": {
         "code": "HWF_0001", "kategori": "5. Health Workforce", "unit": "Per 10,000 Population",
         "desc": "Number of medical doctors per 10,000 population."
@@ -181,103 +185,118 @@ with st.expander("ℹ️ Definisi & Metadata Resmi WHO", expanded=False):
     st.markdown("🔗 **Portal Sumber Resmi:** [WHO Global Health Observatory](https://www.who.int/data/gho)")
 
 # =============================================================================
-# 2. PENARIKAN DATA LIVE API WHO (TANPA BATAS WAKTU)
+# 2. PENARIKAN DATA LIVE API WHO
 # =============================================================================
 st.subheader("2. Penarikan Data Runtun Waktu Nasional (Indonesia)")
-st.caption("Seluruh riwayat tahun dari awal hingga data terbaru yang tersedia di server WHO akan ditarik secara otomatis.")
+st.caption("Seluruh riwayat tahun yang tersedia di server WHO ditarik secara otomatis.")
+
+def fetch_who(indicator_code: str) -> list:
+    """
+    Tarik data WHO GHO untuk Indonesia.
+    Strategi filter Dim1:
+    1. Prioritaskan baris dengan Dim1 yang termasuk TOTAL_DIM_CODES (data agregat)
+    2. Jika tidak ada sama sekali, ambil semua baris (indikator tanpa dimensi gender)
+       lalu groupby Tahun dengan mean untuk hindari double-count
+    """
+    api_url = f"https://ghoapi.azureedge.net/api/{indicator_code}"
+    params = {"$filter": "SpatialDim eq 'IDN'"}
+
+    res = requests.get(api_url, params=params, headers=HEADERS, timeout=25)
+    if res.status_code != 200:
+        return []
+
+    items = res.json().get("value", [])
+    if not items:
+        return []
+
+    # Coba ambil hanya baris total/agregat
+    records_total = []
+    records_all = []
+
+    for it in items:
+        th = it.get("TimeDim")
+        val = it.get("NumericValue")
+        if th is None or val is None:
+            continue
+        try:
+            tahun = int(th)
+            nilai = round(float(val), 4)
+        except (ValueError, TypeError):
+            continue
+
+        dim1 = (it.get("Dim1") or "").upper()
+        records_all.append({"Tahun": tahun, "Nilai": nilai})
+        if not dim1 or dim1 in TOTAL_DIM_CODES:
+            records_total.append({"Tahun": tahun, "Nilai": nilai})
+
+    # Pakai data total jika ada, fallback ke semua data (di-mean per tahun)
+    return records_total if records_total else records_all
+
 
 if st.button("📊 Ambil Data WHO (Live API)", type="primary"):
-    with st.spinner(f"Menarik seluruh riwayat data runtun waktu untuk '{nama_indikator}'..."):
-        api_url = f"https://ghoapi.azureedge.net/api/{code_id}"
-        query_params = {"$filter": "SpatialDim eq 'IDN'"}
-
+    with st.spinner(f"Menarik data untuk '{nama_indikator}'..."):
         try:
-            res = requests.get(api_url, params=query_params, headers=HEADERS, timeout=25)
-            
-            if res.status_code == 200:
-                payload = res.json()
-                items = payload.get("value", [])
+            records = fetch_who(code_id)
 
-                records = []
-                for it in items:
-                    th = it.get("TimeDim")
-                    val = it.get("NumericValue")
-                    
-                    dim1 = it.get("Dim1")
-                    if dim1 and dim1 not in ["BTSX", "TOTAL", "SEX_BTSX"]:
-                        continue
+            if not records:
+                st.warning(
+                    "Server WHO merespons namun data untuk Indonesia belum tersedia "
+                    "pada indikator ini. Silakan pilih indikator lain."
+                )
+                st.stop()
 
-                    if th is not None and val is not None:
-                        try:
-                            records.append({
-                                "Tahun": int(th),
-                                "Nilai": round(float(val), 2)
-                            })
-                        except (ValueError, TypeError):
-                            continue
+            val_col = f"Nilai ({meta['unit']})"
+            df_who = (
+                pd.DataFrame(records)
+                .groupby("Tahun", as_index=False)["Nilai"]
+                .mean()
+                .round(2)
+                .rename(columns={"Nilai": val_col})
+                .sort_values(by="Tahun", ascending=True)
+            )
 
-                if not records and items:
-                    for it in items:
-                        th = it.get("TimeDim")
-                        val = it.get("NumericValue")
-                        if th is not None and val is not None:
-                            try:
-                                records.append({"Tahun": int(th), "Nilai": round(float(val), 2)})
-                            except (ValueError, TypeError):
-                                continue
+            st.success(f"Berhasil menarik **{len(df_who)}** observasi tahunan dari server WHO!")
+            st.divider()
 
-                if records:
-                    val_col = f"Nilai ({meta['unit']})"
-                    df_raw = pd.DataFrame(records)
-                    df_who = df_raw.groupby("Tahun", as_index=False)["Nilai"].mean().round(2)
-                    df_who = df_who.sort_values(by="Tahun", ascending=True)
-                    df_who = df_who.rename(columns={"Nilai": val_col})
+            # Tombol Unduh
+            c1, c2 = st.columns(2)
+            c1.download_button(
+                "📥 Unduh CSV",
+                df_who.to_csv(index=False).encode("utf-8"),
+                f"WHO_Indonesia_{code_id}.csv",
+                "text/csv"
+            )
+            buf = io.BytesIO()
+            with pd.ExcelWriter(buf, engine="openpyxl") as writer:
+                df_who.to_excel(writer, index=False, sheet_name="WHO Indonesia")
+            c2.download_button(
+                "📊 Unduh Excel (.xlsx)",
+                buf.getvalue(),
+                f"WHO_Indonesia_{code_id}.xlsx",
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            )
 
-                    st.success(f"Berhasil menarik {len(df_who)} observasi tahunan secara penuh langsung dari server WHO!")
-                    st.divider()
+            # Visualisasi Plotly
+            fig = go.Figure()
+            fig.add_trace(go.Scatter(
+                x=df_who["Tahun"],
+                y=df_who[val_col],
+                mode="lines+markers",
+                name="Indonesia (WHO GHO)",
+                line=dict(width=2.8, color="#0093D5"),
+                marker=dict(size=7),
+                hovertemplate=f"Tahun %{{x}}<br>Nilai: %{{y:,.2f}} {meta['unit']}<extra></extra>"
+            ))
+            fig.update_layout(
+                xaxis=dict(title="Tahun", tickmode="linear"),
+                yaxis=dict(title=meta["unit"]),
+                hovermode="x unified",
+                margin=dict(l=20, r=20, t=30, b=20)
+            )
+            st.plotly_chart(fig, use_container_width=True)
 
-                    # Tombol Unduh
-                    c1, c2 = st.columns(2)
-                    c1.download_button(
-                        "📥 Unduh CSV",
-                        df_who.to_csv(index=False).encode("utf-8"),
-                        f"WHO_Indonesia_{code_id}.csv",
-                        "text/csv"
-                    )
-                    buf = io.BytesIO()
-                    with pd.ExcelWriter(buf, engine="openpyxl") as writer:
-                        df_who.to_excel(writer, index=False, sheet_name="WHO Indonesia")
-                    c2.download_button(
-                        "📊 Unduh Excel (.xlsx)",
-                        buf.getvalue(),
-                        f"WHO_Indonesia_{code_id}.xlsx",
-                        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-                    )
+            with st.expander("📋 Tabel Runtun Waktu Lengkap"):
+                st.dataframe(df_who.sort_values(by="Tahun", ascending=False), use_container_width=True)
 
-                    # Visualisasi Plotly Interaktif Tanpa Batas Tahun
-                    fig = go.Figure()
-                    fig.add_trace(go.Scatter(
-                        x=df_who["Tahun"],
-                        y=df_who[val_col],
-                        mode="lines+markers",
-                        name="Indonesia (WHO GHO)",
-                        line=dict(width=2.8, color="#0093D5"),
-                        marker=dict(size=7),
-                        hovertemplate=f"Tahun %{{x}}<br>Nilai: %{{y:,.2f}} {meta['unit']}<extra></extra>"
-                    ))
-                    fig.update_layout(
-                        xaxis=dict(title="Tahun", tickmode="linear"),
-                        yaxis=dict(title=meta["unit"]),
-                        hovermode="x unified",
-                        margin=dict(l=20, r=20, t=30, b=20)
-                    )
-                    st.plotly_chart(fig, use_container_width=True)
-
-                    with st.expander("📋 Tabel Runtun Waktu Lengkap"):
-                        st.dataframe(df_who.sort_values(by="Tahun", ascending=False), use_container_width=True)
-                else:
-                    st.warning("Server WHO merespons, namun catatan observasi untuk Indonesia belum dipublikasikan pada seri indikator ini.")
-            else:
-                st.error(f"Gagal menghubungi server WHO (Kode Status HTTP: {res.status_code}).")
         except Exception as e:
             st.error(f"Terjadi kesalahan saat memproses data WHO: {e}")
