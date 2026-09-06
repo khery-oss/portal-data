@@ -16,37 +16,13 @@ HEADERS = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
 }
 
-# Daftar topik WB beserta topic ID — dipakai untuk filter katalog
-WB_TOPICS = {
-    "Semua Topik": None,
-    "Economy & Growth": 3,
-    "Finance": 6,
-    "Trade": 21,
-    "Poverty & Inequality": 11,
-    "Social Protection & Labor": 10,
-    "Health": 8,
-    "Education": 4,
-    "Environment": 5,
-    "Infrastructure": 9,
-    "Agriculture & Rural Development": 1,
-    "Energy & Mining": 5,
-    "Private Sector & Trade": 12,
-    "Public Sector": 13,
-    "Science & Technology": 14,
-    "Urban Development": 16,
-    "Gender": 17,
-}
-
 # =============================================================================
-# 1. LOAD KATALOG INDIKATOR
+# 1. LOAD KATALOG INDIKATOR — 100% LIVE DARI WDI API
 # =============================================================================
 @st.cache_data(ttl=86400, show_spinner=False)
-def load_indicators(topic_id=None):
+def load_all_indicators():
     indicators = []
-    if topic_id:
-        url = f"https://api.worldbank.org/v2/indicator?source=2&topic={topic_id}&format=json&per_page=3000"
-    else:
-        url = "https://api.worldbank.org/v2/indicator?source=2&format=json&per_page=3000"
+    url = "https://api.worldbank.org/v2/indicator?source=2&format=json&per_page=3000"
     try:
         res = requests.get(url, headers=HEADERS, timeout=25)
         if res.status_code != 200:
@@ -67,52 +43,43 @@ def load_indicators(topic_id=None):
         pass
     return indicators
 
-# =============================================================================
-# 2. FILTER TOPIK & PENCARIAN
-# =============================================================================
-st.subheader("1. Pencarian Indikator")
-
-col_topic, col_search = st.columns([1, 2])
-
-with col_topic:
-    topik_pilihan = st.selectbox("Filter Topik:", list(WB_TOPICS.keys()))
-
-topic_id = WB_TOPICS[topik_pilihan]
-
 with st.spinner("Menghubungkan ke katalog World Development Indicators..."):
-    all_indicators = load_indicators(topic_id)
+    all_indicators = load_all_indicators()
 
 if not all_indicators:
     st.error("Gagal memuat katalog indikator. Periksa koneksi internet.")
     st.stop()
 
-with col_search:
-    query = st.text_input(
-        "🔍 Ketik kata kunci indikator (Bahasa Inggris):",
-        placeholder="Contoh: gdp growth, inflation, poverty, debt, tax, export",
-        value=""
-    ).strip()
+# =============================================================================
+# 2. PENCARIAN BEBAS
+# =============================================================================
+st.subheader("1. Pencarian Indikator")
 
-# Filter hasil pencarian
-if query:
-    query_tokens = query.lower().split()
-    results = [
-        ind for ind in all_indicators
-        if all(
-            token in ind["name"].lower() or token in ind["id"].lower()
-            for token in query_tokens
-        )
-    ]
-else:
-    results = all_indicators
+query = st.text_input(
+    "🔍 Ketik kata kunci indikator (Bahasa Inggris):",
+    placeholder="Contoh: gdp · inflation · poverty · unemployment · export · debt · mortality · enrollment",
+    value=""
+).strip()
 
+if not query:
+    st.info("Ketik kata kunci untuk mulai mencari indikator. Contoh: **gdp**, **inflation**, **poverty**, **unemployment**, **export**, **debt**.")
+    st.stop()
+
+query_tokens = query.lower().split()
+results = [
+    ind for ind in all_indicators
+    if any(
+        token in ind["name"].lower() or token in ind["id"].lower()
+        for token in query_tokens
+    )
+]
 results = sorted(results, key=lambda x: (len(x["name"]), x["name"]))
 
 if not results:
     st.warning(f"Tidak ditemukan indikator untuk kata kunci **'{query}'**. Coba kata kunci lain.")
     st.stop()
 
-st.success(f"Ditemukan **{len(results)}** indikator pada topik **{topik_pilihan}**{(' dengan kata kunci ' + chr(34) + query + chr(34)) if query else ''}.")
+st.success(f"Ditemukan **{len(results)}** indikator untuk kata kunci **'{query}'**.")
 
 # =============================================================================
 # 3. PILIH INDIKATOR
@@ -124,22 +91,22 @@ selected_ind = st.selectbox(
 )
 
 kode_indikator = selected_ind["id"]
+link_resmi = f"https://data.worldbank.org/indicator/{kode_indikator}?locations=ID"
 
 with st.expander("ℹ️ Definisi & Metodologi Resmi", expanded=False):
     st.markdown(f"**Kode Indikator:** `{kode_indikator}`")
     st.markdown(f"**Organisasi Sumber:** {selected_ind['sourceOrg']}")
     note = selected_ind.get("sourceNote", "")
     st.markdown(f"**Definisi:** {note if note else 'Tidak ada deskripsi rinci.'}")
-    link_resmi = f"https://data.worldbank.org/indicator/{kode_indikator}?locations=ID"
     st.markdown(f"🔗 [Lihat di World Bank]({link_resmi})")
 
 # =============================================================================
-# 4. PENARIKAN DATA INDONESIA
+# 4. PENARIKAN DATA INDONESIA — 100% LIVE
 # =============================================================================
 st.subheader("2. Penarikan Data Indonesia")
 
 if st.button("📊 Ambil Data Indonesia", type="primary"):
-    with st.spinner(f"Mengunduh runtun waktu untuk '{selected_ind['name']}'..."):
+    with st.spinner(f"Mengunduh data untuk '{selected_ind['name']}'..."):
         data_url = (
             f"https://api.worldbank.org/v2/country/IDN/indicator/{kode_indikator}"
             f"?format=json&per_page=1000"
@@ -178,14 +145,12 @@ if st.button("📊 Ambil Data Indonesia", type="primary"):
             name_lower = selected_ind["name"].lower()
             if "% of gdp" in name_lower:
                 unit = "% of GDP"
-            elif "% of government" in name_lower or "% of total" in name_lower:
-                unit = "%"
-            elif "current us$" in name_lower or "usd" in name_lower or "dollar" in name_lower:
+            elif "current us$" in name_lower or "(current" in name_lower:
                 unit = "USD"
             elif "constant" in name_lower and ("lcu" in name_lower or "us$" in name_lower):
                 unit = "Constant USD"
-            elif "per capita" in name_lower:
-                unit = "Per Capita"
+            elif "per capita" in name_lower and "us$" in name_lower:
+                unit = "USD per Capita"
             elif "%" in selected_ind["name"]:
                 unit = "%"
             elif any(k in name_lower for k in ["number", "count", "total", "persons", "people"]):
