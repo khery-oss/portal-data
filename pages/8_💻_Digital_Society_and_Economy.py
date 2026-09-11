@@ -179,20 +179,6 @@ with tab_ict:
         "dari **World Bank World Development Indicators** — *100% Live API*."
     )
 
-    # Keyword preset untuk digital/ICT
-    ICT_PRESETS = {
-        "— Pilih Topik Cepat (opsional) —": "",
-        "🌐 Pengguna Internet": "internet user",
-        "📱 Mobile & Seluler": "mobile cellular",
-        "📡 Broadband": "broadband",
-        "💰 Ekspor & Impor TIK": "ICT service",
-        "🔒 Keamanan Digital": "secure server",
-        "🏭 Ekspor Teknologi Tinggi": "high technology export",
-        "📞 Infrastruktur Telekomunikasi": "telecom",
-        "💳 Pembayaran Digital (WDI)": "digital payment",
-        "🔬 Riset & Inovasi": "research development",
-    }
-
     @st.cache_data(ttl=86400, show_spinner=False)
     def load_ict_indicators():
         indicators = []
@@ -206,9 +192,8 @@ with tab_ict:
                 for item in data[1]:
                     ind_id = item.get("id", "")
                     ind_name = item.get("name", "")
-                    # Filter hanya indikator ICT/digital yang relevan
                     ict_keywords = ["internet", "mobile", "broadband", "telecom", "ict",
-                                    "technology", "digital", "secure server", "high.tech",
+                                    "technology", "digital", "secure server",
                                     "information", "communication", "ecommerce", "e-commerce"]
                     if ind_id and ind_name and any(
                         kw in ind_name.lower() or kw in ind_id.lower()
@@ -230,25 +215,22 @@ with tab_ict:
     if not ict_indicators:
         st.error("Gagal memuat katalog indikator ICT.")
     else:
-        col_preset, col_search = st.columns([1, 2])
-        with col_preset:
-            preset_pilihan = st.selectbox("⚡ Topik Cepat:", list(ICT_PRESETS.keys()), key="preset_ict")
-        with col_search:
-            query_ict = st.text_input(
-                "🔍 Atau ketik kata kunci:",
-                value=ICT_PRESETS[preset_pilihan],
-                placeholder="Contoh: internet, mobile, broadband, ICT, telecom",
-                key="q_ict"
-            ).strip()
+        query_ict = st.text_input(
+            "🔍 Cari indikator digital & ICT (Bahasa Inggris):",
+            placeholder="Contoh: internet · mobile · broadband · telecom · ICT · technology · secure · ecommerce",
+            value="",
+            key="q_ict"
+        ).strip()
 
-        if query_ict:
-            tokens_ict = query_ict.lower().split()
-            results_ict = [
-                ind for ind in ict_indicators
-                if any(t in ind["name"].lower() or t in ind["id"].lower() for t in tokens_ict)
-            ]
-        else:
-            results_ict = ict_indicators
+        if not query_ict:
+            st.info("Ketik kata kunci untuk mencari indikator. Contoh: **internet**, **mobile**, **broadband**, **telecom**, **ICT**.")
+            st.stop()
+
+        tokens_ict = query_ict.lower().split()
+        results_ict = [
+            ind for ind in ict_indicators
+            if any(t in ind["name"].lower() or t in ind["id"].lower() for t in tokens_ict)
+        ]
         results_ict = sorted(results_ict, key=lambda x: len(x["name"]))
 
         if not results_ict:
@@ -357,6 +339,21 @@ with tab_dsp:
         "Analisis disinformasi, sensor internet, pembatasan jaringan, dan kebebasan digital "
         "dari **Digital Society Project (DSP)** — data berbasis file CSV resmi DSP."
     )
+
+    with st.expander("📂 Panduan Setup File DSP", expanded=False):
+        st.markdown("""
+        Modul ini membutuhkan file **`DSP_CY_IDN.csv`** di root folder repository GitHub.
+
+        **Cara mendapatkan file:**
+        - Unduh dataset dari situs resmi: [Digital Society Project](https://www.digitalsocietyproject.net/)
+        - Filter baris dengan `country_text_id == 'IDN'` lalu simpan sebagai `DSP_CY_IDN.csv`
+        - Atau gunakan skrip berikut:
+        ```python
+        import pandas as pd
+        df = pd.read_csv("DSP_full_dataset.csv", low_memory=False)
+        df[df["country_text_id"] == "IDN"].to_csv("DSP_CY_IDN.csv", index=False)
+        ```
+        """)
 
     @st.cache_data(show_spinner=False)
     def load_dsp():
