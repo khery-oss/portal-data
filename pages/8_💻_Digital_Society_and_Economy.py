@@ -338,21 +338,6 @@ with tab_dsp:
         "dari **Digital Society Project (DSP)** — data berbasis file CSV resmi DSP."
     )
 
-    with st.expander("📂 Panduan Setup File DSP", expanded=False):
-        st.markdown("""
-        Modul ini membutuhkan file **`DSP_CY_IDN.csv`** di root folder repository GitHub.
-
-        **Cara mendapatkan file:**
-        - Unduh dataset dari situs resmi: [Digital Society Project](https://www.digitalsocietyproject.net/)
-        - Filter baris dengan `country_text_id == 'IDN'` lalu simpan sebagai `DSP_CY_IDN.csv`
-        - Atau gunakan skrip berikut:
-        ```python
-        import pandas as pd
-        df = pd.read_csv("DSP_full_dataset.csv", low_memory=False)
-        df[df["country_text_id"] == "IDN"].to_csv("DSP_CY_IDN.csv", index=False)
-        ```
-        """)
-
     @st.cache_data(show_spinner=False)
     def load_dsp():
         paths = ["DSP_CY_IDN.csv", "data/DSP_CY_IDN.csv"]
