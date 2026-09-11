@@ -224,111 +224,109 @@ with tab_ict:
 
         if not query_ict:
             st.info("Ketik kata kunci untuk mencari indikator. Contoh: **internet**, **mobile**, **broadband**, **telecom**, **ICT**.")
-            st.stop()
-
-        tokens_ict = query_ict.lower().split()
-        results_ict = [
-            ind for ind in ict_indicators
-            if any(t in ind["name"].lower() or t in ind["id"].lower() for t in tokens_ict)
-        ]
-        results_ict = sorted(results_ict, key=lambda x: len(x["name"]))
-
-        if not results_ict:
-            st.warning("Tidak ditemukan indikator ICT untuk kata kunci tersebut.")
         else:
-            st.success(f"Ditemukan **{len(results_ict)}** indikator digital/ICT.")
+            tokens_ict = query_ict.lower().split()
+            results_ict = [
+                ind for ind in ict_indicators
+                if any(t in ind["name"].lower() or t in ind["id"].lower() for t in tokens_ict)
+            ]
+            results_ict = sorted(results_ict, key=lambda x: len(x["name"]))
 
-            sel_ict = st.selectbox(
-                "Pilih Indikator:",
-                options=results_ict,
-                format_func=lambda x: x["name"],
-                key="sel_ict"
-            )
+            if not results_ict:
+                st.warning("Tidak ditemukan indikator ICT untuk kata kunci tersebut.")
+            else:
+                st.success(f"Ditemukan **{len(results_ict)}** indikator digital/ICT.")
 
-            with st.expander("ℹ️ Metadata & Definisi", expanded=False):
-                st.markdown(f"**Kode Indikator:** `{sel_ict['id']}`")
-                st.markdown(f"**Sumber:** {sel_ict['sourceOrg']}")
-                if sel_ict.get("sourceNote"):
-                    st.markdown(f"**Definisi:** {sel_ict['sourceNote']}")
-                st.markdown(f"🔗 [Lihat di World Bank](https://data.worldbank.org/indicator/{sel_ict['id']}?locations=ID)")
+                sel_ict = st.selectbox(
+                    "Pilih Indikator:",
+                    options=results_ict,
+                    format_func=lambda x: x["name"],
+                    key="sel_ict"
+                )
 
-            if st.button("📊 Ambil Data ICT Indonesia", type="primary", key="btn_ict"):
-                with st.spinner(f"Menarik data untuk '{sel_ict['name']}'..."):
-                    try:
-                        url_ict = (
-                            f"https://api.worldbank.org/v2/country/IDN/indicator/{sel_ict['id']}"
-                            f"?format=json&per_page=1000"
-                        )
-                        res = requests.get(url_ict, headers=HEADERS, timeout=20)
-                        records = []
-                        if res.status_code == 200:
-                            payload = res.json()
-                            if len(payload) > 1 and isinstance(payload[1], list):
-                                for item in payload[1]:
-                                    thn = item.get("date")
-                                    val = item.get("value")
-                                    if thn is not None and val is not None:
-                                        try:
-                                            records.append({"Tahun": int(thn), "nilai_raw": round(float(val), 4)})
-                                        except (ValueError, TypeError):
-                                            continue
+                with st.expander("ℹ️ Metadata & Definisi", expanded=False):
+                    st.markdown(f"**Kode Indikator:** `{sel_ict['id']}`")
+                    st.markdown(f"**Sumber:** {sel_ict['sourceOrg']}")
+                    if sel_ict.get("sourceNote"):
+                        st.markdown(f"**Definisi:** {sel_ict['sourceNote']}")
+                    st.markdown(f"🔗 [Lihat di World Bank](https://data.worldbank.org/indicator/{sel_ict['id']}?locations=ID)")
 
-                        if not records:
-                            st.warning("Data untuk Indonesia belum tersedia pada indikator ini.")
-                        else:
-                            # Deteksi unit
-                            name_lower = sel_ict["name"].lower()
-                            if "%" in sel_ict["name"]:
-                                unit = "%"
-                            elif "per 100" in name_lower:
-                                unit = "Per 100 Orang"
-                            elif "per 1 million" in name_lower or "per million" in name_lower:
-                                unit = "Per 1 Juta Orang"
-                            elif "usd" in name_lower or "current us$" in name_lower or "(cd)" in name_lower:
-                                unit = "USD"
+                if st.button("📊 Ambil Data ICT Indonesia", type="primary", key="btn_ict"):
+                    with st.spinner(f"Menarik data untuk '{sel_ict['name']}'..."):
+                        try:
+                            url_ict = (
+                                f"https://api.worldbank.org/v2/country/IDN/indicator/{sel_ict['id']}"
+                                f"?format=json&per_page=1000"
+                            )
+                            res = requests.get(url_ict, headers=HEADERS, timeout=20)
+                            records = []
+                            if res.status_code == 200:
+                                payload = res.json()
+                                if len(payload) > 1 and isinstance(payload[1], list):
+                                    for item in payload[1]:
+                                        thn = item.get("date")
+                                        val = item.get("value")
+                                        if thn is not None and val is not None:
+                                            try:
+                                                records.append({"Tahun": int(thn), "nilai_raw": round(float(val), 4)})
+                                            except (ValueError, TypeError):
+                                                continue
+
+                            if not records:
+                                st.warning("Data untuk Indonesia belum tersedia pada indikator ini.")
                             else:
-                                unit = "Nilai"
+                                name_lower = sel_ict["name"].lower()
+                                if "%" in sel_ict["name"]:
+                                    unit = "%"
+                                elif "per 100" in name_lower:
+                                    unit = "Per 100 Orang"
+                                elif "per 1 million" in name_lower or "per million" in name_lower:
+                                    unit = "Per 1 Juta Orang"
+                                elif "usd" in name_lower or "current us$" in name_lower or "(cd)" in name_lower:
+                                    unit = "USD"
+                                else:
+                                    unit = "Nilai"
 
-                            val_col = f"Nilai ({unit})"
-                            df_ict = (
-                                pd.DataFrame(records)
-                                .groupby("Tahun", as_index=False)["nilai_raw"]
-                                .mean().round(2)
-                                .rename(columns={"nilai_raw": val_col})
-                                .sort_values("Tahun")
-                            )
-                            st.success(f"Berhasil menarik **{len(df_ict)}** observasi!")
-                            st.divider()
+                                val_col = f"Nilai ({unit})"
+                                df_ict = (
+                                    pd.DataFrame(records)
+                                    .groupby("Tahun", as_index=False)["nilai_raw"]
+                                    .mean().round(2)
+                                    .rename(columns={"nilai_raw": val_col})
+                                    .sort_values("Tahun")
+                                )
+                                st.success(f"Berhasil menarik **{len(df_ict)}** observasi!")
+                                st.divider()
 
-                            c1, c2 = st.columns(2)
-                            c1.download_button("📥 Unduh CSV", df_ict.to_csv(index=False).encode("utf-8"),
-                                f"ICT_IDN_{sel_ict['id']}.csv", "text/csv", key="dl_ict_csv")
-                            buf = io.BytesIO()
-                            with pd.ExcelWriter(buf, engine="openpyxl") as w:
-                                df_ict.to_excel(w, index=False, sheet_name="ICT Data")
-                            c2.download_button("📊 Unduh Excel (.xlsx)", buf.getvalue(),
-                                f"ICT_IDN_{sel_ict['id']}.xlsx",
-                                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                                key="dl_ict_xl")
+                                c1, c2 = st.columns(2)
+                                c1.download_button("📥 Unduh CSV", df_ict.to_csv(index=False).encode("utf-8"),
+                                    f"ICT_IDN_{sel_ict['id']}.csv", "text/csv", key="dl_ict_csv")
+                                buf = io.BytesIO()
+                                with pd.ExcelWriter(buf, engine="openpyxl") as w:
+                                    df_ict.to_excel(w, index=False, sheet_name="ICT Data")
+                                c2.download_button("📊 Unduh Excel (.xlsx)", buf.getvalue(),
+                                    f"ICT_IDN_{sel_ict['id']}.xlsx",
+                                    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                                    key="dl_ict_xl")
 
-                            fig = go.Figure()
-                            fig.add_trace(go.Scatter(
-                                x=df_ict["Tahun"], y=df_ict[val_col],
-                                mode="lines+markers", name="Indonesia (WB WDI)",
-                                line=dict(width=2.5, color="#1f77b4"), marker=dict(size=7),
-                                hovertemplate=f"Tahun %{{x}}<br>Nilai: %{{y:,.2f}} {unit}<extra></extra>"
-                            ))
-                            fig.update_layout(
-                                xaxis=dict(title="Tahun", tickmode="linear"),
-                                yaxis=dict(title=unit),
-                                hovermode="x unified", margin=dict(l=20, r=20, t=30, b=20)
-                            )
-                            st.plotly_chart(fig, use_container_width=True)
+                                fig = go.Figure()
+                                fig.add_trace(go.Scatter(
+                                    x=df_ict["Tahun"], y=df_ict[val_col],
+                                    mode="lines+markers", name="Indonesia (WB WDI)",
+                                    line=dict(width=2.5, color="#1f77b4"), marker=dict(size=7),
+                                    hovertemplate=f"Tahun %{{x}}<br>Nilai: %{{y:,.2f}} {unit}<extra></extra>"
+                                ))
+                                fig.update_layout(
+                                    xaxis=dict(title="Tahun", tickmode="linear"),
+                                    yaxis=dict(title=unit),
+                                    hovermode="x unified", margin=dict(l=20, r=20, t=30, b=20)
+                                )
+                                st.plotly_chart(fig, use_container_width=True)
 
-                            with st.expander("📋 Tabel Lengkap"):
-                                st.dataframe(df_ict.sort_values("Tahun", ascending=False), use_container_width=True)
-                    except Exception as e:
-                        st.error(f"Gagal mengambil data: {e}")
+                                with st.expander("📋 Tabel Lengkap"):
+                                    st.dataframe(df_ict.sort_values("Tahun", ascending=False), use_container_width=True)
+                        except Exception as e:
+                            st.error(f"Gagal mengambil data: {e}")
 
 # =============================================================================
 # TAB 3: DIGITAL SOCIETY PROJECT (DSP) — CSV LOKAL
