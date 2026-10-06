@@ -48,30 +48,22 @@ with col1:
     * **Cakupan:** Suku bunga global/AS, perbandingan kebijakan moneter, inflasi produsen, dan harga komoditas strategis global.
     * **Penyedia:** Federal Reserve Economic Data REST API.
     
-    ### 👷 3. ILO (International Labour Organization)
-    * **Cakupan:** Pasar tenaga kerja, TPAK, pengangguran terbuka & menurut tingkat pendidikan, pekerja rentan, serta transformasi sektoral.
-    * **Penyedia:** ILOSTAT Harmonized Modelled Estimates API.
-    
-    ### 🇺🇳 4. UN SDGs (United Nations)
+    ### 🇺🇳 3. UN SDGs (United Nations)
     * **Cakupan:** Indikator tujuan pembangunan berkelanjutan global, kemiskinan ekstrem, ketimpangan (*income share bottom 40%*), dan transisi energi bersih.
     * **Penyedia:** United Nations Statistics Division (UNSD) SDG API.
     """)
 
 with col2:
     st.markdown("""
-    ### 🎓 5. UNESCO Institute for Statistics (UIS)
-    * **Cakupan:** Angka Partisipasi Kasar/Murni (APK/APM), angka melek aksara (literasi), rasio murid-guru, dan pembiayaan belanja pendidikan publik.
-    * **Penyedia:** UNESCO UIS Data Repository API.
-    
-    ### 🏥 6. WHO (World Health Organization)
+    ### 🏥 4. WHO (World Health Organization)
     * **Cakupan:** Indikator kesehatan publik, angka harapan hidup, stunting & gizi balita, tenaga medis, jaminan kesehatan semesta (*UHC*), dan modal manusia.
     * **Penyedia:** WHO Global Health Observatory (GHO) OData API.
     
-    ### 🗳️ 7. V-Dem (Varieties of Democracy)
+    ### 🗳️ 5. V-Dem (Varieties of Democracy)
     * **Cakupan:** Kualitas demokrasi elektoral, liberal, partisipatif, deliberatif, egaliter, korupsi sektor publik, supremasi hukum, dan kebebasan sipil.
     * **Penyedia:** V-Dem Institute Dataset (Terintegrasi sinkronisasi *Codebook* penjelas & rumus matematis turunan).
 
-    ### 💻 8. Digital Society & Economy
+    ### 💻 6. Digital Society & Economy
     * **Cakupan:** Inklusi keuangan (Global Findex), kesiapan ekonomi digital (UNCTAD), disinformasi, sensor internet, pemadaman jaringan, dan kebebasan digital (DSP).
     * **Penyedia:** World Bank Findex, UNCTAD, & Digital Society Project (DSP).
     """)
