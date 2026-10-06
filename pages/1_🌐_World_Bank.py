@@ -55,11 +55,48 @@ if not all_indicators:
 # =============================================================================
 st.subheader("1. Pencarian Indikator")
 
-query = st.text_input(
-    "🔍 Ketik kata kunci indikator (Bahasa Inggris):",
-    placeholder="Contoh: gdp · inflation · poverty · unemployment · export · debt · mortality · enrollment",
-    value=""
-).strip()
+# Keyword preset per topik
+TOPIC_PRESETS = {
+    "— Pilih Topik Cepat (opsional) —": "",
+    # Makroekonomi
+    "💰 GDP & Pertumbuhan Ekonomi": "gdp growth",
+    "📉 Inflasi & Harga": "inflation",
+    "🏦 Keuangan & Perbankan": "credit bank interest",
+    "💸 Perdagangan & Ekspor": "export import trade",
+    "📊 Kemiskinan & Ketimpangan": "poverty gini",
+    "💼 Fiskal & Utang": "tax revenue debt",
+    "🏙️ Urbanisasi & Populasi": "urban population",
+    "🔬 Teknologi & Inovasi": "technology research",
+    # ILO — Ketenagakerjaan
+    "👷 Pengangguran (ILO)": "unemployment",
+    "💼 Angkatan Kerja (ILO)": "labor force participation",
+    "🏭 Penyerapan Kerja (ILO)": "employment",
+    "⚠️ Pekerja Rentan (ILO)": "vulnerable employment",
+    "📦 Sektor Kerja (ILO)": "employment agriculture industry services",
+    # UNESCO — Pendidikan
+    "📚 Partisipasi Sekolah (UNESCO)": "school enrollment",
+    "✏️ Literasi & Melek Huruf (UNESCO)": "literacy",
+    "👩‍🏫 Rasio Murid-Guru (UNESCO)": "pupil teacher",
+    "💰 Anggaran Pendidikan (UNESCO)": "education expenditure",
+    "🎓 Kelulusan & Putus Sekolah (UNESCO)": "completion dropout",
+    # Kesehatan & Lingkungan
+    "🏥 Kesehatan": "mortality health",
+    "⚡ Energi": "energy electricity",
+    "🌿 Iklim & Lingkungan": "co2 emission forest",
+    "👩 Gender": "female gender women",
+}
+
+col_preset, col_search = st.columns([1, 2])
+
+with col_preset:
+    preset = st.selectbox("⚡ Topik Cepat:", list(TOPIC_PRESETS.keys()))
+
+with col_search:
+    query = st.text_input(
+        "🔍 Atau ketik kata kunci (bisa diedit):",
+        value=TOPIC_PRESETS[preset],
+        placeholder="Contoh: gdp · inflation · poverty · unemployment · export · debt · co2 · forest",
+    ).strip()
 
 if not query:
     st.info("Ketik kata kunci untuk mulai mencari indikator. Contoh: **gdp**, **inflation**, **poverty**, **unemployment**, **export**, **debt**.")
