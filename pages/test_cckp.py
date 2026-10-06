@@ -1,75 +1,110 @@
 import requests
 import streamlit as st
+import json
 
-st.title("🌡️ CCKP API Format Test — Round 3")
-st.markdown("Cek struktur data tanpa filter negara dulu.")
+st.title("🌡️ CCKP API Format Test — Round 4")
+st.markdown("Cek endpoint dasar CCKP untuk temukan struktur URL yang benar-benar return data.")
 
 HEADERS = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"}
 
-BASE = "https://cckpapi.worldbank.org/cckp/v2/cru-x0.5_timeseries_tas_annual_1901-2022_mean_historical_ensemble_all_p50_mean"
-
 if st.button("🚀 Jalankan Test", type="primary"):
 
-    # Test 1: Tanpa filter sama sekali — lihat struktur data mentah
-    st.subheader("1. Tanpa filter — lihat data apa yang ada")
-    url = f"{BASE}?_format=json"
-    res = requests.get(url, headers=HEADERS, timeout=20)
-    data = res.json()
-    st.write(f"Total data points: {len(data.get('data', []))}")
-    if data.get("data"):
-        st.write("Sample 3 baris pertama:")
-        st.json(data["data"][:3])
-        st.write("Keys di setiap baris:")
-        st.write(list(data["data"][0].keys()) if data["data"] else "kosong")
-    else:
-        st.warning("Data masih kosong tanpa filter juga")
+    # Test 1: Coba endpoint root/index CCKP untuk lihat available endpoints
+    st.subheader("1. Root endpoints — cari katalog yang tersedia")
+    root_urls = [
+        "https://cckpapi.worldbank.org/cckp/v2?_format=json",
+        "https://cckpapi.worldbank.org/cckp/v2/index?_format=json",
+        "https://cckpapi.worldbank.org/cckp/v2/variables?_format=json",
+        "https://cckpapi.worldbank.org/cckp/v2/countries?_format=json",
+        "https://cckpapi.worldbank.org/cckp/v2/datasets?_format=json",
+        "https://cckpapi.worldbank.org/cckp/v2/indicators?_format=json",
+    ]
+    for url in root_urls:
+        try:
+            res = requests.get(url, headers=HEADERS, timeout=10)
+            st.write(f"HTTP {res.status_code}: `{url}`")
+            if res.status_code == 200:
+                try:
+                    d = res.json()
+                    st.success("✅ JSON response!")
+                    st.json(d if len(str(d)) < 1000 else str(d)[:1000])
+                except:
+                    st.write(f"Non-JSON: {res.text[:300]}")
+        except Exception as e:
+            st.error(f"ERROR: {e}")
     st.divider()
 
-    # Test 2: Coba dengan iso parameter
-    st.subheader("2. Berbagai parameter filter lain")
-    params_tests = [
-        {"iso": "IDN"},
-        {"iso3": "IDN"},
-        {"iso2": "ID"},
-        {"location": "IDN"},
-        {"region": "IDN"},
-        {"geographyId": "IDN"},
-        {"geography": "IDN"},
-        {"areaCode": "IDN"},
+    # Test 2: Coba format URL dari dokumentasi GitHub WB resmi
+    # https://github.com/worldbank/CCKP
+    st.subheader("2. Format URL dari GitHub WB CCKP resmi")
+    github_urls = [
+        # Format dari notebook contoh WB
+        "https://cckpapi.worldbank.org/cckp/v2/cru-x0.5_timeseries_tas_annual_1901-2022_mean_historical_ensemble_all_p50_mean/IDN?_format=json",
+        # Versi dengan iso3 di path sebelum parameter
+        "https://cckpapi.worldbank.org/cckp/v2/cru-x0.5_timeseries_tas_annual_1901-2020_mean_historical_ensemble_all_p50_mean/IDN?_format=json",
+        # Periode berbeda
+        "https://cckpapi.worldbank.org/cckp/v2/cru-x0.5_timeseries_tas_annual_1950-2020_mean_historical_ensemble_all_p50_mean/IDN?_format=json",
+        # Tanpa period range
+        "https://cckpapi.worldbank.org/cckp/v2/cru-x0.5_timeseries_tas_annual_all_mean_historical_ensemble_all_p50_mean/IDN?_format=json",
+        # ERA5 format
+        "https://cckpapi.worldbank.org/cckp/v2/era5_timeseries_tas_annual_1950-2020_mean_historical_ensemble_all_p50_mean/IDN?_format=json",
     ]
-    for params in params_tests:
-        key = list(params.keys())[0]
-        val = list(params.values())[0]
+    for url in github_urls:
         try:
-            res2 = requests.get(f"{BASE}?_format=json", params=params, headers=HEADERS, timeout=10)
-            d2 = res2.json()
-            count = len(d2.get("data", []))
-            if count > 0:
-                st.success(f"✅ **{key}={val}** → {count} data points!")
-                st.json(d2["data"][:2])
+            res = requests.get(url, headers=HEADERS, timeout=12)
+            if res.status_code == 200:
+                d = res.json()
+                count = len(d.get("data", []))
+                if count > 0:
+                    st.success(f"✅ **DATA ADA! {count} points**")
+                    st.json(d["data"][:3])
+                    st.code(url)
+                else:
+                    st.write(f"⚠️ HTTP 200 kosong: `{url[-70:]}`")
+                    # Tampilkan full response untuk debug
+                    st.json(d)
             else:
-                st.write(f"⚠️ {key}={val} → kosong")
+                st.write(f"HTTP {res.status_code}: `{url[-70:]}`")
         except Exception as e:
-            st.error(f"❌ {key}={val} → {e}")
+            st.error(f"ERROR: {e}")
     st.divider()
 
-    # Test 3: Coba endpoint yang berbeda — mungkin ada endpoint khusus per negara
-    st.subheader("3. Endpoint alternatif per negara")
-    alt_urls = [
-        f"https://cckpapi.worldbank.org/cckp/v2/IDN/cru-x0.5_timeseries_tas_annual_1901-2022_mean_historical_ensemble_all_p50_mean?_format=json",
-        f"https://cckpapi.worldbank.org/cckp/v2/country/IDN/cru-x0.5_timeseries_tas?_format=json",
-        f"https://cckpapi.worldbank.org/cckp/v2/cru-x0.5_timeseries_tas_annual_1901-2022_mean_historical_ensemble_all_p50_mean/IDN?_format=json",
-        f"https://cckpapi.worldbank.org/cckp/v2/countries/IDN/indicators/tas?_format=json",
+    # Test 3: Coba WB climate API yang berbeda sama sekali
+    st.subheader("3. API WB Climate alternatif")
+    alt_apis = [
+        # WB Climate Data API (berbeda dari CCKP)
+        "https://climatedata.worldbank.org/api/v1/country/IDN/indicator/tas?_format=json",
+        # CCKP lewat path berbeda
+        "https://cckpapi.worldbank.org/api/v1/cru-x0.5_timeseries_tas_annual_1901-2022_mean_historical_ensemble_all_p50_mean/IDN?_format=json",
+        # World Bank open data untuk climate
+        "https://api.worldbank.org/v2/country/IDN/indicator/EN.ATM.CO2E.PC?format=json&per_page=10",
+        "https://api.worldbank.org/v2/country/IDN/indicator/AG.LND.PRCP.MM?format=json&per_page=10",
+        "https://api.worldbank.org/v2/country/IDN/indicator/EN.CLC.MDAT.ZS?format=json&per_page=10",
     ]
-    for url in alt_urls:
+    for url in alt_apis:
         try:
-            res3 = requests.get(url, headers=HEADERS, timeout=10)
-            d3 = res3.json() if res3.status_code == 200 else {}
-            count = len(d3.get("data", []))
-            if res3.status_code == 200 and count > 0:
-                st.success(f"✅ DATA ADA! {url[-60:]}")
-                st.json(d3["data"][:2])
+            res = requests.get(url, headers=HEADERS, timeout=12)
+            if res.status_code == 200:
+                try:
+                    d = res.json()
+                    # WB API format
+                    if isinstance(d, list) and len(d) > 1:
+                        records = [i for i in d[1] if i.get("value")]
+                        if records:
+                            st.success(f"✅ WB API — {len(records)} records: `{url[-60:]}`")
+                            st.json(records[:2])
+                        else:
+                            st.write(f"⚠️ WB API kosong: `{url[-60:]}`")
+                    else:
+                        count = len(d.get("data", [])) if isinstance(d, dict) else 0
+                        if count > 0:
+                            st.success(f"✅ {count} data points: `{url[-60:]}`")
+                            st.json(d["data"][:2])
+                        else:
+                            st.write(f"⚠️ HTTP 200 kosong: `{url[-60:]}`")
+                except:
+                    st.write(f"Non-JSON HTTP 200: {res.text[:200]}")
             else:
-                st.write(f"HTTP {res3.status_code} — kosong: `{url[-60:]}`")
+                st.write(f"HTTP {res.status_code}: `{url[-60:]}`")
         except Exception as e:
-            st.error(f"❌ {url[-60:]}: {e}")
+            st.error(f"ERROR: {e}")
