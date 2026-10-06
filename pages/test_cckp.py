@@ -1,57 +1,75 @@
 import requests
 import streamlit as st
 
-st.title("🌡️ CCKP API Format Test — Round 2")
-st.markdown("Test geo_code sebagai path parameter, bukan query string.")
+st.title("🌡️ CCKP API Format Test — Round 3")
+st.markdown("Cek struktur data tanpa filter negara dulu.")
 
 HEADERS = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"}
 
-# Format hint dari API: /api/v1/{collection}_{type}_{var}_{product}_{agg}_{period}_{percentile}_{scenario}_{model}_{model-calc}_{grid}_{stat}/{geo_code}
-# Tapi v2 endpoint pakai 11 parts (tanpa product), jadi:
-# {collection}_{type}_{var}_{agg}_{period}_{stat}_{scenario}_{model-type}_{model}_{percentile}_{grid}/{geo_code}
+BASE = "https://cckpapi.worldbank.org/cckp/v2/cru-x0.5_timeseries_tas_annual_1901-2022_mean_historical_ensemble_all_p50_mean"
 
-# Geo codes yang mungkin untuk Indonesia
-GEO_CODES = ["IDN", "idn", "ID", "360", "Indonesia"]
+if st.button("🚀 Jalankan Test", type="primary"):
 
-BASE_URLS = [
-    "https://cckpapi.worldbank.org/cckp/v2/cru-x0.5_timeseries_tas_annual_1901-2022_mean_historical_ensemble_all_p50_mean",
-    "https://cckpapi.worldbank.org/cckp/v2/cmip6_timeseries_tas_annual_2015-2100_mean_ssp245_ensemble_all_p50_mean",
-    "https://cckpapi.worldbank.org/cckp/v2/cru-x0.5_timeseries_pr_annual_1901-2022_mean_historical_ensemble_all_p50_mean",
-]
+    # Test 1: Tanpa filter sama sekali — lihat struktur data mentah
+    st.subheader("1. Tanpa filter — lihat data apa yang ada")
+    url = f"{BASE}?_format=json"
+    res = requests.get(url, headers=HEADERS, timeout=20)
+    data = res.json()
+    st.write(f"Total data points: {len(data.get('data', []))}")
+    if data.get("data"):
+        st.write("Sample 3 baris pertama:")
+        st.json(data["data"][:3])
+        st.write("Keys di setiap baris:")
+        st.write(list(data["data"][0].keys()) if data["data"] else "kosong")
+    else:
+        st.warning("Data masih kosong tanpa filter juga")
+    st.divider()
 
-if st.button("🚀 Test Geo Code sebagai Path Parameter", type="primary"):
-    for base in BASE_URLS:
-        var_name = base.split("_")[2] if "_" in base else base
-        st.subheader(f"Base: `...{base[-50:]}`")
-        
-        for geo in GEO_CODES:
-            # Format 1: /{geo_code} di akhir path
-            url1 = f"{base}/{geo}?_format=json"
-            # Format 2: /{geo_code} + query
-            url2 = f"{base}?_format=json&country={geo}"
-            # Format 3: /country/{geo_code}
-            url3 = f"{base}/country/{geo}?_format=json"
+    # Test 2: Coba dengan iso parameter
+    st.subheader("2. Berbagai parameter filter lain")
+    params_tests = [
+        {"iso": "IDN"},
+        {"iso3": "IDN"},
+        {"iso2": "ID"},
+        {"location": "IDN"},
+        {"region": "IDN"},
+        {"geographyId": "IDN"},
+        {"geography": "IDN"},
+        {"areaCode": "IDN"},
+    ]
+    for params in params_tests:
+        key = list(params.keys())[0]
+        val = list(params.values())[0]
+        try:
+            res2 = requests.get(f"{BASE}?_format=json", params=params, headers=HEADERS, timeout=10)
+            d2 = res2.json()
+            count = len(d2.get("data", []))
+            if count > 0:
+                st.success(f"✅ **{key}={val}** → {count} data points!")
+                st.json(d2["data"][:2])
+            else:
+                st.write(f"⚠️ {key}={val} → kosong")
+        except Exception as e:
+            st.error(f"❌ {key}={val} → {e}")
+    st.divider()
 
-            for label, url in [
-                (f"Path /{geo}", url1),
-                (f"Query ?country={geo}", url2),
-                (f"Path /country/{geo}", url3),
-            ]:
-                try:
-                    res = requests.get(url, headers=HEADERS, timeout=15)
-                    if res.status_code == 200:
-                        data = res.json()
-                        if data.get("metadata", {}).get("status") == "success" and data.get("data"):
-                            st.success(f"✅ **DATA ADA!** {label}")
-                            st.json({"sample": data["data"][:3], "total": len(data["data"])})
-                            st.code(url)
-                        elif data.get("metadata", {}).get("status") == "success":
-                            st.warning(f"⚠️ Success tapi data kosong — {label}")
-                        else:
-                            msg = data.get("metadata", {}).get("message", "")
-                            st.error(f"❌ API error — {label}: {str(msg)[:100]}")
-                    else:
-                        st.error(f"❌ HTTP {res.status_code} — {label}")
-                except Exception as e:
-                    st.error(f"❌ ERROR — {label}: {str(e)[:80]}")
-        st.divider()
+    # Test 3: Coba endpoint yang berbeda — mungkin ada endpoint khusus per negara
+    st.subheader("3. Endpoint alternatif per negara")
+    alt_urls = [
+        f"https://cckpapi.worldbank.org/cckp/v2/IDN/cru-x0.5_timeseries_tas_annual_1901-2022_mean_historical_ensemble_all_p50_mean?_format=json",
+        f"https://cckpapi.worldbank.org/cckp/v2/country/IDN/cru-x0.5_timeseries_tas?_format=json",
+        f"https://cckpapi.worldbank.org/cckp/v2/cru-x0.5_timeseries_tas_annual_1901-2022_mean_historical_ensemble_all_p50_mean/IDN?_format=json",
+        f"https://cckpapi.worldbank.org/cckp/v2/countries/IDN/indicators/tas?_format=json",
+    ]
+    for url in alt_urls:
+        try:
+            res3 = requests.get(url, headers=HEADERS, timeout=10)
+            d3 = res3.json() if res3.status_code == 200 else {}
+            count = len(d3.get("data", []))
+            if res3.status_code == 200 and count > 0:
+                st.success(f"✅ DATA ADA! {url[-60:]}")
+                st.json(d3["data"][:2])
+            else:
+                st.write(f"HTTP {res3.status_code} — kosong: `{url[-60:]}`")
+        except Exception as e:
+            st.error(f"❌ {url[-60:]}: {e}")
