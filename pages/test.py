@@ -2,65 +2,44 @@ import time
 import requests
 import streamlit as st
 
-st.set_page_config(page_title="Tes Akses Comtrade", layout="wide")
-st.title("Tes Aksesibilitas UN Comtrade dari Streamlit Cloud")
+st.set_page_config(page_title="Tes Batas Comtrade", layout="wide")
+st.title("Tes Batas Preview Comtrade")
 
-HEADERS = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"}
-
-try:
-    KEY = st.secrets["COMTRADE_API_KEY"]
-except (KeyError, FileNotFoundError):
-    KEY = None
-
-BASE_PARAMS = (
-    "reporterCode=360&period=2022&cmdCode=TOTAL&flowCode=X,M"
-    "&partnerCode=0&partner2Code=0&motCode=0&customsCode=C00"
-)
+H = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"}
+B = "https://comtradeapi.un.org/public/v1/preview/C/A/HS"
+F = "reporterCode=360&partnerCode=0&partner2Code=0&motCode=0&customsCode=C00&flowCode=X,M"
 
 TESTS = [
-    ("1. Referensi HS (katalog komoditas live)",
-     "https://comtradeapi.un.org/files/v1/app/reference/HS.json", {}),
-    ("2. Public preview, tanpa key (total X/M Indonesia 2022)",
-     f"https://comtradeapi.un.org/public/v1/preview/C/A/HS?{BASE_PARAMS}", {}),
+    ("A. Satu komoditas (1511 minyak sawit), 1 periode", f"{B}?{F}&period=2022&cmdCode=1511"),
+    ("B. Satu komoditas, 12 periode (2012-2023)", f"{B}?{F}&period=2012,2013,2014,2015,2016,2017,2018,2019,2020,2021,2022,2023&cmdCode=1511"),
+    ("C. Tahun terbaru (2024, 2025)", f"{B}?{F}&period=2024,2025&cmdCode=TOTAL"),
+    ("D. Semua bab 2 digit (AG2), 1 periode", f"{B}?{F}&period=2022&cmdCode=AG2"),
+    ("E. Beberapa komoditas sekaligus (2709,1511,2701), 1 periode", f"{B}?{F}&period=2022&cmdCode=2709,1511,2701"),
 ]
-if KEY:
-    TESTS.append((
-        "3. Data API dengan key (total X/M Indonesia 2022)",
-        f"https://comtradeapi.un.org/data/v1/get/C/A/HS?{BASE_PARAMS}",
-        {"Ocp-Apim-Subscription-Key": KEY},
-    ))
-else:
-    st.info("COMTRADE_API_KEY belum ada di secrets, tes nomor 3 dilewati.")
 
 if st.button("Jalankan tes", type="primary"):
-    for label, url, extra in TESTS:
+    for label, url in TESTS:
         st.subheader(label)
         st.code(url)
         t0 = time.time()
         try:
-            r = requests.get(url, headers={**HEADERS, **extra}, timeout=30)
-            dt = time.time() - t0
-            st.write(f"HTTP **{r.status_code}** | {dt:.2f} detik | "
-                     f"Content-Type: `{r.headers.get('Content-Type')}` | "
-                     f"Ukuran: {len(r.content):,} byte")
+            r = requests.get(url, headers=H, timeout=40)
+            st.write(f"HTTP **{r.status_code}** | {time.time()-t0:.2f} detik | {len(r.content):,} byte")
             try:
                 js = r.json()
-                if isinstance(js, dict):
-                    st.write("Kunci JSON:", list(js.keys()))
-                    data = js.get("data") or js.get("results")
-                    if isinstance(data, list):
-                        st.write(f"Jumlah baris data: **{len(data)}**")
-                        if data:
-                            st.json(data[0])
-                    if js.get("error") or js.get("message"):
-                        st.warning(js.get("error") or js.get("message"))
-                elif isinstance(js, list):
-                    st.write(f"Jumlah elemen: **{len(js)}**")
-                st.text(r.text[:500])
+                data = js.get("data") or []
+                st.write(f"count: **{js.get('count')}** | baris di data: **{len(data)}** | error: {js.get('error')}")
+                if data:
+                    yrs = sorted({d.get("period") for d in data})
+                    st.write("Periode yang kembali:", yrs)
+                    st.write("Kode komoditas:", sorted({d.get("cmdCode") for d in data})[:15])
+                    st.write("classificationCode:", sorted({d.get("classificationCode") for d in data}))
+                    st.write("Flag isAggregate:", sorted({str(d.get("isAggregate")) for d in data}))
+                    st.json({k: data[0][k] for k in
+                        ["period","flowCode","cmdCode","classificationCode","primaryValue","netWgt","isReported","isAggregate"]})
+                else:
+                    st.text(r.text[:600])
             except ValueError:
-                st.text(r.text[:500])
-            denied = r.headers.get("x-deny-reason")
-            if denied:
-                st.error(f"x-deny-reason: {denied}")
+                st.text(r.text[:600])
         except Exception as e:
             st.error(f"{type(e).__name__}: {e}")
