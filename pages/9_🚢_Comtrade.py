@@ -209,7 +209,7 @@ with st.expander("ℹ️ Sumber, Cakupan & Catatan Metodologi", expanded=False):
         "Berat bernilai 0 dapat berarti tidak tersedia di sumber.\n"
         "- **Perbedaan dengan WDI:** angka total Comtrade dapat sedikit berbeda dari indikator World Bank WDI untuk tahun yang sama.\n"
         "- **Batas endpoint:** 1 periode per panggilan dan maksimal 500 baris. Modul menarik per tahun lalu menggabungkannya, "
-          "dan menolak hasil yang terpotong.\n"
+        "dan menolak hasil yang terpotong.\n"
         "- **Verifikasi langsung:** buka [UN Comtrade Plus untuk Indonesia]"
         "(https://comtradeplus.un.org/TradeFlow?Frequency=A&Flows=X&CommodityCodes=TOTAL"
         "&Partners=0&Reporters=360&period=2022&AggregateBy=none&BreakdownMode=plus) "
