@@ -236,8 +236,8 @@ if mode.startswith("📦"):
             )
             st.subheader("3. Rentang Tahun")
             y1, y2 = st.columns(2)
-            thn_mulai = y1.number_input("Dari Tahun:", SITC_MIN[sitc], TAHUN_INI, 1967 if sitc == "S1" else SITC_MIN[sitc], 1, key=f"lg_y1_{sitc}")
-            thn_akhir = y2.number_input("Sampai Tahun:", SITC_MIN[sitc], TAHUN_INI, TAHUN_INI, 1, key=f"lg_y2_{sitc}")
+            thn_mulai = y1.number_input("Dari Tahun:", HS_MIN, TAHUN_INI, HS_MIN, 1, key="hs_y1")
+            thn_akhir = y2.number_input("Sampai Tahun:", HS_MIN, TAHUN_INI, TAHUN_INI, 1, key="hs_y2")
             if thn_mulai > thn_akhir:
                 st.warning("Tahun awal tidak boleh lebih besar dari tahun akhir.")
             elif terpilih:
@@ -257,8 +257,8 @@ else:
         else "SITC Rev.2 (data sejak 1979)",
     )
     y1, y2 = st.columns(2)
-    thn_mulai = y1.number_input("Dari Tahun:", SITC_MIN[sitc], TAHUN_INI, 1967 if sitc == "S1" else SITC_MIN[sitc], 1, key="lg_y1")
-    thn_akhir = y2.number_input("Sampai Tahun:", SITC_MIN[sitc], TAHUN_INI, TAHUN_INI, 1, key="lg_y2")
+    thn_mulai = y1.number_input("Dari Tahun:", SITC_MIN[sitc], TAHUN_INI, 1967 if sitc == "S1" else SITC_MIN[sitc], 1, key=f"lg_y1_{sitc}")
+    thn_akhir = y2.number_input("Sampai Tahun:", SITC_MIN[sitc], TAHUN_INI, TAHUN_INI, 1, key=f"lg_y2_{sitc}")
     if thn_mulai > thn_akhir:
         st.warning("Tahun awal tidak boleh lebih besar dari tahun akhir.")
     else:
