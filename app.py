@@ -26,7 +26,7 @@ st.info(
     "ke website utama sumber data resmi seperti yang tercantum pada masing-masing modul.\n"
     "* **Standar Sitasi & Penulisan Sumber:** Dalam penulisan karya ilmiah, skripsi, tesis, jurnal, maupun laporan riset, "
     "penulisan sumber **tetap menggunakan sumber asli** tempat data diterbitkan "
-    "(seperti *World Bank, FRED, UN SDGs, WHO, WITS, hingga V-Dem Institute*).\n"
+    "(seperti *World Bank, FRED, UN SDGs, WHO, Comtrade, hingga V-Dem Institute*).\n"
     "* **Koreksi & Masukan:** Apabila terdapat kekeliruan, kesalahan data, atau *error* pada penarikan API/data, "
     "bisa langsung diberitahukan ke email tim pengembang melalui formulir kontak di bawah."
 )
