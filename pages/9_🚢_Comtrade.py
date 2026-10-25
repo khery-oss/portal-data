@@ -330,7 +330,7 @@ elif mode.startswith("🏛"):
                     jobs = [(sitc_rev, t) for t in range(int(thn_mulai), int(thn_akhir) + 1)]
                     label_hasil = f"{sitc_rev} | {len(kode_list)} komoditas | {int(thn_mulai)}-{int(thn_akhir)}"
                     
-    else:
+else:
     st.subheader("3. Pengaturan Deret Jangka Panjang")
     st.caption(
         "Total seluruh komoditas. Tahun sampai 1988 diambil dari SITC, tahun 1989 dan seterusnya dari HS. "
