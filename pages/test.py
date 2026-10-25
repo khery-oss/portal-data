@@ -3,22 +3,22 @@ import time
 import requests
 import streamlit as st
 
-st.set_page_config(page_title="Tes Comtrade v3", layout="wide")
-st.title("Tes Comtrade v3: rentang tahun dan batas baris")
+st.set_page_config(page_title="Tes Comtrade v4", layout="wide")
+st.title("Tes Comtrade v4: data sebelum 1990")
 
 H = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"}
-B = "https://comtradeapi.un.org/public/v1/preview/C/A/HS"
-F = "reporterCode=360&partnerCode=0&partner2Code=0&motCode=0&customsCode=C00&flowCode=X,M"
+B = "https://comtradeapi.un.org/public/v1/preview/C/A"
+F = "reporterCode=360&partnerCode=0&partner2Code=0&motCode=0&customsCode=C00&flowCode=X,M&cmdCode=TOTAL"
 JEDA = 6
 MAX_RETRY = 4
 
 TESTS = [
-    ("A. 1511, 2022 (tabel nilai X dan M)", f"{B}?{F}&period=2022&cmdCode=1511", True),
-    ("B. TOTAL, 2025", f"{B}?{F}&period=2025&cmdCode=TOTAL", True),
-    ("C. TOTAL, 2024", f"{B}?{F}&period=2024&cmdCode=TOTAL", True),
-    ("D. TOTAL, 1990", f"{B}?{F}&period=1990&cmdCode=TOTAL", True),
-    ("E. TOTAL, 1995", f"{B}?{F}&period=1995&cmdCode=TOTAL", True),
-    ("F. Semua kode 4 digit (AG4), 2022", f"{B}?{F}&period=2022&cmdCode=AG4", False),
+    ("A. HS 1989", f"{B}/HS?{F}&period=1989"),
+    ("B. HS 1988", f"{B}/HS?{F}&period=1988"),
+    ("C. SITC Rev.3 (S3) 1985", f"{B}/S3?{F}&period=1985"),
+    ("D. SITC Rev.2 (S2) 1976", f"{B}/S2?{F}&period=1976"),
+    ("E. SITC Rev.1 (S1) 1965", f"{B}/S1?{F}&period=1965"),
+    ("F. SITC Rev.1 (S1) 1962", f"{B}/S1?{F}&period=1962"),
 ]
 
 def get_with_retry(url):
@@ -34,30 +34,26 @@ def get_with_retry(url):
     return r, log
 
 if st.button("Jalankan tes", type="primary"):
-    for label, url, tampil_tabel in TESTS:
+    for label, url in TESTS:
         st.subheader(label)
-        t0 = time.time()
         try:
             r, log = get_with_retry(url)
             if log:
                 st.caption(" | ".join(log))
-            st.write(f"HTTP **{r.status_code}** | {time.time()-t0:.2f} dtk | {len(r.content):,} byte")
             try:
                 js = r.json()
                 data = js.get("data") or []
-                st.write(f"count: **{js.get('count')}** | baris data: **{len(data)}** | error: {js.get('error')}")
+                st.write(f"HTTP **{r.status_code}** | count: **{js.get('count')}** | "
+                         f"baris data: **{len(data)}** | error: {js.get('error')}")
                 if data:
-                    st.write("Kode komoditas unik:", len({d.get("cmdCode") for d in data}),
-                             "| classificationCode:", sorted({d.get("classificationCode") for d in data}))
-                    if tampil_tabel:
-                        st.dataframe([{k: d.get(k) for k in
-                            ["period", "flowCode", "cmdCode", "classificationCode",
-                             "primaryValue", "netWgt", "isReported", "isAggregate"]}
-                            for d in data[:30]], use_container_width=True)
+                    st.write("classificationCode:", sorted({d.get("classificationCode") for d in data}),
+                             "| arah:", sorted({d.get("flowCode") for d in data}),
+                             "| primaryValue:", [d.get("primaryValue") for d in data])
                 else:
-                    st.text(r.text[:400])
+                    st.text(r.text[:300])
             except ValueError:
-                st.text(r.text[:400])
+                st.write(f"HTTP **{r.status_code}**")
+                st.text(r.text[:300])
         except Exception as e:
             st.error(f"{type(e).__name__}: {e}")
         time.sleep(JEDA)
