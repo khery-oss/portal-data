@@ -4,8 +4,8 @@ import requests
 import pandas as pd
 import streamlit as st
 
-st.set_page_config(page_title="Tes Referensi SITC Comtrade", layout="wide")
-st.title("Tes referensi dan data komoditas SITC (pra-1989)")
+st.set_page_config(page_title="Tes SITC Comtrade v2", layout="wide")
+st.title("Tes katalog dan data komoditas SITC (v2)")
 
 H = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"}
 REF = "https://comtradeapi.un.org/files/v1/app/reference"
@@ -24,87 +24,70 @@ def get(url):
         return r
     return r
 
-def muat_ref(nama):
-    r = get(f"{REF}/{nama}")
-    info = {"file": nama, "http": r.status_code, "ukuran": len(r.content)}
-    if r.status_code != 200:
-        return info, None
-    try:
-        js = r.json()
-    except ValueError:
-        info["catatan"] = "bukan JSON: " + r.text[:100]
-        return info, None
-    if isinstance(js, dict):
-        hasil = js.get("results")
-        info["classCode"] = js.get("classCode")
-        info["className"] = js.get("className")
-        if isinstance(hasil, list):
-            info["jumlah_entri"] = len(hasil)
-            return info, hasil
-        info["catatan"] = "kunci: " + str(list(js.keys()))[:150]
-    elif isinstance(js, list):
-        info["jumlah_entri"] = len(js)
-        info["catatan"] = "bentuk daftar"
-    return info, None
+KOLOM_DATA = ["period", "flowCode", "cmdCode", "classificationCode",
+              "primaryValue", "netWgt", "isReported", "isAggregate"]
 
 if st.button("Jalankan tes", type="primary"):
-    # ---- Bagian 1: file referensi ----
-    st.header("1. File referensi")
-    kandidat = ["ListofReferences.json", "S1.json", "S2.json", "S3.json", "S4.json", "SS.json", "SITC.json"]
-    katalog = {}
-    ringkas = []
-    for nama in kandidat:
-        info, hasil = muat_ref(nama)
-        ringkas.append(info)
-        if hasil:
-            katalog[nama] = hasil
-        time.sleep(JEDA)
-    st.dataframe(pd.DataFrame(ringkas), use_container_width=True)
+    # ---- 1. ListofReferences: hanya baris berisi SITC ----
+    st.header("1. ListofReferences (baris berisi SITC)")
+    r = get(f"{REF}/ListofReferences.json")
+    try:
+        js = r.json()
+        rows = js if isinstance(js, list) else js.get("results", js)
+        dfl = pd.DataFrame(rows)
+        mask = dfl.astype(str).apply(lambda c: c.str.contains("SITC", case=False)).any(axis=1)
+        st.dataframe(dfl[mask], use_container_width=True)
+    except Exception as e:
+        st.warning(f"Tidak bisa diurai: {type(e).__name__}: {e}")
+        st.text(r.text[:500])
+    time.sleep(JEDA)
 
-    for nama, hasil in katalog.items():
-        st.subheader(f"Isi {nama}")
-        dfk = pd.DataFrame(hasil)
+    # ---- 2. Katalog dan data per komoditas ----
+    st.header("2. Katalog dan data per komoditas")
+    uji = [("S1", 1975), ("S2", 1985), ("SS", 1975)]
+    for klas, tahun in uji:
+        st.subheader(f"{klas}, tahun {tahun}")
+        rr = get(f"{REF}/{klas}.json")
+        if rr.status_code != 200:
+            st.warning(f"{klas}.json HTTP {rr.status_code}, dilewati.")
+            continue
+        dfk = pd.DataFrame(rr.json().get("results", []))
+        if dfk.empty or "text" not in dfk.columns:
+            st.warning("Katalog kosong atau tidak punya kolom 'text'.")
+            st.write("Kolom:", list(dfk.columns))
+            continue
+        st.write("Kolom katalog:", list(dfk.columns))
+        if "aggrLevel" in dfk.columns:
+            st.write("Sebaran aggrLevel:", dfk["aggrLevel"].value_counts().sort_index().to_dict())
         kolom = [c for c in ["id", "text", "parent", "isLeaf", "aggrLevel"] if c in dfk.columns]
-        st.write("Sebaran aggrLevel:", dfk["aggrLevel"].value_counts().sort_index().to_dict() if "aggrLevel" in dfk else "tidak ada")
-        st.dataframe(dfk[kolom].head(12), use_container_width=True)
         palm = dfk[dfk["text"].str.contains("palm", case=False, na=False)][kolom].head(6)
         st.write("Entri berisi 'palm':")
         st.dataframe(palm, use_container_width=True)
 
-    # ---- Bagian 2: data per komoditas SITC ----
-    st.header("2. Data per komoditas SITC")
-    uji = [("S1", "S1.json", 1975), ("S2", "S2.json", 1985)]
-    for klas, nama_ref, tahun in uji:
-        st.subheader(f"{klas}, tahun {tahun}")
-        hasil = katalog.get(nama_ref)
-        if not hasil:
-            st.warning(f"{nama_ref} tidak tersedia, tes data {klas} dilewati.")
-            continue
-        dfk = pd.DataFrame(hasil)
         kode = []
-        if "aggrLevel" in dfk:
+        if "aggrLevel" in dfk.columns:
             kode += dfk[dfk["aggrLevel"] == 3]["id"].astype(str).head(3).tolist()
-        kode += dfk[dfk["text"].str.contains("palm", case=False, na=False)]["id"].astype(str).head(2).tolist()
+        kode += palm["id"].astype(str).head(2).tolist()
         kode = list(dict.fromkeys(kode))
         st.write("Kode yang diuji:", kode)
         if not kode:
-            st.warning("Tidak ada kode contoh yang bisa dipilih.")
+            st.warning("Tidak ada kode contoh.")
             continue
+
         url = f"{DATA}/{klas}?{F}&period={tahun}&cmdCode={','.join(kode)}"
         st.code(url)
-        r = get(url)
+        rd = get(url)
         try:
-            js = r.json()
-            data = js.get("data") or []
-            st.write(f"HTTP **{r.status_code}** | count: **{js.get('count')}** | baris: **{len(data)}** | error: {js.get('error')}")
+            jd = rd.json()
+            data = jd.get("data") or []
+            st.write(f"HTTP **{rd.status_code}** | count: **{jd.get('count')}** | "
+                     f"baris: **{len(data)}** | error: {jd.get('error')}")
             if data:
-                st.dataframe(pd.DataFrame([{k: d.get(k) for k in
-                    ["period", "flowCode", "cmdCode", "classificationCode",
-                     "primaryValue", "netWgt", "isReported", "isAggregate"]} for d in data]),
-                    use_container_width=True)
+                st.dataframe(pd.DataFrame([{k: d.get(k) for k in KOLOM_DATA} for d in data]),
+                             use_container_width=True)
             else:
-                st.text(r.text[:300])
+                st.text(rd.text[:300])
         except ValueError:
-            st.write(f"HTTP **{r.status_code}**")
-            st.text(r.text[:300])
+            st.write(f"HTTP **{rd.status_code}**")
+            st.text(rd.text[:300])
         time.sleep(JEDA)
