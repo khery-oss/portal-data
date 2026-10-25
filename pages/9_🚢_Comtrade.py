@@ -2,7 +2,7 @@ import datetime
 import io
 import re
 import time
-
+from urllib.parse import urlencode
 import pandas as pd
 import plotly.graph_objects as go
 import requests
@@ -370,5 +370,31 @@ if hasil:
     )
     st.plotly_chart(fig, use_container_width=True)
 
+    # --- Tautan verifikasi dinamis ke UN Comtrade Plus (hanya tahun HS) ---
+    tahun_hs = sorted(df.loc[df["Klasifikasi"].astype(str).str.startswith("H"), "Tahun"].unique())
+    if tahun_hs:
+        def url_comtrade(kode: str) -> str:
+            q = {
+                "Frequency": "A",
+                "Flows": "X,M",
+                "CommodityCodes": kode,
+                "Partners": "0",
+                "Reporters": "360",
+                "period": ",".join(str(t) for t in tahun_hs),
+                "AggregateBy": "none",
+                "BreakdownMode": "plus",
+            }
+            return "https://comtradeplus.un.org/TradeFlow?" + urlencode(q, safe=",")
+
+        with st.expander("🔗 Verifikasi langsung di UN Comtrade Plus", expanded=False):
+            st.caption(
+                "Tautan membuka UN Comtrade Plus dengan pelapor Indonesia, mitra dunia, "
+                "arus ekspor dan impor, serta tahun HS yang sedang ditampilkan di atas. "
+                "Tahun SITC (sebelum 1989) tidak tercakup. "
+                "Situs membulatkan tampilan angka, sedangkan modul menampilkan nilai penuh dari API."
+            )
+            for kode in sorted(df["Kode"].unique()):
+                st.markdown(f"- [{kode}]({url_comtrade(kode)}) {peta_nama.get(kode, '')}")    
+    
     with st.expander("📋 Tabel Data Lengkap"):
         st.dataframe(df.sort_values(["Tahun", "Kode", "Arah"], ascending=[False, True, True]), use_container_width=True)
