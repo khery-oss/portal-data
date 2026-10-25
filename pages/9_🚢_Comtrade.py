@@ -23,6 +23,8 @@ HEADERS = {
 
 BASE = "https://comtradeapi.un.org/public/v1/preview/C/A"
 HS_REF_URL = "https://comtradeapi.un.org/files/v1/app/reference/HS.json"
+REF_BASE = "https://comtradeapi.un.org/files/v1/app/reference"
+SITC_MAKS = 1989  # tahun terakhir SITC pada mode per komoditas
 
 REPORTER_IDN = 360
 BATAS_BARIS = 500      # batas baris endpoint preview; hasil yang mencapai ini dianggap terpotong
@@ -36,7 +38,7 @@ SITC_MIN = {"S1": 1962, "S2": 1979}
 SITC_AKHIR = 1988      # tahun terakhir yang diambil dari SITC pada mode gabungan
 
 KOLOM_SUMBER = [
-    "period", "flowCode", "cmdCode", "classificationCode",
+    "period", "flowCode", "cmdCode", "classificationCode", "isOriginalClassification",
     "primaryValue", "netWgt", "isNetWgtEstimated", "isReported", "isAggregate",
 ]
 
@@ -56,19 +58,27 @@ def _get_dengan_retry(url: str) -> requests.Response:
 
 
 @st.cache_data(ttl=86400, show_spinner=False)
-def muat_katalog_hs() -> list:
-    """Katalog komoditas HS, live dari file referensi Comtrade.
-    Gagal = exception (tidak ikut di-cache), bukan daftar kosong."""
-    r = _get_dengan_retry(HS_REF_URL)
+def muat_katalog(klasifikasi: str) -> list:
+    """Katalog komoditas live untuk HS, S1, atau S2 dari file referensi Comtrade.
+    Gagal = exception (tidak ikut di-cache). Nama kolom level berbeda antar file
+    (aggrLevel di HS, aggrlevel di SITC), jadi keduanya dibaca."""
+    r = _get_dengan_retry(f"{REF_BASE}/{klasifikasi}.json")
     if r.status_code != 200:
-        raise RuntimeError(f"HTTP {r.status_code} saat memuat katalog HS.")
+        raise RuntimeError(f"HTTP {r.status_code} saat memuat katalog {klasifikasi}.")
     hasil = r.json().get("results", [])
     if not hasil:
-        raise RuntimeError("Katalog HS kosong dari server.")
-    return [
-        {"id": x["id"], "text": x["text"], "level": x.get("aggrLevel")}
-        for x in hasil if x.get("id") and x.get("text")
-    ]
+        raise RuntimeError(f"Katalog {klasifikasi} kosong dari server.")
+    keluaran = []
+    for x in hasil:
+        if not (x.get("id") and x.get("text")):
+            continue
+        lv = x.get("aggrLevel", x.get("aggrlevel"))
+        try:
+            lv = int(lv)
+        except (TypeError, ValueError):
+            lv = None
+        keluaran.append({"id": str(x["id"]), "text": x["text"], "level": lv})
+    return keluaran
 
 
 def _validasi(data: list, tahun: int):
@@ -152,22 +162,23 @@ def susun_dataframe(rows: list, peta_nama: dict) -> pd.DataFrame:
     df["Komoditas"] = df["cmdCode"].map(lambda c: peta_nama.get(c, c))
     df = df.rename(columns={
         "classificationCode": "Klasifikasi",
+        "isOriginalClassification": "Klasifikasi Asli",
         "primaryValue": "Nilai (USD)",
         "netWgt": "Berat Bersih (kg)",
         "isNetWgtEstimated": "Berat Diestimasi",
         "isReported": "Dilaporkan Langsung",
         "isAggregate": "Agregat Comtrade",
     })
-    kolom = ["Tahun", "Arah", "Kode", "Komoditas", "Klasifikasi", "Nilai (USD)",
-             "Berat Bersih (kg)", "Berat Diestimasi", "Dilaporkan Langsung", "Agregat Comtrade"]
+    kolom = ["Tahun", "Arah", "Kode", "Komoditas", "Klasifikasi", "Klasifikasi Asli",
+             "Nilai (USD)", "Berat Bersih (kg)", "Berat Diestimasi",
+             "Dilaporkan Langsung", "Agregat Comtrade"]
     return df[kolom].sort_values(["Kode", "Arah", "Tahun"]).reset_index(drop=True)
-
 
 # =============================================================================
 # 2. KATALOG
 # =============================================================================
 try:
-    katalog = muat_katalog_hs()
+    katalog = muat_katalog("HS")
 except Exception as e:
     katalog = None
     st.error(f"Gagal memuat katalog komoditas HS dari Comtrade: {e}")
@@ -181,7 +192,8 @@ st.subheader("1. Pilih Mode")
 mode = st.radio(
     "Mode:",
     [
-        "📦 Per komoditas (HS, 1989 sampai terbaru)",
+        "📦 Per komoditas, HS (1989 sampai terbaru)",
+        "🏛️ Per komoditas, SITC (1962 sampai 1989)",
         "📈 Total perdagangan jangka panjang (SITC lalu HS)",
     ],
     horizontal=True,
@@ -250,8 +262,76 @@ if mode.startswith("📦"):
                 kode_list = list(terpilih)
                 jobs = [("HS", t) for t in range(int(thn_mulai), int(thn_akhir) + 1)]
                 label_hasil = f"HS | {len(kode_list)} komoditas | {int(thn_mulai)}-{int(thn_akhir)}"
-else:
-    st.subheader("2. Pengaturan Deret Jangka Panjang")
+
+elif mode.startswith("🏛"):
+    st.subheader("2. Pilih Revisi SITC dan Komoditas")
+    st.caption(
+        "Kode SITC **tidak sama** dengan kode HS (misalnya minyak sawit: 1511 di HS, 4222 di SITC Rev.1, "
+        "4242 di SITC Rev.2). Tidak ada penyambungan otomatis antar klasifikasi. Untuk melanjutkan komoditas "
+        "yang sama ke periode HS, cari kodenya sendiri di mode HS. Kolom *Klasifikasi Asli* menunjukkan "
+        "apakah angka berasal dari klasifikasi aslinya atau hasil konversi Comtrade."
+    )
+    sitc_rev = st.selectbox(
+        "Revisi SITC:",
+        ["S1", "S2"],
+        format_func=lambda s: "SITC Rev.1 (1962 sampai 1989, lengkap dua arah sejak 1967)" if s == "S1"
+        else "SITC Rev.2 (1979 sampai 1989)",
+        key="sitc_rev_pilih",
+    )
+    try:
+        kat_sitc = muat_katalog(sitc_rev)
+    except Exception as e:
+        kat_sitc = None
+        st.error(f"Gagal memuat katalog {sitc_rev} dari Comtrade: {e}")
+
+    if kat_sitc:
+        peta_nama = {k["id"]: k["text"] for k in kat_sitc}
+        c1, c2 = st.columns([2, 1])
+        with c1:
+            query_s = st.text_input(
+                "🔍 Cari komoditas (kode atau kata kunci Bahasa Inggris):",
+                placeholder="Contoh: palm oil · rubber · coffee · 4222",
+                key="q_sitc",
+            ).strip()
+        with c2:
+            level_opsi = sorted({k["level"] for k in kat_sitc if k["level"] is not None})
+            level_s = st.selectbox(
+                "Tingkat kode:", ["Semua"] + level_opsi,
+                format_func=lambda v: v if v == "Semua" else f"Level {v}",
+                key="lv_sitc",
+            )
+        if not query_s:
+            st.info("Ketik kata kunci atau kode SITC untuk mencari komoditas.")
+        else:
+            token_s = query_s.lower().split()
+            hasil_s = [
+                k for k in kat_sitc
+                if all(t in k["text"].lower() or t in k["id"].lower() for t in token_s)
+                and (level_s == "Semua" or k["level"] == level_s)
+            ]
+            if not hasil_s:
+                st.warning(f"Tidak ditemukan komoditas untuk '{query_s}'.")
+            else:
+                st.success(f"Ditemukan **{len(hasil_s)}** entri.")
+                terpilih_s = st.multiselect(
+                    "Pilih satu atau lebih komoditas:",
+                    options=[k["id"] for k in hasil_s],
+                    format_func=lambda i: peta_nama.get(i, i),
+                    key="ms_sitc",
+                )
+                st.subheader("3. Rentang Tahun")
+                y1, y2 = st.columns(2)
+                thn_mulai = y1.number_input("Dari Tahun:", SITC_MIN[sitc_rev], SITC_MAKS, SITC_MIN[sitc_rev], 1, key=f"sitc_y1_{sitc_rev}")
+                thn_akhir = y2.number_input("Sampai Tahun:", SITC_MIN[sitc_rev], SITC_MAKS, SITC_MAKS, 1, key=f"sitc_y2_{sitc_rev}")
+                if thn_mulai > thn_akhir:
+                    st.warning("Tahun awal tidak boleh lebih besar dari tahun akhir.")
+                elif terpilih_s:
+                    kode_list = list(terpilih_s)
+                    jobs = [(sitc_rev, t) for t in range(int(thn_mulai), int(thn_akhir) + 1)]
+                    label_hasil = f"{sitc_rev} | {len(kode_list)} komoditas | {int(thn_mulai)}-{int(thn_akhir)}"
+                    
+    else:
+    st.subheader("3. Pengaturan Deret Jangka Panjang")
     st.caption(
         "Total seluruh komoditas. Tahun sampai 1988 diambil dari SITC, tahun 1989 dan seterusnya dari HS. "
         "Dua klasifikasi ini **tidak disambung** dan ditandai terpisah di grafik."
@@ -395,7 +475,9 @@ if hasil:
                 "Situs membulatkan tampilan angka, sedangkan modul menampilkan nilai penuh dari API."
             )
             for kode in sorted(df["Kode"].unique()):
-                st.markdown(f"- [{kode}]({url_comtrade(kode)}) {peta_nama.get(kode, '')}")    
+                            nama_df = df.drop_duplicates("Kode").set_index("Kode")["Komoditas"]
+            for kode in sorted(df["Kode"].unique()):
+                st.markdown(f"- [{kode}]({url_comtrade(kode)}) {nama_df.get(kode, '')}")
     
     with st.expander("📋 Tabel Data Lengkap"):
         st.dataframe(df.sort_values(["Tahun", "Kode", "Arah"], ascending=[False, True, True]), use_container_width=True)
