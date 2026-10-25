@@ -391,6 +391,7 @@ if hasil:
                 "Tautan membuka UN Comtrade Plus dengan pelapor Indonesia, mitra dunia, "
                 "arus ekspor dan impor, serta tahun HS yang sedang ditampilkan di atas. "
                 "Tahun SITC (sebelum 1989) tidak tercakup. "
+                "Situs UN Comtrade Plus dapat meminta pembuatan akun gratis untuk melihat tabel. "
                 "Situs membulatkan tampilan angka, sedangkan modul menampilkan nilai penuh dari API."
             )
             for kode in sorted(df["Kode"].unique()):
