@@ -87,7 +87,11 @@ def _tahun(v):
         return int(float(v))
     except (TypeError, ValueError):
         return None
-
+        
+def _gabung(v):
+    if isinstance(v, list):
+        return ", ".join(str(x) for x in v)
+    return None if v is None else str(v)
 
 @st.cache_data(ttl=86400, show_spinner=False)
 def muat_katalog() -> list:
@@ -200,6 +204,9 @@ def _ringkas_baris(d: dict, kode: str) -> dict:
         "tahun": _tahun(d.get("timePeriodStart")),
         "nilai": None if d.get("value") is None else str(d.get("value")),
         "sumber": d.get("source"),
+        "goal": _gabung(d.get("goal")),
+        "target": _gabung(d.get("target")),
+        "indikator": _gabung(d.get("indicator")),        
         "catatan": foot,
         "batas_bawah": d.get("lowerBound"),
         "batas_atas": d.get("upperBound"),
@@ -252,6 +259,9 @@ def susun_dataframe(rows: list):
     df["Sifat Data"] = [r["nature"] for r in rows]
     df["Status Observasi"] = [r["status"] for r in rows]
     df["Sumber"] = [r["sumber"] for r in rows]
+    df["Goal"] = [r.get("goal") for r in rows]
+    df["Target"] = [r.get("target") for r in rows]
+    df["Indikator"] = [r.get("indikator") for r in rows]    
     df["Catatan Kaki"] = [r["catatan"] for r in rows]
     df["Batas Bawah"] = [r["batas_bawah"] for r in rows]
     df["Batas Atas"] = [r["batas_atas"] for r in rows]
