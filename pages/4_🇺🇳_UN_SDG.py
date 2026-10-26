@@ -30,14 +30,23 @@ UKURAN_HALAMAN_PINDAI = (2000, 500) # penarikan seluruh data Indonesia; urutan =
 KODE_TOTAL = ("BOTHSEX", "ALLAREA", "ALLAGE")  # kode dimensi "total" yang dikenali
 
 # Keterangan kode atribut "Nature" (daftar kode SDMX). Kode di luar daftar ditampilkan apa adanya.
+# Keterangan kode atribut "Nature" (sifat data). Kode di luar daftar ditampilkan apa adanya.
 KETERANGAN_NATURE = {
-    "C": "Data negara",
-    "CA": "Data negara yang disesuaikan",
-    "E": "Estimasi",
-    "G": "Data pemantauan global",
-    "M": "Hasil pemodelan",
-    "N": "Tidak relevan",
-    "NA": "Tidak berlaku",
+    "C": ("Data negara",
+          "Angka berasal dari statistik nasional (survei atau pencatatan resmi di Indonesia) dan diteruskan "
+          "apa adanya oleh lembaga internasional."),
+    "CA": ("Data negara yang disesuaikan",
+           "Angka berasal dari statistik nasional, lalu disesuaikan oleh lembaga internasional agar "
+           "definisinya sebanding antarnegara."),
+    "E": ("Estimasi",
+          "Angka diperkirakan oleh lembaga internasional karena data nasional tidak lengkap atau tidak tersedia "
+          "untuk tahun tersebut."),
+    "M": ("Hasil pemodelan",
+          "Angka dihitung dengan model statistik oleh lembaga internasional, bukan hasil pengukuran langsung "
+          "di Indonesia."),
+    "G": ("Data pemantauan global",
+          "Angka disusun oleh lembaga internasional yang ditunjuk untuk pemantauan global, dengan metodologi "
+          "yang seragam untuk semua negara."),
 }
 
 # =============================================================================
@@ -341,9 +350,8 @@ else:
 
 def label_seri(kode: str) -> str:
     teks = peta_seri[kode]["description"]
-    if ketersediaan is not None:
-        n = ketersediaan.get(kode, [0])[0]
-        teks += f"  [{n} observasi Indonesia]" if n else "  [tidak ada data Indonesia]"
+    if ketersediaan is not None and kode not in ketersediaan:
+        teks += "  [tidak ada data Indonesia]"
     return teks
 
 kode_pilih = st.selectbox("Pilih Seri:", [s["code"] for s in hasil], format_func=label_seri)
@@ -363,7 +371,6 @@ with st.expander("ℹ️ Metadata & Sumber Resmi", expanded=False):
     st.markdown(
         "**Basis Data:** UN Global SDG Indicators Database, United Nations Statistics Division (UNSD)  \n"
         "🔗 [UNSD SDG Data Portal](https://unstats.un.org/sdgs/dataportal) · "
-        "[Global SDG Database](https://unstats.un.org/sdgs/indicators/database/) · "
         "[Metadata Indikator](https://unstats.un.org/sdgs/metadata/)"
     )
 
@@ -500,9 +507,17 @@ if hasil_tarik:
                             st.markdown(f"- {s}")
                 kode_nature = [str(s) for s in df_view["Sifat Data"].dropna().unique()]
                 if kode_nature:
-                    st.markdown("**Sifat Data (`Nature`):**")
+                    st.markdown("**Sifat Data (`Nature`), arti kode pada tampilan ini:**")
                     for k in kode_nature:
-                        st.markdown(f"- `{k}`: {KETERANGAN_NATURE.get(k, 'kode di luar keterangan modul, lihat dokumentasi UNSD')}")
-
+                        nama, arti = KETERANGAN_NATURE.get(
+                            k, ("Kode di luar keterangan modul", "Lihat dokumentasi UNSD untuk artinya.")
+                        )
+                        st.markdown(f"- **`{k}` ({nama}).** {arti}")
+                    st.caption(
+                        "Cara membacanya: angka bersifat C dan CA paling dekat dengan statistik nasional. "
+                        "Angka bersifat E dan M adalah turunan lembaga internasional, jadi sebaiknya disebut "
+                        "sifatnya saat dikutip."
+                    )
+                    
             with st.expander("📋 Tabel Data Lengkap"):
                 st.dataframe(df_view.sort_values("Tahun", ascending=False), use_container_width=True)
