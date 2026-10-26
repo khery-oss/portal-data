@@ -54,4 +54,17 @@ if st.button("Jalankan tes", type="primary"):
         ringkas(u)
         time.sleep(1)
 
-    st.header("B. Kecepatan pemindaian per seri (10 seri
+    st.header("B. Kecepatan pemindaian per seri (10 seri pertama dari katalog)")
+    daftar = requests.get(f"{BASE}/Series/List", headers=H, timeout=40).json()
+    t0, hasil = time.time(), []
+    for s in daftar[:10]:
+        try:
+            r = requests.get(f"{BASE}/Series/Data?seriesCode={s['code']}&areaCode=360&pageSize=1",
+                             headers=H, timeout=40)
+            hasil.append((s["code"], r.status_code, r.json().get("totalElements") if r.status_code == 200 else None))
+        except Exception as e:
+            hasil.append((s["code"], type(e).__name__, None))
+        time.sleep(0.5)
+    dt = time.time() - t0
+    st.write(hasil)
+    st.write(f"10 seri: {dt:.1f} dtk | perkiraan 713 seri: {dt/10*713/60:.1f} menit")
