@@ -29,24 +29,22 @@ UKURAN_HALAMAN_DATA = 500           # penarikan per seri
 UKURAN_HALAMAN_PINDAI = (2000, 500) # penarikan seluruh data Indonesia; urutan = coba yang pertama dulu
 KODE_TOTAL = ("BOTHSEX", "ALLAREA", "ALLAGE")  # kode dimensi "total" yang dikenali
 
-# Keterangan kode atribut "Nature" (daftar kode SDMX). Kode di luar daftar ditampilkan apa adanya.
-# Keterangan kode atribut "Nature" (sifat data). Kode di luar daftar ditampilkan apa adanya.
+# Keterangan kode Nature, dirangkum dari metadata UN Statistics Division.
+# E dan M sengaja tidak diberi definisi karena belum terverifikasi.
 KETERANGAN_NATURE = {
     "C": ("Data negara",
-          "Angka berasal dari statistik nasional (survei atau pencatatan resmi di Indonesia) dan diteruskan "
-          "apa adanya oleh lembaga internasional."),
+          "Dihasilkan dan disebarluaskan oleh negara, termasuk data yang sudah disesuaikan oleh negara "
+          "itu sendiri dengan standar internasional."),
     "CA": ("Data negara yang disesuaikan",
-           "Angka berasal dari statistik nasional, lalu disesuaikan oleh lembaga internasional agar "
-           "definisinya sebanding antarnegara."),
-    "E": ("Estimasi",
-          "Angka diperkirakan oleh lembaga internasional karena data nasional tidak lengkap atau tidak tersedia "
-          "untuk tahun tersebut."),
-    "M": ("Hasil pemodelan",
-          "Angka dihitung dengan model statistik oleh lembaga internasional, bukan hasil pengukuran langsung "
-          "di Indonesia."),
+           "Dihasilkan dan diserahkan oleh negara, lalu disesuaikan oleh lembaga internasional agar sesuai "
+           "standar, definisi, dan klasifikasi internasional."),
     "G": ("Data pemantauan global",
-          "Angka disusun oleh lembaga internasional yang ditunjuk untuk pemantauan global, dengan metodologi "
-          "yang seragam untuk semua negara."),
+          "Dihasilkan secara rutin oleh lembaga yang ditunjuk untuk pemantauan global, berdasarkan data negara. "
+          "Menurut metadata UNSD, tidak ada angka padanannya di tingkat negara."),
+    "E": ("Estimated",
+          "Definisi lengkap belum diverifikasi modul ini. Lihat metadata UNSD."),
+    "M": ("Modelled",
+          "Definisi lengkap belum diverifikasi modul ini. Lihat metadata UNSD."),
 }
 
 # =============================================================================
@@ -514,9 +512,8 @@ if hasil_tarik:
                         )
                         st.markdown(f"- **`{k}` ({nama}).** {arti}")
                     st.caption(
-                        "Cara membacanya: angka bersifat C dan CA paling dekat dengan statistik nasional. "
-                        "Angka bersifat E dan M adalah turunan lembaga internasional, jadi sebaiknya disebut "
-                        "sifatnya saat dikutip."
+                        "Keterangan dirangkum dari metadata UN Statistics Division. Untuk kode E dan M, "
+                        "rujuk dokumentasi UNSD sebelum menafsirkan atau mengutip."
                     )
                     
             with st.expander("📋 Tabel Data Lengkap"):
