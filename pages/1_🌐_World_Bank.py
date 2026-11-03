@@ -205,7 +205,8 @@ if st.button("📊 Ambil Data Indonesia", type="primary"):
                 "📥 Unduh CSV",
                 df.to_csv(index=False).encode("utf-8"),
                 f"{kode_indikator}_indonesia.csv",
-                "text/csv"
+                "text/csv",
+                on_click="ignore"
             )
             buffer = io.BytesIO()
             with pd.ExcelWriter(buffer, engine="openpyxl") as writer:
@@ -214,7 +215,8 @@ if st.button("📊 Ambil Data Indonesia", type="primary"):
                 "📊 Unduh Excel (.xlsx)",
                 buffer.getvalue(),
                 f"{kode_indikator}_indonesia.xlsx",
-                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                on_click="ignore"
             )
 
             # Visualisasi Plotly
