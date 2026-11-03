@@ -12,6 +12,8 @@ st.write(
     "khusus untuk Indonesia secara otomatis dan real-time."
 )
 
+st.caption("Versi modul: 2026-11-03 · nilai ditampilkan dan diunduh tanpa pembulatan")
+
 HEADERS = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
 }
@@ -157,6 +159,7 @@ if st.button("📊 Ambil Data Indonesia", type="primary"):
 
             data_json = r_data.json()
             records = []
+            contoh_mentah = []  # nilai persis seperti dikirim API, untuk verifikasi
 
             if len(data_json) > 1 and data_json[1]:
                 for item in data_json[1]:
@@ -166,8 +169,10 @@ if st.button("📊 Ambil Data Indonesia", type="primary"):
                         try:
                             records.append({
                                 "Tahun": int(thn),
-                                "nilai_raw": round(float(val), 4)
+                                "nilai_raw": float(val)
                             })
+                            if len(contoh_mentah) < 5:
+                                contoh_mentah.append((str(thn), repr(val)))
                         except (ValueError, TypeError):
                             continue
 
@@ -178,36 +183,21 @@ if st.button("📊 Ambil Data Indonesia", type="primary"):
                 )
                 st.stop()
 
-            # Deteksi unit dari nama indikator
-            name_lower = selected_ind["name"].lower()
-            if "% of gdp" in name_lower:
-                unit = "% of GDP"
-            elif "current us$" in name_lower or "(current" in name_lower:
-                unit = "USD"
-            elif "constant" in name_lower and ("lcu" in name_lower or "us$" in name_lower):
-                unit = "Constant USD"
-            elif "per capita" in name_lower and "us$" in name_lower:
-                unit = "USD per Capita"
-            elif "%" in selected_ind["name"]:
-                unit = "%"
-            elif any(k in name_lower for k in ["number", "count", "total", "persons", "people"]):
-                unit = "Jiwa"
-            elif "index" in name_lower:
-                unit = "Index"
-            elif "ratio" in name_lower:
-                unit = "Rasio"
-            else:
-                unit = "Nilai"
-
-            val_col = f"Nilai ({unit})"
+            # Satuan mengikuti nama indikator resmi World Bank (tanpa tebakan)
+            val_col = "Nilai"
             df = (
                 pd.DataFrame(records)
-                .groupby("Tahun", as_index=False)["nilai_raw"]
-                .mean()
-                .round(2)
                 .rename(columns={"nilai_raw": val_col})
                 .sort_values(by="Tahun", ascending=True)
+                .reset_index(drop=True)
             )
+            df["Indikator"] = selected_ind["name"]
+
+            if df["Tahun"].duplicated().any():
+                st.warning(
+                    "Ada lebih dari satu nilai untuk tahun yang sama. Semua baris ditampilkan apa adanya, "
+                    "tanpa diratakan."
+                )
 
             st.success(f"Berhasil menarik **{len(df)}** observasi tahunan untuk Indonesia!")
             st.divider()
@@ -241,20 +231,37 @@ if st.button("📊 Ambil Data Indonesia", type="primary"):
                 name="Indonesia (World Bank)",
                 line=dict(width=2.5, color="#009688"),
                 marker=dict(size=7),
-                hovertemplate=f"Tahun %{{x}}<br>Nilai: %{{y:,.2f}} {unit}<extra></extra>"
+                hovertemplate="Tahun %{x}<br>Nilai: %{y:,}<extra></extra>"
             ))
             fig.update_layout(
                 xaxis=dict(title="Tahun", tickmode="linear"),
-                yaxis=dict(title=unit),
+                yaxis=dict(title=selected_ind["name"]),
                 hovermode="x unified",
                 margin=dict(l=20, r=20, t=30, b=20)
             )
             st.plotly_chart(fig, use_container_width=True)
 
             with st.expander("📋 Tabel Angka Lengkap"):
+                st.caption(
+                    "Nilai ditampilkan sebagai teks agar tampilan Streamlit tidak membulatkannya. "
+                    "File CSV dan Excel memuat angka penuh."
+                )
+                tabel = df.sort_values(by="Tahun", ascending=False)
                 st.dataframe(
-                    df.sort_values(by="Tahun", ascending=False),
-                    use_container_width=True
+                    pd.DataFrame({
+                        "Tahun": tabel["Tahun"],
+                        "Nilai (teks penuh, tanpa pembulatan)": tabel[val_col].map(lambda v: repr(float(v))),
+                    }),
+                    use_container_width=True,
+                    hide_index=True
+                )
+
+            with st.expander("🔍 Verifikasi: nilai mentah dari respons API (5 observasi terbaru)"):
+                st.caption("Nilai persis seperti dikirim server World Bank, sebelum diproses modul ini.")
+                st.dataframe(
+                    pd.DataFrame(contoh_mentah, columns=["Tahun", "Nilai mentah API"]),
+                    use_container_width=True,
+                    hide_index=True
                 )
 
         except Exception as e:
