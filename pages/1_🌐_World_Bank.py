@@ -239,10 +239,6 @@ if st.button("📊 Ambil Data Indonesia", type="primary"):
             st.plotly_chart(fig, use_container_width=True)
 
             with st.expander("📋 Tabel Angka Lengkap"):
-                st.caption(
-                    "Nilai ditampilkan sebagai teks agar tampilan Streamlit tidak membulatkannya. "
-                    "File CSV dan Excel memuat angka penuh."
-                )
                 tabel = df.sort_values(by="Tahun", ascending=False)
                 st.dataframe(
                     pd.DataFrame({
