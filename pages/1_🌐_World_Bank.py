@@ -12,8 +12,6 @@ st.write(
     "khusus untuk Indonesia secara otomatis dan real-time."
 )
 
-st.caption("Versi modul: 2026-11-03 · nilai ditampilkan dan diunduh tanpa pembulatan")
-
 HEADERS = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
 }
@@ -243,7 +241,7 @@ if st.button("📊 Ambil Data Indonesia", type="primary"):
                 st.dataframe(
                     pd.DataFrame({
                         "Tahun": tabel["Tahun"],
-                        "Nilai (teks penuh, tanpa pembulatan)": tabel[val_col].map(lambda v: repr(float(v))),
+                        "Nilai": tabel[val_col].map(lambda v: repr(float(v))),
                     }),
                     use_container_width=True,
                     hide_index=True
