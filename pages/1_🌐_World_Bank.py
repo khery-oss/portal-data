@@ -159,7 +159,6 @@ if st.button("📊 Ambil Data Indonesia", type="primary"):
 
             data_json = r_data.json()
             records = []
-            contoh_mentah = []  # nilai persis seperti dikirim API, untuk verifikasi
 
             if len(data_json) > 1 and data_json[1]:
                 for item in data_json[1]:
@@ -171,8 +170,6 @@ if st.button("📊 Ambil Data Indonesia", type="primary"):
                                 "Tahun": int(thn),
                                 "nilai_raw": float(val)
                             })
-                            if len(contoh_mentah) < 5:
-                                contoh_mentah.append((str(thn), repr(val)))
                         except (ValueError, TypeError):
                             continue
 
@@ -252,14 +249,6 @@ if st.button("📊 Ambil Data Indonesia", type="primary"):
                         "Tahun": tabel["Tahun"],
                         "Nilai (teks penuh, tanpa pembulatan)": tabel[val_col].map(lambda v: repr(float(v))),
                     }),
-                    use_container_width=True,
-                    hide_index=True
-                )
-
-            with st.expander("🔍 Verifikasi: nilai mentah dari respons API (5 observasi terbaru)"):
-                st.caption("Nilai persis seperti dikirim server World Bank, sebelum diproses modul ini.")
-                st.dataframe(
-                    pd.DataFrame(contoh_mentah, columns=["Tahun", "Nilai mentah API"]),
                     use_container_width=True,
                     hide_index=True
                 )
