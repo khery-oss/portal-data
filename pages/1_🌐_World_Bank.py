@@ -21,33 +21,38 @@ HEADERS = {
 # =============================================================================
 @st.cache_data(ttl=86400, show_spinner=False)
 def load_all_indicators():
+    """Katalog WDI live. Gagal = exception (tidak ikut di-cache), bukan daftar kosong."""
+    base = "https://api.worldbank.org/v2/indicator?source=2&format=json&per_page=3000"
+    res = requests.get(base, headers=HEADERS, timeout=25)
+    if res.status_code != 200:
+        raise RuntimeError(f"HTTP {res.status_code} dari server World Bank.")
+    data = res.json()
+    if not isinstance(data, list) or len(data) < 2 or not data[1]:
+        raise RuntimeError("Respons katalog kosong atau bentuknya tidak dikenali.")
+    items = list(data[1])
+    for halaman in range(2, int(data[0].get("pages", 1)) + 1):
+        rp = requests.get(f"{base}&page={halaman}", headers=HEADERS, timeout=25)
+        if rp.status_code != 200:
+            raise RuntimeError(f"HTTP {rp.status_code} pada halaman {halaman} katalog.")
+        items.extend(rp.json()[1] or [])
     indicators = []
-    url = "https://api.worldbank.org/v2/indicator?source=2&format=json&per_page=3000"
-    try:
-        res = requests.get(url, headers=HEADERS, timeout=25)
-        if res.status_code != 200:
-            return []
-        data = res.json()
-        if len(data) > 1 and data[1]:
-            for item in data[1]:
-                ind_id = item.get("id")
-                ind_name = item.get("name")
-                if ind_id and ind_name:
-                    indicators.append({
-                        "id": ind_id,
-                        "name": ind_name,
-                        "sourceNote": item.get("sourceNote", ""),
-                        "sourceOrg": item.get("sourceOrganization", "World Bank")
-                    })
-    except Exception:
-        pass
+    for item in items:
+        ind_id = item.get("id")
+        ind_name = item.get("name")
+        if ind_id and ind_name:
+            indicators.append({
+                "id": ind_id,
+                "name": ind_name,
+                "sourceNote": item.get("sourceNote", ""),
+                "sourceOrg": item.get("sourceOrganization", "World Bank")
+            })
     return indicators
 
-with st.spinner("Menghubungkan ke katalog World Development Indicators..."):
-    all_indicators = load_all_indicators()
-
-if not all_indicators:
-    st.error("Gagal memuat katalog indikator. Periksa koneksi internet.")
+try:
+    with st.spinner("Menghubungkan ke katalog World Development Indicators..."):
+        all_indicators = load_all_indicators()
+except Exception as e:
+    st.error(f"Gagal memuat katalog indikator: {e}")
     st.stop()
 
 # =============================================================================
@@ -137,6 +142,40 @@ with st.expander("ℹ️ Definisi & Metodologi Resmi", expanded=False):
     st.markdown(f"**Definisi:** {note if note else 'Tidak ada deskripsi rinci.'}")
     st.markdown(f"🔗 [Lihat di World Bank]({link_resmi})")
 
+def tarik_data_idn(kode: str):
+    """Semua halaman data Indonesia untuk satu indikator. Mengembalikan (meta, items).
+    Error API, jumlah baris tidak lengkap, atau baris negara lain ditolak dengan exception."""
+    url = f"https://api.worldbank.org/v2/country/IDN/indicator/{kode}?format=json&per_page=1000"
+    r = requests.get(url, headers=HEADERS, timeout=20)
+    if r.status_code != 200:
+        raise RuntimeError(f"HTTP {r.status_code} dari server World Bank.")
+    payload = r.json()
+    if not isinstance(payload, list) or not payload or not isinstance(payload[0], dict):
+        raise RuntimeError("Bentuk respons tidak dikenali.")
+    meta = payload[0]
+    if "message" in meta:
+        pesan = meta["message"]
+        if isinstance(pesan, list):
+            pesan = "; ".join(str(m.get("value", m)) if isinstance(m, dict) else str(m) for m in pesan)
+        raise RuntimeError(f"API World Bank menolak permintaan: {pesan}")
+    items = list(payload[1] or []) if len(payload) > 1 else []
+    for halaman in range(2, int(meta.get("pages", 1)) + 1):
+        rp = requests.get(f"{url}&page={halaman}", headers=HEADERS, timeout=20)
+        if rp.status_code != 200:
+            raise RuntimeError(f"HTTP {rp.status_code} pada halaman {halaman}.")
+        pj = rp.json()
+        items.extend((pj[1] if len(pj) > 1 else None) or [])
+    total = meta.get("total")
+    if total is not None and len(items) != int(total):
+        raise RuntimeError(
+            f"Jumlah baris terkumpul ({len(items)}) tidak sama dengan total di API ({total}). Data ditolak."
+        )
+    for it in items:
+        iso = it.get("countryiso3code")
+        if iso and iso != "IDN":
+            raise RuntimeError(f"Baris negara {iso} muncul pada penarikan Indonesia. Data ditolak.")
+    return meta, items
+
 # =============================================================================
 # 4. PENARIKAN DATA INDONESIA — 100% LIVE
 # =============================================================================
@@ -144,32 +183,21 @@ st.subheader("2. Penarikan Data Indonesia")
 
 if st.button("📊 Ambil Data Indonesia", type="primary"):
     with st.spinner(f"Mengunduh data untuk '{selected_ind['name']}'..."):
-        data_url = (
-            f"https://api.worldbank.org/v2/country/IDN/indicator/{kode_indikator}"
-            f"?format=json&per_page=1000"
-        )
         try:
-            r_data = requests.get(data_url, headers=HEADERS, timeout=20)
-
-            if r_data.status_code != 200:
-                st.error(f"Gagal menghubungi server World Bank (HTTP {r_data.status_code}).")
-                st.stop()
-
-            data_json = r_data.json()
+            meta_resp, items_api = tarik_data_idn(kode_indikator)
             records = []
 
-            if len(data_json) > 1 and data_json[1]:
-                for item in data_json[1]:
-                    thn = item.get("date")
-                    val = item.get("value")
-                    if thn is not None and val is not None:
-                        try:
-                            records.append({
-                                "Tahun": int(thn),
-                                "nilai_raw": float(val)
-                            })
-                        except (ValueError, TypeError):
-                            continue
+            for item in items_api:
+                thn = item.get("date")
+                val = item.get("value")
+                if thn is not None and val is not None:
+                    try:
+                        records.append({
+                            "Tahun": int(thn),
+                            "nilai_raw": float(val)
+                        })
+                    except (ValueError, TypeError):
+                        continue
 
             if not records:
                 st.warning(
@@ -187,6 +215,10 @@ if st.button("📊 Ambil Data Indonesia", type="primary"):
                 .reset_index(drop=True)
             )
             df["Indikator"] = selected_ind["name"]
+            df["Kode Indikator"] = kode_indikator
+            df["Organisasi Sumber"] = selected_ind["sourceOrg"]
+            if meta_resp.get("lastupdated"):
+                df["Pembaruan WDI"] = meta_resp["lastupdated"]
 
             if df["Tahun"].duplicated().any():
                 st.warning(
