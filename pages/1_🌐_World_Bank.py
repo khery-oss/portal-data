@@ -1,4 +1,6 @@
 import io
+import time
+
 import pandas as pd
 import plotly.graph_objects as go
 import requests
@@ -16,6 +18,35 @@ HEADERS = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
 }
 
+MAX_RETRY = 3
+BATAS_WAKTU = 45  # detik per percobaan
+
+
+def get_dengan_retry(url: str) -> requests.Response:
+    """GET dengan pengulangan otomatis untuk timeout, koneksi putus, HTTP 429, dan HTTP 5xx.
+    Jeda antar percobaan 2 lalu 4 detik. Gagal di percobaan terakhir = exception (tidak ikut di-cache)."""
+    for percobaan in range(MAX_RETRY):
+        terakhir = percobaan == MAX_RETRY - 1
+        try:
+            r = requests.get(url, headers=HEADERS, timeout=BATAS_WAKTU)
+        except requests.RequestException as e:
+            if terakhir:
+                raise RuntimeError(
+                    f"Server World Bank tidak merespons setelah {MAX_RETRY} percobaan ({type(e).__name__}). "
+                    "Server mungkin sedang lambat, coba lagi beberapa saat."
+                )
+            time.sleep(2 * (percobaan + 1))
+            continue
+        if r.status_code == 429 or r.status_code >= 500:
+            if terakhir:
+                raise RuntimeError(
+                    f"Server World Bank menolak atau gagal merespons (HTTP {r.status_code}) "
+                    f"setelah {MAX_RETRY} percobaan. Coba lagi beberapa saat."
+                )
+            time.sleep(2 * (percobaan + 1))
+            continue
+        return r
+
 # =============================================================================
 # 1. LOAD KATALOG INDIKATOR — 100% LIVE DARI WDI API
 # =============================================================================
@@ -23,7 +54,7 @@ HEADERS = {
 def load_all_indicators():
     """Katalog WDI live. Gagal = exception (tidak ikut di-cache), bukan daftar kosong."""
     base = "https://api.worldbank.org/v2/indicator?source=2&format=json&per_page=3000"
-    res = requests.get(base, headers=HEADERS, timeout=25)
+    res = get_dengan_retry(base)
     if res.status_code != 200:
         raise RuntimeError(f"HTTP {res.status_code} dari server World Bank.")
     data = res.json()
@@ -31,7 +62,7 @@ def load_all_indicators():
         raise RuntimeError("Respons katalog kosong atau bentuknya tidak dikenali.")
     items = list(data[1])
     for halaman in range(2, int(data[0].get("pages", 1)) + 1):
-        rp = requests.get(f"{base}&page={halaman}", headers=HEADERS, timeout=25)
+        rp = get_dengan_retry(f"{base}&page={halaman}")
         if rp.status_code != 200:
             raise RuntimeError(f"HTTP {rp.status_code} pada halaman {halaman} katalog.")
         items.extend(rp.json()[1] or [])
@@ -146,7 +177,7 @@ def tarik_data_idn(kode: str):
     """Semua halaman data Indonesia untuk satu indikator. Mengembalikan (meta, items).
     Error API, jumlah baris tidak lengkap, atau baris negara lain ditolak dengan exception."""
     url = f"https://api.worldbank.org/v2/country/IDN/indicator/{kode}?format=json&per_page=1000"
-    r = requests.get(url, headers=HEADERS, timeout=20)
+    r = get_dengan_retry(url)
     if r.status_code != 200:
         raise RuntimeError(f"HTTP {r.status_code} dari server World Bank.")
     payload = r.json()
@@ -160,7 +191,7 @@ def tarik_data_idn(kode: str):
         raise RuntimeError(f"API World Bank menolak permintaan: {pesan}")
     items = list(payload[1] or []) if len(payload) > 1 else []
     for halaman in range(2, int(meta.get("pages", 1)) + 1):
-        rp = requests.get(f"{url}&page={halaman}", headers=HEADERS, timeout=20)
+        rp = get_dengan_retry(f"{url}&page={halaman}")
         if rp.status_code != 200:
             raise RuntimeError(f"HTTP {rp.status_code} pada halaman {halaman}.")
         pj = rp.json()
