@@ -334,15 +334,22 @@ if hasil:
             )
             st.plotly_chart(fig, use_container_width=True)
 
-            # --- Sumber & keterangan ---
-            with st.expander("📚 Sumber & Keterangan Kolom", expanded=False):
+            # --- Sumber data: sumber asli diambil dari kolom Catatan yang dikirim API ---
+            with st.expander("📚 Sumber Data", expanded=False):
                 st.markdown("**Basis data:** WHO Global Health Observatory (GHO) OData API.")
-                st.markdown(
-                    "- **Nilai (angka):** angka penuh dari API, tidak diubah modul ini.\n"
-                    "- **Nilai (teks WHO):** teks nilai yang dibulatkan dan diformat oleh WHO, sering memuat rentang ketidakpastian.\n"
-                    "- **Batas Bawah / Batas Atas:** rentang ketidakpastian dari WHO bila tersedia.\n"
-                    "- **Tanggal Rekaman API:** tanggal rekaman data pada server WHO."
+                sumber_asli = (
+                    sorted({str(x) for x in df_view["Catatan"].dropna()}) if "Catatan" in df_view.columns else []
                 )
+                if sumber_asli:
+                    st.markdown("**Sumber asli menurut API (kolom Catatan):**")
+                    for sa in sumber_asli:
+                        st.markdown(f"- {sa}")
+                else:
+                    st.markdown("API tidak mengirim catatan sumber untuk observasi yang ditampilkan.")
+                if "Tanggal Rekaman API" in df_view.columns:
+                    tgl = sorted({str(x) for x in df_view["Tanggal Rekaman API"].dropna()})
+                    if tgl:
+                        st.markdown("**Tanggal rekaman API:** " + ", ".join(tgl))
 
             with st.expander("📋 Tabel Runtun Waktu Lengkap"):
                 tabel = df_view.drop(columns=["Indikator", "Kode Indikator"]).sort_values("Tahun", ascending=False)
