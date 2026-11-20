@@ -2,87 +2,74 @@ import time
 import requests
 import pandas as pd
 import streamlit as st
+from collections import Counter
 
-st.set_page_config(page_title="Tes FRED", layout="wide")
-st.title("Tes struktur API FRED (Indonesia)")
+st.set_page_config(page_title="Tes WHO GHO", layout="wide")
+st.title("Tes struktur API WHO GHO (Indonesia)")
 
-try:
-    KEY = st.secrets["FRED_API_KEY"]
-except Exception:
-    st.error("FRED_API_KEY tidak ada di secrets.")
-    st.stop()
-
-BASE = "https://api.stlouisfed.org/fred"
 H = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"}
+BASE = "https://ghoapi.azureedge.net/api"
 
-def panggil(path, kunci=None, **params):
-    p = {"api_key": kunci or KEY, "file_type": "json", **params}
-    try:
-        r = requests.get(f"{BASE}/{path}", params=p, headers=H, timeout=30)
-        return r.status_code, r.json()
-    except Exception as e:
-        return None, {"exception": type(e).__name__}
+KODE_FILE = [
+    ("WHOSIS_000001", "Life expectancy at birth"), ("WHOSIS_000002", "HALE at birth"),
+    ("WHOSIS_000015", "Life expectancy at age 60"), ("NCDMORT3070", "Prob. dying 30-70 NCD"),
+    ("WHOSIS_000007", "Adult mortality rate"), ("WHOSIS_000004", "Crude death rate"),
+    ("MDG_0000000007", "Under-five mortality"), ("MDG_0000000001", "Infant mortality"),
+    ("WHOSIS_000003", "Neonatal mortality"), ("MDG_0000000026", "Maternal mortality ratio"),
+    ("MDG_0000000025", "Births attended by skilled staff"), ("M_03", "Adolescent birth rate"),
+    ("NUTRITION_STUNTING_PREV", "Stunting"), ("NUTRITION_WASTING_PREV", "Wasting"),
+    ("NUTRITION_OVERWEIGHT_PREV", "Overweight children"), ("NUTRITION_ANEMIA_CHILDREN", "Anemia children"),
+    ("NUTRITION_ANEMIA_WOMEN", "Anemia women"), ("WHS3_62", "MCV1 coverage"),
+    ("WHS3_49", "Polio Pol3 coverage"), ("WHS3_40", "DTP3 coverage"),
+    ("MDG_0000000020", "TB incidence"), ("MDG_0000000018", "TB prevalence"),
+    ("HWF_0001", "Medical doctors"), ("HWF_0002", "Nursing and midwifery"),
+    ("HWF_0003", "Pharmacists"), ("HWF_BE_HOSP", "Hospital beds"),
+    ("UHC_INDEX_REPORTED", "UHC service coverage index"), ("WSH_WATER_SAFELY_MANAGED", "Safe drinking water"),
+    ("WSH_SANITATION_SAFELY_MANAGED", "Safe sanitation"), ("NCD_BMI_30A", "Obesity adults"),
+]
+SAMPEL = ["WHOSIS_000001", "WHOSIS_000002", "MDG_0000000026", "MDG_0000000007",
+          "NCD_BMI_30A", "UHC_INDEX_REPORTED", "WSH_WATER_SAFELY_MANAGED", "NCDMORT3070"]
+KATA = ["stunting", "wasting", "overweight", "anaemia", "measles", "DTP3", "polio", "hospital beds",
+        "nursing", "pharmac", "adolescent birth", "tuberculosis", "adult mortality", "crude death"]
 
-def cari(teks, tag=None):
-    semua, offset, total = [], 0, None
-    while True:
-        prm = dict(search_text=teks, limit=1000, offset=offset, order_by="popularity", sort_order="desc")
-        if tag:
-            prm["tag_names"] = tag
-        kode, js = panggil("series/search", **prm)
-        if kode != 200:
-            return semua, total, (kode, {k: v for k, v in js.items() if k != "api_key"})
-        total = js.get("count")
-        bagian = js.get("seriess", [])
-        semua.extend(bagian)
-        offset += len(bagian)
-        if not bagian or offset >= int(total):
-            break
-        time.sleep(0.6)
-    return semua, total, None
+def get(path, **params):
+    return requests.get(f"{BASE}/{path}", params=params or None, headers=H, timeout=60)
 
 if st.button("Jalankan tes", type="primary"):
-    st.header("A. Pencarian 'Indonesia' (semua halaman)")
-    semua, total, err = cari("Indonesia")
-    if err:
-        st.error(err)
-        st.stop()
-    judul_ind = [s for s in semua if "indonesia" in s.get("title", "").lower()]
-    st.write(f"count dari API: **{total}** | terkumpul: **{len(semua)}** | judul memuat 'Indonesia': **{len(judul_ind)}**")
-    bukan_for = [s for s in judul_ind if "for indonesia" not in s["title"].lower()]
-    st.write(f"Judul memuat 'Indonesia' tetapi bukan pola 'for Indonesia': **{len(bukan_for)}**")
-    st.dataframe(pd.DataFrame([{"id": s["id"], "title": s["title"], "freq": s.get("frequency_short"),
-                                "units": s.get("units_short")} for s in bukan_for[:60]]), use_container_width=True)
-    tanpa_kata = [s for s in semua if "indonesia" not in s.get("title", "").lower()]
-    st.write(f"Hasil pencarian yang judulnya TIDAK memuat 'Indonesia': {len(tanpa_kata)}. Contoh:")
-    st.write([s["title"] for s in tanpa_kata[:8]])
+    st.header("A. Katalog indikator")
+    r = get("Indicator")
+    st.write(f"HTTP **{r.status_code}** | {len(r.content):,} byte")
+    js = r.json()
+    items = js.get("value", [])
+    st.write("Kunci respons:", list(js.keys()))
+    st.write(f"Jumlah indikator: **{len(items)}** | kunci satu entri: {list(items[0].keys()) if items else '-'}")
+    nama = {x.get("IndicatorCode"): x.get("IndicatorName") for x in items}
 
-    st.header("B. Duplikat label dropdown (judul + frekuensi + satuan)")
-    df = pd.DataFrame([{"title": s["title"], "freq": s.get("frequency"), "units": s.get("units_short"), "id": s["id"]}
-                       for s in judul_ind])
-    dup = df[df.duplicated(["title", "freq", "units"], keep=False)].sort_values("title")
-    st.write(f"Baris yang labelnya kembar: **{len(dup)}**")
-    st.dataframe(dup.head(30), use_container_width=True)
+    st.header("B. Verifikasi kode yang ada di file")
+    st.dataframe(pd.DataFrame([{"kode": k, "label_di_file": l, "nama_resmi_di_API": nama.get(k, "TIDAK ADA")}
+                               for k, l in KODE_FILE]), use_container_width=True)
 
-    st.header("C. Pencarian dengan tag_names=indonesia")
-    time.sleep(1)
-    semua_t, total_t, err_t = cari("Indonesia", tag="indonesia")
-    if err_t:
-        st.write("Gagal:", err_t)
-    else:
-        judul_t = [s for s in semua_t if "indonesia" in s.get("title", "").lower()]
-        st.write(f"count: **{total_t}** | terkumpul: {len(semua_t)} | judul memuat 'Indonesia': {len(judul_t)}")
-        st.write("Contoh judul tanpa kata Indonesia pada hasil tag:",
-                 [s["title"] for s in semua_t if "indonesia" not in s.get("title", "").lower()][:8])
+    st.header("C. Pencarian kata kunci pada nama resmi")
+    for kt in KATA:
+        cocok = [(c, n) for c, n in nama.items() if n and kt.lower() in n.lower()]
+        st.write(f"**{kt}**: {len(cocok)} cocok")
+        for c, n in cocok[:5]:
+            st.text(f"  {c} | {n[:110]}")
 
-    st.header("D. Struktur observasi (seri 'for Indonesia' terpopuler)")
-    seri = next((s for s in judul_ind if "for indonesia" in s["title"].lower()), None)
-    if seri:
-        kode, js = panggil("series/observations", series_id=seri["id"])
-        st.write(seri["id"], "|", seri["title"])
-        st.write("HTTP", kode, "| kunci:", list(js.keys()))
-        st.write("count:", js.get("count"), "| limit:", js.get("limit"), "| len(observations):", len(js.get("observations", [])))
-
-    st.header("E. Bentuk respons error (kunci palsu)")
-    kode, js = panggil("series/search", kunci="x" * 32, search_text="Indonesia", limit=1)
-    st.write("HTTP", kode, "| isi:", {k: v for k, v in js.items() if k != "api_key"})
+    st.header("D. Baris Indonesia untuk sampel kode")
+    for kode in SAMPEL:
+        rr = get(kode, **{"$filter": "SpatialDim eq 'IDN'"})
+        js = rr.json() if rr.status_code == 200 else {}
+        rows = js.get("value", [])
+        tahun = Counter(x.get("TimeDim") for x in rows)
+        st.text(f"{kode}: HTTP {rr.status_code} | baris {len(rows)} | tahun unik {len(tahun)} | "
+                f"maks baris per tahun {max(tahun.values()) if tahun else 0} | nextLink: {'@odata.nextLink' in js}")
+        if rows:
+            st.text("  SpatialDimType: " + str(dict(Counter(x.get("SpatialDimType") for x in rows)))
+                    + " | TimeDimType: " + str(dict(Counter(x.get("TimeDimType") for x in rows))))
+            for d in ("Dim1", "Dim2", "Dim3"):
+                st.text(f"  {d}: tipe={dict(Counter(x.get(d + 'Type') for x in rows))} | "
+                        f"nilai={dict(Counter(x.get(d) for x in rows).most_common(6))}")
+            st.text("  kolom: " + ", ".join(rows[0].keys()))
+            st.text("  contoh: " + str({k: rows[0].get(k) for k in ("TimeDim", "Value", "NumericValue", "Low", "High")}))
+        time.sleep(1)
