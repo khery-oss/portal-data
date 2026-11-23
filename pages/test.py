@@ -3,8 +3,8 @@ import requests
 import pandas as pd
 import streamlit as st
 
-st.set_page_config(page_title="Tes BPS WebAPI", layout="wide")
-st.title("Tes struktur BPS WebAPI")
+st.set_page_config(page_title="Tes BPS WebAPI v2", layout="wide")
+st.title("Tes BPS WebAPI v2")
 
 try:
     KEY = st.secrets["BPS_API_KEY"]
@@ -19,65 +19,71 @@ def panggil(**params):
     t0 = time.time()
     try:
         r = requests.get(BASE, params={"key": KEY, **params}, headers=H, timeout=60)
-    except Exception as e:
-        return None, None, type(e).__name__, time.time() - t0
-    try:
         js = r.json()
-        return r.status_code, js, None, time.time() - t0
-    except ValueError:
-        return r.status_code, None, r.text[:300].replace(KEY, "***"), time.time() - t0
+        return r.status_code, js, time.time() - t0
+    except Exception as e:
+        return None, {"galat": type(e).__name__}, time.time() - t0
 
-def lapor(judul, kode, js, galat, dt):
-    st.subheader(judul)
-    st.write(f"HTTP **{kode}** | {dt:.2f} dtk" + (f" | galat: {galat}" if galat else ""))
+def ringkas(label, **params):
+    kode, js, dt = panggil(**params)
+    st.subheader(label)
+    st.write(f"HTTP **{kode}** | {dt:.2f} dtk | parameter: {', '.join(f'{k}={v}' for k, v in params.items())}")
     if isinstance(js, dict):
-        st.write("Kunci atas:", list(js.keys()), "| status:", js.get("status"), "| ketersediaan:", js.get("data-availability"))
-
-if st.button("Jalankan tes", type="primary"):
-    kode, js, galat, dt = panggil(model="domain", type="all")
-    lapor("A. Daftar domain", kode, js, galat, dt)
-    if isinstance(js, dict) and isinstance(js.get("data"), list) and len(js["data"]) == 2:
-        st.write("Meta:", js["data"][0], "| jumlah:", len(js["data"][1]))
-        st.write("Lima pertama:", js["data"][1][:5])
-    time.sleep(1)
-
-    kode, js, galat, dt = panggil(model="subject", domain="0000")
-    lapor("B. Daftar subjek (domain 0000)", kode, js, galat, dt)
-    if isinstance(js, dict) and isinstance(js.get("data"), list) and len(js["data"]) == 2:
-        st.write("Meta:", js["data"][0], "| jumlah:", len(js["data"][1]))
-        st.write("Sepuluh pertama:", js["data"][1][:10])
-    time.sleep(1)
-
-    kode, js, galat, dt = panggil(model="var", domain="0000", page=1)
-    lapor("C. Daftar variabel (halaman 1)", kode, js, galat, dt)
-    var_id = None
-    if isinstance(js, dict) and isinstance(js.get("data"), list) and len(js["data"]) == 2:
-        st.write("Meta:", js["data"][0], "| baris di halaman:", len(js["data"][1]))
-        st.dataframe(pd.DataFrame(js["data"][1]).head(10), use_container_width=True)
-        if js["data"][1]:
-            var_id = js["data"][1][0].get("var_id")
-    time.sleep(1)
-    for nama in ("perpage", "per_page"):
-        kode, js2, galat, dt = panggil(model="var", domain="0000", page=1, **{nama: 100})
-        n = len(js2["data"][1]) if isinstance(js2, dict) and isinstance(js2.get("data"), list) and len(js2["data"]) == 2 else None
-        st.write(f"Parameter `{nama}=100`: HTTP {kode} | baris: {n}")
-        time.sleep(1)
-
-    if var_id:
-        kode, js, galat, dt = panggil(model="data", domain="0000", var=var_id)
-        lapor(f"D. Data variabel {var_id} tanpa parameter tahun", kode, js, galat, dt)
-        if isinstance(js, dict):
+        st.write("status:", js.get("status"), "| pesan:", str(js.get("message"))[:300].replace(KEY, "***"))
+        d = js.get("data")
+        if isinstance(d, list) and len(d) == 2 and isinstance(d[1], list):
+            st.write("meta:", d[0], "| jumlah di halaman:", len(d[1]))
+            st.write("tiga pertama:", d[1][:3])
+        elif js.get("datacontent") is not None or js.get("tahun") is not None:
+            st.write("kunci:", list(js.keys()))
             for k in ("var", "turvar", "vervar", "tahun", "turtahun"):
                 v = js.get(k)
-                st.write(f"{k}: {len(v) if isinstance(v, list) else v}", (v[:3] if isinstance(v, list) else ""))
+                st.write(f"{k}: {len(v) if isinstance(v, list) else v}", v[:3] if isinstance(v, list) else "")
             dc = js.get("datacontent")
-            st.write("labelvervar:", js.get("labelvervar"), "| last_update:", js.get("last_update"))
-            st.write("datacontent:", type(dc).__name__, "| jumlah:", len(dc) if dc else 0)
-            if isinstance(dc, dict):
-                st.write("Contoh kunci dan nilai:", list(dc.items())[:6])
-            tahun = js.get("tahun") or []
-            if tahun:
-                time.sleep(1)
-                k2, js3, g3, d3 = panggil(model="data", domain="0000", var=var_id, th=tahun[0].get("val"))
-                dc3 = js3.get("datacontent") if isinstance(js3, dict) else None
-                st.write(f"E. Dengan th={tahun[0].get('val')}: HTTP {k2} | jumlah datacontent: {len(dc3) if dc3 else 0}")
+            st.write("datacontent jumlah:", len(dc) if dc else 0, "| contoh:", list(dc.items())[:5] if isinstance(dc, dict) else dc)
+    return js
+
+if st.button("Jalankan tes", type="primary"):
+    st.header("A. Domain")
+    ringkas("A1", model="domain", type="all")
+    time.sleep(1)
+    ringkas("A2", model="domain", type="prov")
+    time.sleep(1)
+
+    st.header("B. Daftar nilai untuk variabel 70, domain 0000")
+    j_th = ringkas("B1 periode", model="th", domain="0000", var=70)
+    time.sleep(1)
+    ringkas("B2 variabel vertikal", model="vervar", domain="0000", var=70)
+    time.sleep(1)
+    ringkas("B3 variabel turunan", model="turvar", domain="0000", var=70)
+    time.sleep(1)
+    ringkas("B4 periode turunan", model="turth", domain="0000", var=70)
+    time.sleep(1)
+
+    th_id = None
+    d = j_th.get("data") if isinstance(j_th, dict) else None
+    if isinstance(d, list) and len(d) == 2 and d[1]:
+        th_id = d[1][-1].get("th_id")
+
+    st.header("C. Data variabel 70")
+    ringkas("C1 tanpa parameter tambahan", model="data", domain="0000", var=70)
+    time.sleep(1)
+    ringkas("C2 dengan lang=ind", model="data", domain="0000", var=70, lang="ind")
+    time.sleep(1)
+    if th_id:
+        ringkas(f"C3 dengan th={th_id}", model="data", domain="0000", var=70, th=th_id)
+        time.sleep(1)
+        ringkas(f"C4 dengan th={th_id} dan lang=ind", model="data", domain="0000", var=70, th=th_id, lang="ind")
+        time.sleep(1)
+
+    st.header("D. Penyaringan katalog variabel")
+    ringkas("D1 subject=30 (Kesehatan)", model="var", domain="0000", subject=30)
+    time.sleep(1)
+    ringkas("D2 keyword=kemiskinan", model="var", domain="0000", keyword="kemiskinan")
+    time.sleep(1)
+
+    st.header("E. Kecepatan halaman katalog")
+    t0 = time.time()
+    for p in range(1, 6):
+        panggil(model="var", domain="0000", page=p)
+    st.write(f"5 halaman berurutan: {time.time() - t0:.1f} dtk")
