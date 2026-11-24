@@ -2,20 +2,20 @@ import streamlit as st
 
 
 def apply_custom_theme() -> None:
-    """Menerapkan IBM Plex Mono, aksen tombol neon, dan warna adaptif Light/Dark."""
+    """Menerapkan JetBrains Mono, aksen tombol neon, dan warna adaptif Light/Dark."""
     st.markdown(
         """
         <style>
-        @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Jet+Brains+Mono:wght@400;500;600;700&display=swap');
 
         /* Font utama */
         html, body, .stApp, .stMarkdown, p, li, label, input, textarea, button {
-            font-family: 'IBM Plex Mono', monospace !important;
+            font-family: 'JetBrains Mono', monospace !important;
         }
 
         /* Judul mengikuti warna tema aktif (putih di Dark, gelap di Light) */
         h1, h2, h3 {
-            font-family: 'IBM Plex Mono', monospace !important;
+            font-family: 'JetBrains Mono', monospace !important;
             color: var(--text-color) !important;
             letter-spacing: -0.03em;
             font-weight: 700 !important;
@@ -28,7 +28,7 @@ def apply_custom_theme() -> None:
 
         /* Aksen monospace untuk angka metrik, caption, dan kode */
         code, pre, [data-testid="stMetricValue"], [data-testid="stCaptionContainer"] {
-            font-family: 'IBM Plex Mono', monospace !important;
+            font-family: 'JetBrains Mono', monospace !important;
         }
 
         /* Sidebar adaptif dengan garis batas halus */
@@ -78,7 +78,7 @@ def apply_custom_theme() -> None:
 
         /* Label kecil uppercase monospace di atas judul */
         .atlas-eyebrow {
-            font-family: 'IBM Plex Mono', monospace !important;
+            font-family: 'JetBrains Mono', monospace !important;
             font-size: 0.78rem;
             letter-spacing: 0.02em;
             text-transform: uppercase;
