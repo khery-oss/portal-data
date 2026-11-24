@@ -74,3 +74,19 @@ def apply_custom_theme() -> None:
         [data-testid="stBaseButton-primary"]:hover {
             background-color: #0047D1 !important;
             transform: translateY(-1px);
+            box-shadow: 0 0 22px rgba(0, 212, 255, 0.75) !important;
+        }
+
+        /* Label kecil uppercase Geist Mono di atas judul */
+        .atlas-eyebrow {
+            font-family: 'Geist Mono', monospace !important;
+            font-size: 0.78rem;
+            letter-spacing: 0.02em;
+            text-transform: uppercase;
+            color: color-mix(in srgb, var(--text-color) 62%, transparent);
+            margin-bottom: 0.25rem;
+        }
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
