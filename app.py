@@ -6,7 +6,7 @@ from style_helper import apply_custom_theme
 
 # 1. Konfigurasi & tema dipanggil SEKALI saja di sini untuk semua halaman
 st.set_page_config(
-    with st.container(key="beranda_hero"):
+with st.container(key="beranda_hero"):
         st.title(":material/analytics: IE IndoEcon Explorer")
     page_icon=":material/analytics:",
     layout="wide",
