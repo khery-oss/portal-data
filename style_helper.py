@@ -23,7 +23,7 @@ def apply_custom_theme() -> None:
         }
 
         h1 {
-            font-size: 2.05rem !important;   /* st.title() — turun dari ~2.75rem (44px) ke ~30px */
+            font-size: 2.15rem !important;   /* st.title() — turun dari ~2.15rem (44px) ke ~30px */
             line-height: 1.2 !important;
             padding-top: 0.25rem !important;
         }
