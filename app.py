@@ -101,18 +101,19 @@ def beranda() -> None:
     # =========================================================================
     # CATATAN AKADEMIS & PENGGUNAAN RISET (RINGKAS DALAM EXPANDER)
     # =========================================================================
-    with st.expander(":material/menu_book: Pedoman Penggunaan Akademis & Standar Sitasi", expanded=False):
-        st.markdown(
-            "Website ini dibuat untuk kebutuhan para **peneliti, akademisi, dosen, dan mahasiswa** "
-            "dalam mengakses serta mengeksplorasi data resmi Indonesia secara cepat, transparan, dan terbuka.\n\n"
-            "- **Rekomendasi Cross-check:** Pengguna sangat disarankan untuk tetap melakukan *cross-check* kembali "
-            "ke website utama sumber data resmi seperti yang tercantum pada masing-masing modul.\n"
-            "- **Standar Sitasi & Penulisan Sumber:** Dalam penulisan karya ilmiah, skripsi, tesis, jurnal, maupun laporan riset, "
-            "penulisan sumber **tetap menggunakan sumber asli** tempat data diterbitkan "
-            "(seperti *World Bank, FRED, UN SDGs, BPS, WHO, Comtrade, hingga V-Dem Institute*).\n"
-            "- **Koreksi & Masukan:** Apabila terdapat kekeliruan, kesalahan data, atau *error* pada penarikan API/data, "
-            "bisa langsung diberitahukan ke email tim pengembang melalui formulir kontak di bawah."
-        )
+    with st.container(key="pedoman_neon"):
+        with st.expander(":material/menu_book: Pedoman Penggunaan Akademis & Standar Sitasi", expanded=False):
+            st.markdown(
+                "Website ini dibuat untuk kebutuhan para **peneliti, akademisi, dosen, dan mahasiswa** "
+                "dalam mengakses serta mengeksplorasi data resmi Indonesia secara cepat, transparan, dan terbuka.\n\n"
+                "- **Rekomendasi Cross-check:** Pengguna sangat disarankan untuk tetap melakukan *cross-check* kembali "
+                "ke website utama sumber data resmi seperti yang tercantum pada masing-masing modul.\n"
+                "- **Standar Sitasi & Penulisan Sumber:** Dalam penulisan karya ilmiah, skripsi, tesis, jurnal, maupun laporan riset, "
+                "penulisan sumber **tetap menggunakan sumber asli** tempat data diterbitkan "
+                "(seperti *World Bank, FRED, UN SDGs, BPS, WHO, Comtrade, hingga V-Dem Institute*).\n"
+                "- **Koreksi & Masukan:** Apabila terdapat kekeliruan, kesalahan data, atau *error* pada penarikan API/data, "
+                "bisa langsung diberitahukan ke email tim pengembang melalui formulir kontak di bawah."
+            )
 
     st.divider()
 
@@ -126,7 +127,7 @@ def beranda() -> None:
         cols = st.columns(2)
         for col, modul in zip(cols, MODUL_INFO[i : i + 2]):
             with col:
-                with st.container(border=True):
+                with st.container(key="integritas_neon"):
                     st.markdown(
                         f"### {modul['icon']} {modul['judul']}\n"
                         f"- **Cakupan:** {modul['cakupan']}\n"
@@ -140,7 +141,7 @@ def beranda() -> None:
 
     st.divider()
 
-    with st.container(border=True):
+    with st.container(key="saran_neon"):
         st.subheader(":material/verified_user: Prinsip Integritas & Transparansi Data")
         st.markdown(
             "- **Live API & Curated Local Database:** Sebagian besar modul memanfaatkan penarikan *real-time* via API resmi, "
