@@ -2,28 +2,28 @@ import streamlit as st
 
 
 def apply_custom_theme() -> None:
-    """Menerapkan Space Grotesk, JetBrains Mono, dan tema dark ledger."""
+    """Menerapkan Space Grotesk, aksen tombol neon, dan warna adaptif Light/Dark."""
     st.markdown(
         """
         <style>
         @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Space+Grotesk:wght@400;500;600;700&display=swap');
 
-        /* Font utama Space Grotesk (tanpa menyentuh span global agar ikon aman) */
+        /* Font utama */
         html, body, .stApp, .stMarkdown, p, li, label, input, textarea, button {
             font-family: 'Space Grotesk', -apple-system, BlinkMacSystemFont, sans-serif !important;
         }
 
-        /* Judul putih terang dan tegas */
+        /* Judul mengikuti warna tema aktif (putih di Dark, gelap di Light) */
         h1, h2, h3 {
             font-family: 'Space Grotesk', sans-serif !important;
-            color: #F8FAFC !important;
+            color: var(--text-color) !important;
             letter-spacing: -0.03em;
             font-weight: 700 !important;
         }
 
-        /* Paragraf utama sedikit diredupkan agar hierarki judul menonjol */
+        /* Paragraf sedikit lebih lembut, tetap adaptif di Light & Dark */
         .stMarkdown p, .stMarkdown li {
-            color: #CBD5E1;
+            color: color-mix(in srgb, var(--text-color) 82%, transparent);
         }
 
         /* Aksen monospace untuk angka metrik, caption, dan kode */
@@ -31,31 +31,48 @@ def apply_custom_theme() -> None:
             font-family: 'JetBrains Mono', monospace !important;
         }
 
-        /* Sidebar dengan garis batas tegas */
+        /* Sidebar adaptif dengan garis batas halus */
         [data-testid="stSidebar"] {
-            background-color: #0E1520 !important;
-            border-right: 1px solid #1E293B;
+            background-color: var(--secondary-background-color) !important;
+            border-right: 1px solid color-mix(in srgb, var(--text-color) 14%, transparent);
         }
 
-        /* Kotak input dan filter */
+        /* Kotak input dan filter adaptif */
         div[data-baseweb="input"] > div,
         div[data-baseweb="select"] > div {
-            background-color: #131B26 !important;
-            border: 1px solid #1E293B !important;
+            background-color: var(--secondary-background-color) !important;
+            border: 1px solid color-mix(in srgb, var(--text-color) 18%, transparent) !important;
             border-radius: 6px;
         }
 
-        /* Paksa kotak st.info / st.warning menjadi gelap netral (hilangkan teks biru) */
+        /* Kotak st.info / st.warning adaptif (netral di Dark maupun Light) */
         [data-testid="stAlert"] {
-            background-color: #111827 !important;
-            border: 1px solid #1E293B !important;
+            background-color: var(--secondary-background-color) !important;
+            border: 1px solid color-mix(in srgb, var(--text-color) 16%, transparent) !important;
             border-radius: 8px !important;
         }
 
         [data-testid="stAlert"] p,
         [data-testid="stAlert"] li,
         [data-testid="stAlert"] strong {
-            color: #CBD5E1 !important;
+            color: var(--text-color) !important;
+        }
+
+        /* Tombol Primary bergaya Neon dengan kontras tinggi & efek glow */
+        button[kind="primary"],
+        [data-testid="stBaseButton-primary"] {
+            background-color: var(--primary-color) !important;
+            color: #FFFFFF !important; /* Ganti ke #0B111A jika pakai Neon Cyan/Emerald */
+            border: 1px solid color-mix(in srgb, var(--primary-color) 75%, white) !important;
+            font-weight: 600 !important;
+            box-shadow: 0 0 14px color-mix(in srgb, var(--primary-color) 45%, transparent) !important;
+            transition: transform 0.15s ease, box-shadow 0.15s ease !important;
+        }
+
+        button[kind="primary"]:hover,
+        [data-testid="stBaseButton-primary"]:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 0 22px color-mix(in srgb, var(--primary-color) 70%, transparent) !important;
         }
 
         /* Label kecil uppercase monospace di atas judul */
@@ -64,7 +81,7 @@ def apply_custom_theme() -> None:
             font-size: 0.78rem;
             letter-spacing: 0.08em;
             text-transform: uppercase;
-            color: #94A3B8;
+            color: color-mix(in srgb, var(--text-color) 62%, transparent);
             margin-bottom: 0.25rem;
         }
         </style>
