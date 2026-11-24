@@ -8,6 +8,11 @@ from style_helper import apply_custom_theme
 # Letakkan setelah st.set_page_config(...) jika halaman memakainya
 apply_custom_theme()
 
+st.markdown(
+    '<div class="atlas-eyebrow">INDONESIA MACRO &amp; INSTITUTIONAL DATA · OPEN ACCESS</div>',
+    unsafe_allow_html=True,
+)
+
 st.set_page_config(
     page_title="IndoEcon Explorer",
     page_icon="📊",
