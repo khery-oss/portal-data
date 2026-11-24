@@ -3,6 +3,11 @@ import re
 import requests
 import streamlit as st
 
+from style_helper import apply_custom_theme
+
+# Letakkan setelah st.set_page_config(...) jika halaman memakainya
+apply_custom_theme()
+
 st.set_page_config(
     page_title="IndoEcon Explorer",
     page_icon="📊",
