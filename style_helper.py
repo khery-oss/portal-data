@@ -6,7 +6,7 @@ def apply_custom_theme() -> None:
     st.markdown(
         """
         <style>
-        @import url('https://fonts.googleapis.com/css2?family=Jet+Barins+Mono:wght@400;500;600;700&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;500;600;700&display=swap');
 
         /* Font utama */
         html, body, .stApp, .stMarkdown, p, li, label, input, textarea, button {
