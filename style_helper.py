@@ -51,7 +51,7 @@ def apply_custom_theme() -> None:
         }
 
         .stMainBlockContainer [data-testid="stVerticalBlock"] {
-            gap: 0.65rem;
+            gap: 0.85rem;
         }
 
         /* 2. Tipografi Global Ringkas (aman untuk ikon Material & grafik SVG) */
