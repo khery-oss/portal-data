@@ -6,11 +6,6 @@ import plotly.graph_objects as go
 import requests
 import streamlit as st
 
-from style_helper import apply_custom_theme
-
-# Letakkan setelah st.set_page_config(...) jika halaman memakainya
-apply_custom_theme()
-
 st.set_page_config(page_title="World Bank Data Explorer - Indonesia", layout="wide")
 
 st.title("🌐 World Bank Open Data Explorer - Indonesia")
