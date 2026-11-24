@@ -3,10 +3,44 @@ import re
 import requests
 import streamlit as st
 
+import streamlit as st
 from style_helper import apply_custom_theme
 
-# Letakkan setelah st.set_page_config(...) jika halaman memakainya
+# 1. Konfigurasi & tema dipanggil SEKALI saja di sini untuk semua halaman
+st.set_page_config(
+    page_title="IE IndoEcon Explorer",
+    page_icon="📊",
+    layout="wide",
+)
 apply_custom_theme()
+
+
+# 2. Bungkus konten halaman utama Anda saat ini ke dalam fungsi
+def beranda():
+    st.markdown(
+        '<div class="atlas-eyebrow">INDONESIA MACRO &amp; INSTITUTIONAL DATA · OPEN ACCESS</div>',
+        unsafe_allow_html=True,
+    )
+    st.title("📊 IE IndoEcon Explorer")
+    # ... tempel sisa kode beranda app.py Anda di sini ...
+
+
+# 3. Daftarkan seluruh halaman dari folder pages/
+pg = st.navigation(
+    [
+        st.Page(beranda, title="Beranda", icon="🏠", default=True),
+        st.Page("pages/1_🌐_World_Bank.py", title="World Bank", icon="🌐"),
+        st.Page("pages/2_📈_FRED.py", title="FRED", icon="📈"),
+        st.Page("pages/4_UN_UN_SDG.py", title="UN SDG", icon="🇺🇳"),
+        st.Page("pages/5_🏛️_BPS.py", title="BPS", icon="🏛️"),
+        st.Page("pages/6_🏥_WHO.py", title="WHO", icon="🏥"),
+        st.Page("pages/7_🗳️_V-Dem.py", title="V-Dem", icon="🗳️"),
+        st.Page("pages/8_💻_Digital_Society_and_Economy.py", title="Digital Society & Economy", icon="💻"),
+        st.Page("pages/9_🚢_Comtrade.py", title="Comtrade", icon="🚢"),
+    ]
+)
+
+pg.run()
 
 st.markdown(
     '<div class="atlas-eyebrow">INDONESIA MACRO &amp; INSTITUTIONAL DATA · OPEN ACCESS</div>',
