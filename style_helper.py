@@ -51,7 +51,7 @@ def apply_custom_theme() -> None:
         }
 
         .stMainBlockContainer [data-testid="stVerticalBlock"] {
-            gap: 0.65rem;
+            gap: 0.85rem;
         }
 
         /* 2. Tipografi Global Ringkas (aman untuk ikon Material & grafik SVG) */
@@ -81,10 +81,10 @@ def apply_custom_theme() -> None:
         }
 
         h3 {
-            font-size: 1.0rem !important;
+            font-size: 1.05rem !important;
             line-height: 1.35 !important;
-            padding-top: 0.5rem !important;
-            padding-bottom: 0.35rem !important;
+            padding-top: 0.65rem !important;
+            padding-bottom: 0.65rem !important;
         }
 
         .stMarkdown p, .stMarkdown li {
