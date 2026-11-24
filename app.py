@@ -99,7 +99,7 @@ def beranda() -> None:
     )
 
     # =========================================================================
-    # CATATAN AKADEMIS & PENGGUNAAN RISET (RINGKAS DALAM EXPANDER)
+    # CATATAN AKADEMIS & PENGGUNAAN RISET (NEON BIRU)
     # =========================================================================
     with st.container(key="pedoman_neon"):
         with st.expander(":material/menu_book: Pedoman Penggunaan Akademis & Standar Sitasi", expanded=False):
@@ -122,7 +122,7 @@ def beranda() -> None:
         "Pilih modul langsung dari kartu di bawah atau melalui bilah navigasi di sebelah kiri:"
     )
 
-    # 1. DI DALAM LOOP: TETAP border=True (JANGAN diberi key="integritas_neon")
+    # Grid 2x4 sejajar per baris (bingkai netral)
     for i in range(0, len(MODUL_INFO), 2):
         cols = st.columns(2)
         for col, modul in zip(cols, MODUL_INFO[i : i + 2]):
@@ -141,7 +141,9 @@ def beranda() -> None:
 
     st.divider()
 
-    # 2. KEY NEON HIJAU HANYA DI SINI (Prinsip Integritas)
+    # =========================================================================
+    # PRINSIP INTEGRITAS (NEON HIJAU)
+    # =========================================================================
     with st.container(key="integritas_neon"):
         st.subheader(":material/verified_user: Prinsip Integritas & Transparansi Data")
         st.markdown(
@@ -157,26 +159,10 @@ def beranda() -> None:
 
     st.divider()
 
-    # 3. KEY NEON BIRU HANYA DI SINI (Kotak Saran)
+    # =========================================================================
+    # KOTAK SARAN, LAPORAN EROR & PERMINTAAN DATA BARU (NEON BIRU)
+    # =========================================================================
     with st.container(key="saran_neon"):
-        st.subheader(":material/mail: Kotak Saran, Laporan Kendala & Permintaan Data")
-        st.markdown(
-            "- **Live API & Curated Local Database:** Sebagian besar modul memanfaatkan penarikan *real-time* via API resmi, "
-            "sementara modul spesifik berukuran masif (seperti V-Dem dan DSP) menggunakan arsip data terkurasi resmi yang dioptimalkan "
-            "secara lokal untuk menjamin kecepatan akses web publik.\n"
-            "- **Bebas Manipulasi:** Tidak ada data buatan atau tiruan (*zero hardcoding*). Seluruh angka bersumber mutlak dari publikasi lembaga aslinya.\n"
-            "- **Ekspor Terbuka:** Seluruh data yang ditampilkan dapat diunduh seketika dalam format CSV dan Excel (`.xlsx`) "
-            "untuk diolah kembali di Stata, R, Python, maupun SPSS.\n"
-            "- **Pengembangan Berkelanjutan:** Platform ini terus berada dalam masa pengembangan aktif guna meningkatkan kemudahan "
-            "pencarian variabel, memperkaya fitur eksplorasi, serta menyederhanakan pemanfaatan dataset bagi seluruh kalangan akademisi."
-        )
-
-    st.divider()
-
-    # =========================================================================
-    # KOTAK SARAN, LAPORAN EROR & PERMINTAAN DATA BARU
-    # =========================================================================
-    with st.container(border=True):
         st.subheader(":material/mail: Kotak Saran, Laporan Kendala & Permintaan Data")
         st.markdown(
             "Menemukan kekeliruan data, *error* pada sistem, atau membutuhkan seri indikator baru untuk riset Anda? "
