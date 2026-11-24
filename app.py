@@ -110,7 +110,7 @@ def beranda() -> None:
             """)
 
     st.divider()
-
+    with st.container(border=True):
     st.subheader("⚙️ Prinsip Integritas & Transparansi Data")
     st.markdown("""
     * **Live API & Curated Local Database:** Sebagian besar modul memanfaatkan penarikan *real-time* via API resmi, sementara modul spesifik berukuran masif (seperti V-Dem dan DSP) menggunakan arsip data terkurasi resmi yang dioptimalkan secara lokal untuk menjamin kecepatan akses web publik.
@@ -126,6 +126,7 @@ def beranda() -> None:
     # =========================================================================
     # KOTAK SARAN, LAPORAN EROR & PERMINTAAN DATA BARU
     # =========================================================================
+    with st.container(border=True):
     st.subheader("📬 Kotak Saran, Laporan Kendala & Permintaan Data")
     st.markdown(
         "Menemukan kekeliruan data, *error* pada sistem, atau membutuhkan seri indikator baru untuk riset Anda? "
