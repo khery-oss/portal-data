@@ -8,9 +8,9 @@ def apply_custom_theme() -> None:
         <style>
         @import url('https://fonts.googleapis.com/css2?family=Geist+Mono:wght@400;500;600&family=Geist:wght@400;500;600;700&display=swap');
 
-        /* 1. Ruang Kontainer Utama Lebih Rapat (mengurangi ruang kosong atas/bawah) */
+/* 1. Ruang Kontainer Utama Lebih Rapat (aman dari header atas Streamlit) */
         .block-container {
-            padding-top: 2rem !important;
+            padding-top: 4rem !important;
             padding-bottom: 2rem !important;
             max-width: 1200px;
         }
