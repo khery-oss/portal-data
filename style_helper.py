@@ -130,4 +130,31 @@ def apply_custom_theme() -> None:
             background-color: var(--primary-color) !important;
             color: #FFFFFF !important;
             border: 1px solid #38BDF8 !important;
-            border-radius: 6px !
+            border-radius: 6px !important;
+            min-height: 36px !important;
+            font-size: 0.85rem !important;
+            font-weight: 600 !important;
+            box-shadow: 0 0 12px rgba(0, 140, 255, 0.45) !important;
+            transition: transform 0.15s ease, box-shadow 0.15s ease !important;
+        }
+
+        button[kind="primary"]:hover,
+        [data-testid="stBaseButton-primary"]:hover {
+            background-color: #0047D1 !important;
+            transform: translateY(-1px);
+            box-shadow: 0 0 18px rgba(0, 212, 255, 0.7) !important;
+        }
+
+        /* Label kecil uppercase Geist Mono di atas judul */
+        .atlas-eyebrow {
+            font-family: 'Geist Mono', monospace !important;
+            font-size: 0.75rem;
+            letter-spacing: 0.02em;
+            text-transform: uppercase;
+            color: color-mix(in srgb, var(--text-color) 62%, transparent);
+            margin-bottom: 0.2rem;
+        }
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
