@@ -1,9 +1,10 @@
 import time
+from collections import Counter
 import requests
 import streamlit as st
 
-st.set_page_config(page_title="Tes BPS WebAPI v3", layout="wide")
-st.title("Tes BPS WebAPI v3")
+st.set_page_config(page_title="Tes BPS WebAPI v4", layout="wide")
+st.title("Tes BPS WebAPI v4")
 
 try:
     KEY = st.secrets["BPS_API_KEY"]
@@ -13,28 +14,36 @@ except Exception:
 
 BASE = "https://webapi.bps.go.id/v1/api/list"
 H = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"}
+LOG429 = []
 
 def panggil(**params):
-    try:
-        r = requests.get(BASE, params={"key": KEY, **params}, headers=H, timeout=60)
-        return r.status_code, r.json()
-    except Exception as e:
-        return None, {"galat": type(e).__name__}
+    for _ in range(6):
+        try:
+            r = requests.get(BASE, params={"key": KEY, **params}, headers=H, timeout=60)
+            js = r.json()
+        except Exception as e:
+            return None, {"galat": type(e).__name__}
+        if r.status_code == 429 and isinstance(js, dict):
+            LOG429.append({k: js.get(k) for k in ("code", "retry_after", "message")})
+            time.sleep(float(js.get("retry_after") or 5) + 0.5)
+            continue
+        return r.status_code, js
+    return 429, {"message": "429 berulang"}
 
-def semua_halaman(**params):
+def halaman(**params):
     kode, js = panggil(page=1, **params)
     d = js.get("data") if isinstance(js, dict) else None
     if kode != 200 or not (isinstance(d, list) and len(d) == 2):
-        return kode, js, []
+        return kode, js, [], None
     baris, meta = list(d[1]), d[0]
     for p in range(2, int(meta.get("pages", 1)) + 1):
-        time.sleep(0.3)
+        time.sleep(0.6)
         k2, j2 = panggil(page=p, **params)
         d2 = j2.get("data") if isinstance(j2, dict) else None
         if k2 != 200 or not (isinstance(d2, list) and len(d2) == 2):
-            return k2, j2, baris
+            return k2, j2, baris, meta
         baris.extend(d2[1])
-    return kode, js, baris
+    return kode, js, baris, meta
 
 def petakan(js, var):
     dc = js.get("datacontent")
@@ -49,72 +58,64 @@ def petakan(js, var):
             for y in th:
                 for z in tt:
                     k = f"{v}{var}{t}{y}{z}"
-                    if k in kunci:
-                        tabrakan += 1
+                    tabrakan += k in kunci
                     kunci[k] = 1
     cocok = sum(1 for k in dc if k in kunci)
-    return (f"vervar {len(js.get('vervar') or [])} turvar {len(js.get('turvar') or [])} "
-            f"tahun {len(th)} turtahun {len(js.get('turtahun') or [])} | datacontent {len(dc)} "
-            f"cocok {cocok} tak-cocok {len(dc) - cocok} tabrakan {tabrakan}")
-
-def ringkas_data(kode, js):
-    if not isinstance(js, dict):
-        return f"HTTP {kode}"
-    pesan = str(js.get("message") or "")[:90].replace(KEY, "***")
-    return f"HTTP {kode} {js.get('status')} {js.get('data-availability') or ''} {pesan}"
+    tipe = dict(Counter(type(v).__name__ for v in dc.values()))
+    return (f"vervar {len(js.get('vervar') or [])} turvar {len(js.get('turvar') or [])} tahun {len(th)} "
+            f"turtahun {len(js.get('turtahun') or [])} | datacontent {len(dc)} cocok {cocok} tak-cocok {len(dc) - cocok} "
+            f"tabrakan {tabrakan} | tipe nilai {tipe}")
 
 if st.button("Jalankan tes", type="primary"):
-    st.header("A. Pemetaan dan jumlah periode per variabel")
-    var_uji = [70, 182, 195, 198, 42, 53, 58]
-    for kata in ("inflasi", "produk domestik bruto"):
-        k, js, baris = semua_halaman(model="var", domain="0000", keyword=kata)
-        st.text(f"keyword '{kata}': HTTP {k}, {len(baris)} variabel; tiga pertama: {[(b['var_id'], b['title'][:50]) for b in baris[:3]]}")
-        var_uji += [b["var_id"] for b in baris[:2]]
-        time.sleep(0.3)
-    for var in dict.fromkeys(var_uji):
-        k, js, baris = semua_halaman(model="th", domain="0000", var=var)
-        th_ids = [b["th_id"] for b in baris]
+    st.header("A. Pemetaan kunci (3 periode terbaru per variabel)")
+    for var in [70, 182, 195, 198, 42, 53, 58, 1, 1890]:
+        k, js, baris, _ = halaman(model="th", domain="0000", var=var)
+        th_ids = [b["th_id"] for b in baris][:3]
         if not th_ids:
-            st.text(f"var {var}: tidak ada periode | {ringkas_data(k, js)}")
+            st.text(f"var {var}: tidak ada periode (HTTP {k})")
             continue
-        time.sleep(0.3)
-        ka, ja = panggil(model="data", domain="0000", var=var, th=";".join(str(t) for t in th_ids))
-        info_a = petakan(ja, var) if ka == 200 and isinstance(ja, dict) and ja.get("datacontent") is not None else ""
-        time.sleep(0.3)
-        kb, jb = panggil(model="data", domain="0000", var=var, th=f"{min(th_ids)}:{max(th_ids)}")
-        dc_b = len(jb.get("datacontent") or {}) if isinstance(jb, dict) else 0
-        st.text(f"var {var} | periode {len(th_ids)} ({baris[0]['th']}..{baris[-1]['th']}) | A(;) {ringkas_data(ka, ja)} | {info_a} | B(:) {ringkas_data(kb, jb)} datacontent {dc_b}")
-        if isinstance(ja, dict) and ja.get("turtahun"):
-            st.text(f"   turtahun: {[x.get('label') for x in ja['turtahun']][:6]} | tahun contoh: {[x.get('label') for x in (ja.get('tahun') or [])][:3]} | unit: {(ja.get('var') or [{}])[0].get('unit')} | decimal: {(ja.get('var') or [{}])[0].get('decimal')} | last_update: {ja.get('last_update')}")
-        time.sleep(0.3)
-
-    st.header("B. Penyaringan katalog")
-    for label, prm in [
-        ("keyword=kemiskinan", dict(keyword="kemiskinan")),
-        ("keyword=Kemiskinan", dict(keyword="Kemiskinan")),
-        ("keyword=miskin", dict(keyword="miskin")),
-        ("keyword=poverty", dict(keyword="poverty")),
-        ("subject=23", dict(subject=23)),
-        ("subject=23 + keyword=kemiskinan", dict(subject=23, keyword="kemiskinan")),
-        ("subject=30 + keyword=kemiskinan", dict(subject=30, keyword="kemiskinan")),
-        ("lang=eng keyword=poverty", dict(lang="eng", keyword="poverty")),
-    ]:
-        k, js = panggil(model="var", domain="0000", page=1, **prm)
-        d = js.get("data") if isinstance(js, dict) else None
-        if k == 200 and isinstance(d, list) and len(d) == 2:
-            st.text(f"{label}: total {d[0].get('total')} | halaman {d[0].get('pages')} | judul pertama: {(d[1][0]['title'][:70] if d[1] else '-')} | sub_id baris: {sorted({r.get('sub_id') for r in d[1]})}")
+        time.sleep(0.6)
+        ka, ja = panggil(model="data", domain="0000", var=var, th=";".join(map(str, th_ids)))
+        if ka == 200 and isinstance(ja, dict) and ja.get("datacontent") is not None:
+            v0 = (ja.get("var") or [{}])[0]
+            st.text(f"var {var} th={th_ids} | {petakan(ja, var)}")
+            st.text(f"   judul: {str(v0.get('label'))[:70]} | unit: {v0.get('unit')} | decimal: {v0.get('decimal')} | "
+                    f"turtahun: {[x.get('label') for x in ja.get('turtahun', [])][:4]} | "
+                    f"vervar berlabel INDONESIA: {[x['label'] for x in ja.get('vervar', []) if 'INDONESIA' in str(x.get('label')).upper()][:2]} | "
+                    f"last_update: {ja.get('last_update')} | availability: {ja.get('data-availability')}")
         else:
-            st.text(f"{label}: {ringkas_data(k, js)}")
-        time.sleep(0.3)
+            st.text(f"var {var} th={th_ids}: HTTP {ka} {str((ja or {}).get('message'))[:120]}")
+        if len(th_ids) == 3 and max(th_ids) - min(th_ids) == 2:
+            time.sleep(0.6)
+            kb, jb = panggil(model="data", domain="0000", var=var, th=f"{min(th_ids)}:{max(th_ids)}")
+            st.text(f"   rentang titik-dua {min(th_ids)}:{max(th_ids)} -> HTTP {kb}, datacontent {len((jb or {}).get('datacontent') or {}) if isinstance(jb, dict) else 0}")
+        time.sleep(0.6)
 
-    st.header("C. Bentuk galat")
+    st.header("B. Periode tanpa data dan galat")
     k, js = panggil(model="data", domain="0000", var=70, th=999)
-    st.text(f"th=999: {ringkas_data(k, js)} | kunci: {list(js.keys()) if isinstance(js, dict) else ''}")
-    time.sleep(0.3)
+    st.text(f"th=999: HTTP {k} | {({x: (js or {}).get(x) for x in ('status', 'data-availability', 'message')})}")
+    time.sleep(0.6)
     k, js = panggil(model="data", domain="0000", var=999999, th=114)
-    st.text(f"var=999999: {ringkas_data(k, js)}")
-    time.sleep(0.3)
-    kode, js = panggil(model="var", domain="0000")
-    d = js.get("data") if isinstance(js, dict) else None
-    if isinstance(d, list) and len(d) == 2 and d[1]:
-        st.text(f"kunci satu baris katalog: {list(d[1][0].keys())}")
+    st.text(f"var=999999: HTTP {k} | {({x: (js or {}).get(x) for x in ('status', 'data-availability', 'message')})}")
+    time.sleep(0.6)
+
+    st.header("C. Subjek dan konsistensi katalog")
+    k, js, baris, meta = halaman(model="subject", domain="0000")
+    st.text(f"subjek: terkumpul {len(baris)} dari total {meta.get('total') if meta else None}")
+    k, js, baris, meta = halaman(model="var", domain="0000", subject=30)
+    st.text(f"variabel subject=30: terkumpul {len(baris)} dari total {meta.get('total') if meta else None}")
+
+    st.header("D. Batas laju")
+    n = 0
+    awal = len(LOG429)
+    t0 = time.time()
+    while n < 80 and len(LOG429) == awal:
+        r = requests.get(BASE, params={"key": KEY, "model": "th", "domain": "0000", "var": 70}, headers=H, timeout=60)
+        n += 1
+        if r.status_code == 429:
+            js = r.json()
+            LOG429.append({k: js.get(k) for k in ("code", "retry_after", "message")})
+            break
+        time.sleep(0.25)
+    st.text(f"panggilan beruntun sebelum 429: {n} dalam {time.time() - t0:.1f} dtk | 429 terakhir: {LOG429[-1] if LOG429 else 'tidak ada'}")
+    st.text(f"semua catatan 429 selama tes: {LOG429}")
