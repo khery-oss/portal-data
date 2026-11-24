@@ -2,20 +2,20 @@ import streamlit as st
 
 
 def apply_custom_theme() -> None:
-    """Menerapkan Fira Code, aksen tombol neon, dan warna adaptif Light/Dark."""
+    """Menerapkan IBM Plex Mono, aksen tombol neon, dan warna adaptif Light/Dark."""
     st.markdown(
         """
         <style>
-        @import url('https://fonts.googleapis.com/css2?family=IBMPlex+Mono:wght@400;500;600&family=Space+Grotesk:wght@400;500;600;700&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&display=swap');
 
         /* Font utama */
         html, body, .stApp, .stMarkdown, p, li, label, input, textarea, button {
-            font-family: 'Fira Code', -apple-system, BlinkMacSystemFont, sans-serif !important;
+            font-family: 'IBM Plex Mono', monospace !important;
         }
 
         /* Judul mengikuti warna tema aktif (putih di Dark, gelap di Light) */
         h1, h2, h3 {
-            font-family: 'Fira Code', sans-serif !important;
+            font-family: 'IBM Plex Mono', monospace !important;
             color: var(--text-color) !important;
             letter-spacing: -0.03em;
             font-weight: 700 !important;
@@ -28,7 +28,7 @@ def apply_custom_theme() -> None:
 
         /* Aksen monospace untuk angka metrik, caption, dan kode */
         code, pre, [data-testid="stMetricValue"], [data-testid="stCaptionContainer"] {
-            font-family: 'Fira Code', monospace !important;
+            font-family: 'IBM Plex Mono', monospace !important;
         }
 
         /* Sidebar adaptif dengan garis batas halus */
@@ -58,8 +58,7 @@ def apply_custom_theme() -> None:
             color: var(--text-color) !important;
         }
 
-        /* Tombol Primary bergaya Neon dengan kontras tinggi & efek glow */
-/* Tombol Primary Biru Neon (Kontras tinggi di Light & Dark) */
+        /* Tombol Primary Biru Neon (Kontras tinggi di Light & Dark) */
         button[kind="primary"],
         [data-testid="stBaseButton-primary"] {
             background-color: var(--primary-color) !important;
@@ -79,9 +78,9 @@ def apply_custom_theme() -> None:
 
         /* Label kecil uppercase monospace di atas judul */
         .atlas-eyebrow {
-            font-family: 'Fira Code', monospace !important;
+            font-family: 'IBM Plex Mono', monospace !important;
             font-size: 0.78rem;
-            letter-spacing: 0.08em;
+            letter-spacing: 0.02em;
             text-transform: uppercase;
             color: color-mix(in srgb, var(--text-color) 62%, transparent);
             margin-bottom: 0.25rem;
