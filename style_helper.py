@@ -14,11 +14,28 @@ def apply_custom_theme() -> None:
         }
 
         /* Judul tegas dan rapat mengikuti warna tema aktif */
+/* Judul tegas, rapat, dan proporsional */
         h1, h2, h3 {
             font-family: 'Geist', sans-serif !important;
             color: var(--text-color) !important;
             letter-spacing: -0.03em;
             font-weight: 700 !important;
+        }
+
+        h1 {
+            font-size: 1.85rem !important;   /* st.title() — turun dari ~2.75rem (44px) ke ~30px */
+            line-height: 1.2 !important;
+            padding-top: 0.25rem !important;
+        }
+
+        h2 {
+            font-size: 1.35rem !important;   /* st.header() — ~21.6px */
+            line-height: 1.3 !important;
+        }
+
+        h3 {
+            font-size: 1.1rem !important;    /* st.subheader() — ~17.6px */
+            line-height: 1.35 !important;
         }
 
         /* Paragraf sedikit lebih lembut, tetap adaptif di Light & Dark */
