@@ -155,7 +155,7 @@ def apply_custom_theme() -> None:
 
         /* 7. Garis Pemisah Lebih Tipis & Rapat */
         hr {
-            margin-top: 0.35rem !important;
+            margin-top: 0.15rem !important;
             margin-bottom: 0.75rem !important;
             border-color: color-mix(in srgb, var(--text-color) 12%, transparent) !important;
         }
