@@ -2,20 +2,20 @@ import streamlit as st
 
 
 def apply_custom_theme() -> None:
-    """Menerapkan Geist, aksen tombol neon, dan warna adaptif Light/Dark."""
+    """Menerapkan Geist, Geist Mono, aksen tombol biru neon, dan warna adaptif Light/Dark."""
     st.markdown(
         """
         <style>
-        @import url('https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Geist+Mono:wght@400;500;600&family=Geist:wght@400;500;600;700&display=swap');
 
-        /* Font utama */
+        /* Font utama Geist (tanpa menyentuh span global agar ikon Material Streamlit aman) */
         html, body, .stApp, .stMarkdown, p, li, label, input, textarea, button {
-            font-family: 'Geist', monospace !important;
+            font-family: 'Geist', -apple-system, BlinkMacSystemFont, sans-serif !important;
         }
 
-        /* Judul mengikuti warna tema aktif (putih di Dark, gelap di Light) */
+        /* Judul tegas dan rapat mengikuti warna tema aktif */
         h1, h2, h3 {
-            font-family: 'Geist', monospace !important;
+            font-family: 'Geist', sans-serif !important;
             color: var(--text-color) !important;
             letter-spacing: -0.03em;
             font-weight: 700 !important;
@@ -26,9 +26,10 @@ def apply_custom_theme() -> None:
             color: color-mix(in srgb, var(--text-color) 82%, transparent);
         }
 
-        /* Aksen monospace untuk angka metrik, caption, dan kode */
+        /* Aksen Geist Mono untuk angka metrik, caption, dan kode */
         code, pre, [data-testid="stMetricValue"], [data-testid="stCaptionContainer"] {
-            font-family: 'Geist', monospace !important;
+            font-family: 'Geist Mono', monospace !important;
+            letter-spacing: -0.02em;
         }
 
         /* Sidebar adaptif dengan garis batas halus */
@@ -73,19 +74,3 @@ def apply_custom_theme() -> None:
         [data-testid="stBaseButton-primary"]:hover {
             background-color: #0047D1 !important;
             transform: translateY(-1px);
-            box-shadow: 0 0 22px rgba(0, 212, 255, 0.75) !important;
-        }
-
-        /* Label kecil uppercase monospace di atas judul */
-        .atlas-eyebrow {
-            font-family: 'Geist', monospace !important;
-            font-size: 0.78rem;
-            letter-spacing: 0.02em;
-            text-transform: uppercase;
-            color: color-mix(in srgb, var(--text-color) 62%, transparent);
-            margin-bottom: 0.25rem;
-        }
-        </style>
-        """,
-        unsafe_allow_html=True,
-    )
