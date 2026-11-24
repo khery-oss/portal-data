@@ -160,9 +160,10 @@ def apply_custom_theme() -> None:
             border-color: color-mix(in srgb, var(--text-color) 12%, transparent) !important;
         }
 
-        /* 8. Tombol Primary Biru Neon (Kontras Tinggi di Light & Dark) */
+/* 8. Tombol Primary & Tombol Unduh Biru Neon */
         button[kind="primary"],
-        [data-testid="stBaseButton-primary"] {
+        [data-testid="stBaseButton-primary"],
+        [data-testid="stDownloadButton"] button {
             background-color: var(--primary-color) !important;
             color: #FFFFFF !important;
             border: 1px solid #38BDF8 !important;
@@ -175,7 +176,8 @@ def apply_custom_theme() -> None:
         }
 
         button[kind="primary"]:hover,
-        [data-testid="stBaseButton-primary"]:hover {
+        [data-testid="stBaseButton-primary"]:hover,
+        [data-testid="stDownloadButton"] button:hover {
             background-color: #0047D1 !important;
             transform: translateY(-1px);
             box-shadow: 0 0 18px rgba(0, 212, 255, 0.7) !important;
