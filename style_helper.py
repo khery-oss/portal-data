@@ -25,30 +25,33 @@ def apply_custom_theme() -> None:
             font-family: 'Geist', -apple-system, BlinkMacSystemFont, sans-serif !important;
         }
 
-        h1, h2, h3 {
+h1, h2, h3 {
             font-family: 'Geist', sans-serif !important;
             color: var(--text-color) !important;
             letter-spacing: -0.025em;
             font-weight: 700 !important;
-            padding-top: 0.15rem !important;
-            padding-bottom: 0.15rem !important;
         }
 
         h1 {
             font-size: 1.65rem !important;
             line-height: 1.2 !important;
+            padding-top: 0.15rem !important;
+            padding-bottom: 0.65rem !important;
         }
 
         h2 {
             font-size: 1.15rem !important;
             line-height: 1.3 !important;
+            padding-top: 0.75rem !important;
+            padding-bottom: 0.45rem !important;
         }
 
         h3 {
             font-size: 1.0rem !important;
             line-height: 1.35 !important;
+            padding-top: 0.5rem !important;
+            padding-bottom: 0.35rem !important;
         }
-
         .stMarkdown p, .stMarkdown li {
             font-size: 0.875rem !important;
             line-height: 1.5;
