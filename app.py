@@ -63,37 +63,51 @@ def beranda() -> None:
         "yang tersedia di bilah navigasi kiri:"
     )
 
-    col1, col2 = st.columns(2)
+col1, col2 = st.columns(2)
 
     with col1:
-        st.markdown("""
-        ### 🌐 1. World Bank (WDI)
-        * **Cakupan:** Indikator makroekonomi jangka panjang, pertumbuhan PDB riil/nominal, neraca transaksi berjalan, perdagangan internasional, dan utang.
-        * **Penyedia:** World Development Indicators (WDI) API.
+        with st.container(border=True):
+            st.markdown("""
+            ### 🌐 1. World Bank (WDI)
+            * **Cakupan:** Indikator makroekonomi jangka panjang, pertumbuhan PDB riil/nominal, neraca transaksi berjalan, perdagangan internasional, dan utang.
+            * **Penyedia:** World Development Indicators (WDI) API.
+            """)
 
-        ### 📈 2. FRED (Federal Reserve Bank of St. Louis)
-        * **Cakupan:** Suku bunga global/AS, perbandingan kebijakan moneter, inflasi produsen, dan harga komoditas strategis global.
-        * **Penyedia:** Federal Reserve Economic Data REST API.
+        with st.container(border=True):
+            st.markdown("""
+            ### 📈 2. FRED (Federal Reserve Bank of St. Louis)
+            * **Cakupan:** Suku bunga global/AS, perbandingan kebijakan moneter, inflasi produsen, dan harga komoditas strategis global.
+            * **Penyedia:** Federal Reserve Economic Data REST API.
+            """)
 
-        ### 🇺🇳 3. UN SDGs (United Nations)
-        * **Cakupan:** Indikator tujuan pembangunan berkelanjutan global, kemiskinan ekstrem, ketimpangan (*income share bottom 40%*), dan transisi energi bersih.
-        * **Penyedia:** United Nations Statistics Division (UNSD) SDG API.
-        """)
+        with st.container(border=True):
+            st.markdown("""
+            ### 🇺🇳 3. UN SDGs (United Nations)
+            * **Cakupan:** Indikator tujuan pembangunan berkelanjutan global, kemiskinan ekstrem, ketimpangan (*income share bottom 40%*), dan transisi energi bersih.
+            * **Penyedia:** United Nations Statistics Division (UNSD) SDG API.
+            """)
 
     with col2:
-        st.markdown("""
-        ### 🏥 4. WHO (World Health Organization)
-        * **Cakupan:** Indikator kesehatan publik, angka harapan hidup, stunting & gizi balita, tenaga medis, jaminan kesehatan semesta (*UHC*), dan modal manusia.
-        * **Penyedia:** WHO Global Health Observatory (GHO) OData API.
+        with st.container(border=True):
+            st.markdown("""
+            ### 🏥 4. WHO (World Health Organization)
+            * **Cakupan:** Indikator kesehatan publik, angka harapan hidup, stunting & gizi balita, tenaga medis, jaminan kesehatan semesta (*UHC*), dan modal manusia.
+            * **Penyedia:** WHO Global Health Observatory (GHO) OData API.
+            """)
 
-        ### 🗳️ 5. V-Dem (Varieties of Democracy)
-        * **Cakupan:** Kualitas demokrasi elektoral, liberal, partisipatif, deliberatif, egaliter, korupsi sektor publik, supremasi hukum, dan kebebasan sipil.
-        * **Penyedia:** V-Dem Institute Dataset (Terintegrasi sinkronisasi *Codebook* penjelas & rumus matematis turunan).
+        with st.container(border=True):
+            st.markdown("""
+            ### 🗳️ 5. V-Dem (Varieties of Democracy)
+            * **Cakupan:** Kualitas demokrasi elektoral, liberal, partisipatif, deliberatif, egaliter, korupsi sektor publik, supremasi hukum, dan kebebasan sipil.
+            * **Penyedia:** V-Dem Institute Dataset (Terintegrasi sinkronisasi *Codebook* penjelas & rumus matematis turunan).
+            """)
 
-        ### 💻 6. Digital Society & Economy
-        * **Cakupan:** Inklusi keuangan (Global Findex), kesiapan ekonomi digital (UNCTAD), disinformasi, sensor internet, pemadaman jaringan, dan kebebasan digital (DSP).
-        * **Penyedia:** World Bank Findex, UNCTAD, & Digital Society Project (DSP).
-        """)
+        with st.container(border=True):
+            st.markdown("""
+            ### 💻 6. Digital Society & Economy
+            * **Cakupan:** Inklusi keuangan (Global Findex), kesiapan ekonomi digital (UNCTAD), disinformasi, sensor internet, pemadaman jaringan, dan kebebasan digital (DSP).
+            * **Penyedia:** World Bank Findex, UNCTAD, & Digital Society Project (DSP).
+            """)
 
     st.divider()
 
