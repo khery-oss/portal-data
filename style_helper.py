@@ -59,20 +59,22 @@ def apply_custom_theme() -> None:
         }
 
         /* Tombol Primary bergaya Neon dengan kontras tinggi & efek glow */
+/* Tombol Primary Biru Neon (Kontras tinggi di Light & Dark) */
         button[kind="primary"],
         [data-testid="stBaseButton-primary"] {
             background-color: var(--primary-color) !important;
-            color: #FFFFFF !important; /* Ganti ke #0B111A jika pakai Neon Cyan/Emerald */
-            border: 1px solid color-mix(in srgb, var(--primary-color) 75%, white) !important;
+            color: #FFFFFF !important;
+            border: 1px solid #38BDF8 !important;
             font-weight: 600 !important;
-            box-shadow: 0 0 14px color-mix(in srgb, var(--primary-color) 45%, transparent) !important;
+            box-shadow: 0 0 14px rgba(0, 140, 255, 0.55) !important;
             transition: transform 0.15s ease, box-shadow 0.15s ease !important;
         }
 
         button[kind="primary"]:hover,
         [data-testid="stBaseButton-primary"]:hover {
+            background-color: #0047D1 !important;
             transform: translateY(-1px);
-            box-shadow: 0 0 22px color-mix(in srgb, var(--primary-color) 70%, transparent) !important;
+            box-shadow: 0 0 22px rgba(0, 212, 255, 0.75) !important;
         }
 
         /* Label kecil uppercase monospace di atas judul */
