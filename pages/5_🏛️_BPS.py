@@ -1,3 +1,4 @@
+import base64
 import html
 import io
 import re
@@ -137,10 +138,13 @@ def cari_variabel(subjek_id: int, keyword: str) -> list:
     if keyword:
         prm["keyword"] = keyword
     baris = semua_halaman(**prm)
-    return [
+    hasil = [
         {k: b.get(k) for k in ("var_id", "title", "sub_id", "sub_name", "notes", "unit")}
         for b in baris if b.get("var_id") is not None
     ]
+    for h in hasil:
+        h["title"] = bersihkan_html(h["title"])
+    return hasil
 
 
 @st.cache_data(ttl=3600, show_spinner=False)
@@ -160,7 +164,7 @@ def bongkar(js: dict, var_id: int) -> dict:
     meta = {
         "var": info,
         "last_update": js.get("last_update"),
-        "labelvervar": js.get("labelvervar"),
+        "labelvervar": bersihkan_html(js.get("labelvervar")),
     }
     dc = js.get("datacontent")
     if not dc:
@@ -186,10 +190,10 @@ def bongkar(js: dict, var_id: int) -> dict:
             raise RuntimeError(f"Kunci data {kunci} tidak dapat dipetakan ke dimensi. Data ditolak.")
         v, t, y, z, urut = peta[kunci]
         baris.append({
-            "kode_vervar": v["val"], "vervar": v.get("label"),
-            "kode_turvar": t["val"], "turvar": t.get("label"),
-            "th_id": y["val"], "tahun": y.get("label"),
-            "kode_turth": z["val"], "turtahun": z.get("label"), "urut_turth": urut,
+            "kode_vervar": v["val"], "vervar": bersihkan_html(v.get("label")),
+            "kode_turvar": t["val"], "turvar": bersihkan_html(t.get("label")),
+            "th_id": y["val"], "tahun": bersihkan_html(y.get("label")),
+            "kode_turth": z["val"], "turtahun": bersihkan_html(z.get("label")), "urut_turth": urut,
             "nilai": nilai,
         })
     return {"meta": meta, "rows": baris}
@@ -215,6 +219,14 @@ def bersihkan_html(teks) -> str:
     t = re.sub(r"[ \t\u00a0]+", " ", t)
     t = re.sub(r"\s*\n\s*", "\n", t)
     return t.strip()
+
+
+def url_bps(var_id: int, judul: str) -> str:
+    """Tautan halaman tabel dinamis di situs resmi BPS. Kode halaman = base64 dari '<ID variabel>#2';
+    bagian akhir (slug) hanya hiasan dan tidak menentukan halaman."""
+    kode = base64.b64encode(f"{var_id}#2".encode()).decode()
+    slug = re.sub(r"[^a-z0-9]+", "-", str(judul).lower()).strip("-") or "tabel"
+    return f"https://www.bps.go.id/id/statistics-table/2/{kode}/{slug}.html"
 
 
 def tarik_semua(var_id: int):
@@ -243,15 +255,23 @@ def tarik_semua(var_id: int):
     return meta, baris, periode, kosong, gagal
 
 
+def bedakan_label(label, kode) -> list:
+    """Label yang sama untuk kode berbeda diberi kode agar tidak tergabung saat disaring."""
+    pasangan = pd.DataFrame({"l": label.fillna("(tidak ada)").astype(str), "k": kode})
+    banyak = pasangan.groupby("l")["k"].nunique()
+    kembar = set(banyak[banyak > 1].index)
+    return [f"{l} [kode {k}]" if l in kembar else l for l, k in zip(pasangan["l"], pasangan["k"])]
+
+
 def susun_dataframe(rows: list, meta: dict):
     """Mengembalikan (df, kolom_dimensi). Nilai apa adanya: tanpa pembulatan, tanpa rata-rata."""
     d = pd.DataFrame(rows).sort_values(["th_id", "urut_turth"], kind="stable").reset_index(drop=True)
     nama_ver = (meta or {}).get("labelvervar") or "Dimensi Vertikal"
     df = pd.DataFrame({
-        nama_ver: d["vervar"].fillna("(tidak ada)").astype(str),
-        "Variabel Turunan": d["turvar"].fillna("(tidak ada)").astype(str),
+        nama_ver: bedakan_label(d["vervar"], d["kode_vervar"]),
+        "Variabel Turunan": bedakan_label(d["turvar"], d["kode_turvar"]),
         "Tahun": d["tahun"].astype(str),
-        "Periode": d["turtahun"].fillna("(tidak ada)").astype(str),
+        "Periode": bedakan_label(d["turtahun"], d["kode_turth"]),
         "Nilai (angka)": pd.to_numeric(d["nilai"], errors="coerce"),
     })
     teks_asli = d["nilai"].map(lambda v: v if isinstance(v, str) else None)
@@ -321,15 +341,19 @@ idx = st.selectbox("Pilih Tabel:", list(range(len(hasil_cari))), format_func=lam
 pilih = hasil_cari[idx]
 var_id, judul_var = int(pilih["var_id"]), pilih["title"]
 
-with st.expander("ℹ️ Metadata & Catatan dari Katalog BPS", expanded=False):
+link_resmi = url_bps(var_id, judul_var)
+with st.expander("ℹ️ Definisi & Metodologi Resmi", expanded=False):
     st.markdown(f"**Judul Tabel:** {judul_var}")
     st.markdown(f"**ID Variabel BPS:** `{var_id}`")
     st.markdown(f"**Subjek:** {pilih.get('sub_name') or '-'}")
-    st.markdown(f"**Satuan:** {pilih.get('unit') or 'tidak dicantumkan oleh API'}")
+    if pilih.get("unit"):
+        st.markdown(f"**Satuan:** {pilih['unit']}")
     catatan_katalog = bersihkan_html(pilih.get("notes"))
     if catatan_katalog:
         st.markdown("**Catatan & sumber:**")
-        st.text(catatan_katalog)
+        for baris_cat in catatan_katalog.split("\n"):
+            st.markdown(f"- {baris_cat}")
+    st.markdown(f"🔗 [Lihat di BPS]({link_resmi})")
 
 # =============================================================================
 # 3. PENARIKAN DATA (hasil disimpan di session_state)
@@ -373,14 +397,11 @@ if hasil:
         df["ID Variabel"] = hasil["var_id"]
         nama_ver = dim_cols[0]
         st.success(f"Berhasil menarik **{len(df)}** observasi dari {hasil['n_periode']} periode tahun BPS.")
+        st.markdown(f"🔗 **Halaman Resmi BPS:** [{hasil['judul']}]({url_bps(hasil['var_id'], hasil['judul'])})")
 
         # --- Pilihan dimensi: tanpa rata-rata ---
         mask = pd.Series(True, index=df.index)
         dim_tetap = []
-        st.markdown(
-            "**Dimensi pada tabel ini.** Default memilih baris berlabel *INDONESIA* bila ada pada dimensi vertikal; "
-            "selain itu semua nilai dipilih. Tidak ada nilai yang dirata-ratakan."
-        )
         kolom_w = st.columns(3)
         for i, c in enumerate(dim_cols):
             nilai = sorted(df[c].unique(), key=lambda x: str(x))
@@ -466,29 +487,24 @@ if hasil:
             )
             st.plotly_chart(fig, use_container_width=True)
 
-            # --- Sumber ---
+            # --- Sumber data: sumber asli diambil dari catatan yang dikirim API ---
             with st.expander("📚 Sumber Data", expanded=False):
                 st.markdown("**Basis data:** BPS WebAPI (webapi.bps.go.id), domain nasional.")
                 v_info = meta.get("var") or {}
-                st.markdown(f"**Subjek:** {v_info.get('subj') or '-'}")
-                st.markdown(f"**Satuan:** {v_info.get('unit') or 'tidak dicantumkan oleh API'}")
+                if v_info.get("unit"):
+                    st.markdown(f"**Satuan:** {v_info['unit']}")
                 definisi = bersihkan_html(v_info.get("def"))
                 if definisi:
-                    st.markdown("**Definisi:**")
-                    st.text(definisi)
+                    st.markdown(f"**Definisi:** {definisi}")
                 catatan = bersihkan_html(v_info.get("note"))
                 if catatan:
-                    st.markdown("**Catatan & sumber (dari API):**")
-                    st.text(catatan)
-                st.markdown(f"**Pembaruan data (last_update):** {meta.get('last_update') or '-'}")
-                if v_info.get("decimal") is not None:
-                    st.markdown(
-                        f"**Petunjuk desimal BPS:** {v_info['decimal']} (hanya petunjuk tampilan dari BPS; "
-                        "angka di tabel dan unduhan tidak dibulatkan)."
-                    )
-                st.markdown(
-                    "🔗 [Portal BPS](https://www.bps.go.id/) · [BPS WebAPI](https://webapi.bps.go.id/developer/)"
-                )
+                    st.markdown("**Sumber & catatan asli menurut API:**")
+                    for baris_cat in catatan.split("\n"):
+                        st.markdown(f"- {baris_cat}")
+                else:
+                    st.markdown("API tidak mengirim catatan sumber untuk tabel ini.")
+                if meta.get("last_update"):
+                    st.markdown(f"**Pembaruan data (last_update):** {meta['last_update']}")
 
             with st.expander("📋 Tabel Runtun Waktu Lengkap"):
                 tabel = df_view.sort_values(["Kode Tahun (th_id)", "_urut"], ascending=[False, True], kind="stable")
