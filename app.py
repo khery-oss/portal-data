@@ -2,8 +2,6 @@ import io
 import re
 import requests
 import streamlit as st
-
-import streamlit as st
 from style_helper import apply_custom_theme
 
 # 1. Konfigurasi & tema dipanggil SEKALI saja di sini untuk semua halaman
@@ -14,51 +12,43 @@ st.set_page_config(
 )
 apply_custom_theme()
 
+TARGET_EMAIL = "indoecon.project@gmail.com"
 
-# 2. Bungkus konten halaman utama Anda saat ini ke dalam fungsi
-def beranda():
+
+def is_valid_email(email: str) -> bool:
+    pattern = r"^[\w\.-]+@[\w\.-]+\.\w+$"
+    return re.match(pattern, email) is not None
+
+
+# 2. Seluruh konten halaman utama dibungkus di dalam fungsi beranda()
+def beranda() -> None:
     st.markdown(
         '<div class="atlas-eyebrow">INDONESIA MACRO &amp; INSTITUTIONAL DATA · OPEN ACCESS</div>',
         unsafe_allow_html=True,
     )
     st.title("📊 IE IndoEcon Explorer")
-    # ... tempel sisa kode beranda app.py Anda di sini ...
+    st.markdown(
+        "Portal observasi data makroekonomi, ketenagakerjaan, sosial-pendidikan, kesehatan publik, institusi politik, "
+        "dan demokrasi Indonesia yang terintegrasi langsung dengan berbagai institusi resmi internasional dan nasional."
+    )
 
+    # =========================================================================
+    # CATATAN AKADEMIS & PENGGUNAAN RISET (DISCLAIMER)
+    # =========================================================================
+    st.info(
+        "🎯 **Tujuan Platform & Pedoman Penggunaan Akademis:**\n\n"
+        "Website ini dibuat untuk kebutuhan para **peneliti, akademisi, dosen, dan mahasiswa** "
+        "dalam mengakses serta mengeksplorasi data resmi Indonesia secara cepat, transparan, dan terbuka.\n\n"
+        "* **Rekomendasi Cross-check:** Pengguna sangat disarankan untuk tetap melakukan *cross-check* kembali "
+        "ke website utama sumber data resmi seperti yang tercantum pada masing-masing modul.\n"
+        "* **Standar Sitasi & Penulisan Sumber:** Dalam penulisan karya ilmiah, skripsi, tesis, jurnal, maupun laporan riset, "
+        "penulisan sumber **tetap menggunakan sumber asli** tempat data diterbitkan "
+        "(seperti *World Bank, FRED, UN SDGs, WHO, Comtrade, hingga V-Dem Institute*).\n"
+        "* **Koreksi & Masukan:** Apabila terdapat kekeliruan, kesalahan data, atau *error* pada penarikan API/data, "
+        "bisa langsung diberitahukan ke email tim pengembang melalui formulir kontak di bawah."
+    )
 
-st.markdown(
-    '<div class="atlas-eyebrow">INDONESIA MACRO &amp; INSTITUTIONAL DATA · OPEN ACCESS</div>',
-    unsafe_allow_html=True,
-)
-
-st.set_page_config(
-    page_title="IndoEcon Explorer",
-    page_icon="📊",
-    layout="wide"
-)
-
-st.title("📊 IE IndoEcon Explorer")
-st.markdown(
-    "Portal observasi data makroekonomi, ketenagakerjaan, sosial-pendidikan, kesehatan publik, institusi politik, "
-    "dan demokrasi Indonesia yang terintegrasi langsung dengan berbagai institusi resmi internasional dan nasional."
-)
-
-# =============================================================================
-# CATATAN AKADEMIS & PENGGUNAAN RISET (DISCLAIMER)
-# =============================================================================
-st.info(
-    "🎯 **Tujuan Platform & Pedoman Penggunaan Akademis:**\n\n"
-    "Website ini dibuat untuk kebutuhan para **peneliti, akademisi, dosen, dan mahasiswa** "
-    "dalam mengakses serta mengeksplorasi data resmi Indonesia secara cepat, transparan, dan terbuka.\n\n"
-    "* **Rekomendasi Cross-check:** Pengguna sangat disarankan untuk tetap melakukan *cross-check* kembali "
-    "ke website utama sumber data resmi seperti yang tercantum pada masing-masing modul.\n"
-    "* **Standar Sitasi & Penulisan Sumber:** Dalam penulisan karya ilmiah, skripsi, tesis, jurnal, maupun laporan riset, "
-    "penulisan sumber **tetap menggunakan sumber asli** tempat data diterbitkan "
-    "(seperti *World Bank, FRED, UN SDGs, WHO, Comtrade, hingga V-Dem Institute*).\n"
-    "* **Koreksi & Masukan:** Apabila terdapat kekeliruan, kesalahan data, atau *error* pada penarikan API/data, "
-    "bisa langsung diberitahukan ke email tim pengembang melalui formulir kontak di bawah."
-)
-
-st.divider()
+    st.divider()
 
     st.subheader("📚 Arsitektur Modul Data")
     st.markdown(
