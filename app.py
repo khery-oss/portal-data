@@ -117,7 +117,7 @@ def beranda() -> None:
 
     st.divider()
 
-st.subheader("Arsitektur Modul Data")
+    st.subheader("Arsitektur Modul Data")
     st.markdown(
         "Pilih modul langsung dari kartu di bawah atau melalui bilah navigasi di sebelah kiri:"
     )
