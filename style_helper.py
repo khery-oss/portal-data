@@ -196,6 +196,51 @@ def apply_custom_theme() -> None:
         [data-testid="stDownloadButton"] button {
             width: 100% !important;
         }
+        
+        /* 9. Aksen Neon Khusus 3 Blok Beranda */
+        /* A. Pedoman Penggunaan Akademis (Expander Neon Biru) */
+        .st-key-pedoman_neon [data-testid="stExpander"] {
+            border: 1px solid #38BDF8 !important;
+            box-shadow: 0 0 14px rgba(0, 140, 255, 0.38) !important;
+            transition: box-shadow 0.2s ease !important;
+        }
+
+        .st-key-pedoman_neon [data-testid="stExpander"]:hover {
+            box-shadow: 0 0 22px rgba(0, 212, 255, 0.62) !important;
+        }
+
+        .st-key-pedoman_neon [data-testid="stExpander"] summary,
+        .st-key-pedoman_neon [data-testid="stExpander"] summary p {
+            color: #38BDF8 !important;
+            font-weight: 600 !important;
+            text-shadow: 0 0 10px rgba(56, 189, 248, 0.45);
+        }
+
+        /* B. Prinsip Integritas & Transparansi Data (Neon Hijau) */
+        .st-key-integritas_neon {
+            border: 1px solid #22C55E !important;
+            border-radius: 8px !important;
+            padding: 1.1rem 1.25rem !important;
+            box-shadow: 0 0 14px rgba(34, 197, 94, 0.32) !important;
+        }
+
+        .st-key-integritas_neon h3 {
+            color: #22C55E !important;
+            text-shadow: 0 0 10px rgba(34, 197, 94, 0.45);
+        }
+
+        /* C. Kotak Saran (Neon Biru) */
+        .st-key-saran_neon {
+            border: 1px solid #38BDF8 !important;
+            border-radius: 8px !important;
+            padding: 1.1rem 1.25rem !important;
+            box-shadow: 0 0 14px rgba(0, 140, 255, 0.35) !important;
+        }
+
+        .st-key-saran_neon h3 {
+            color: #38BDF8 !important;
+            text-shadow: 0 0 10px rgba(56, 189, 248, 0.45);
+        }
         </style>
         """,
         unsafe_allow_html=True,
