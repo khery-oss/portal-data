@@ -2,20 +2,20 @@ import streamlit as st
 
 
 def apply_custom_theme() -> None:
-    """Menerapkan Plus Jakarta Sans, aksen tombol neon, dan warna adaptif Light/Dark."""
+    """Menerapkan Geist, aksen tombol neon, dan warna adaptif Light/Dark."""
     st.markdown(
         """
         <style>
-        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&display=swap');
 
         /* Font utama */
         html, body, .stApp, .stMarkdown, p, li, label, input, textarea, button {
-            font-family: 'Plus Jakarta Sans', monospace !important;
+            font-family: 'Geist', monospace !important;
         }
 
         /* Judul mengikuti warna tema aktif (putih di Dark, gelap di Light) */
         h1, h2, h3 {
-            font-family: 'Plus Jakarta Sans', monospace !important;
+            font-family: 'Geist', monospace !important;
             color: var(--text-color) !important;
             letter-spacing: -0.03em;
             font-weight: 700 !important;
@@ -28,7 +28,7 @@ def apply_custom_theme() -> None:
 
         /* Aksen monospace untuk angka metrik, caption, dan kode */
         code, pre, [data-testid="stMetricValue"], [data-testid="stCaptionContainer"] {
-            font-family: 'Plus Jakarta Sans', monospace !important;
+            font-family: 'Geist', monospace !important;
         }
 
         /* Sidebar adaptif dengan garis batas halus */
@@ -78,7 +78,7 @@ def apply_custom_theme() -> None:
 
         /* Label kecil uppercase monospace di atas judul */
         .atlas-eyebrow {
-            font-family: 'Plus Jakarta Sans', monospace !important;
+            font-family: 'Geist', monospace !important;
             font-size: 0.78rem;
             letter-spacing: 0.02em;
             text-transform: uppercase;
