@@ -1,21 +1,55 @@
+import plotly.graph_objects as go
+import plotly.io as pio
 import streamlit as st
 
 
+def _register_plotly_theme() -> None:
+    """Mendaftarkan template Plotly global bergaya dark/light ledger."""
+    pio.templates["atlas_ledger"] = go.layout.Template(
+        layout=dict(
+            font=dict(family="Geist, sans-serif", size=12, color="#64748B"),
+            paper_bgcolor="rgba(0,0,0,0)",
+            plot_bgcolor="rgba(0,0,0,0)",
+            colorway=["#2DD4BF", "#38BDF8", "#818CF8", "#F59E0B"],
+            xaxis=dict(
+                showgrid=True,
+                gridcolor="rgba(148, 163, 184, 0.12)",
+                zeroline=False,
+                showline=False,
+                tickfont=dict(family="Geist Mono, monospace", size=11, color="#64748B"),
+            ),
+            yaxis=dict(
+                showgrid=True,
+                gridcolor="rgba(148, 163, 184, 0.12)",
+                zeroline=False,
+                showline=False,
+                tickfont=dict(family="Geist Mono, monospace", size=11, color="#64748B"),
+            ),
+            hoverlabel=dict(
+                bgcolor="#0F172A",
+                bordercolor="#334155",
+                font=dict(family="Geist Mono, monospace", size=12, color="#F8FAFC"),
+            ),
+        )
+    )
+    pio.templates.default = "atlas_ledger"
+
+
 def apply_custom_theme() -> None:
-    """Menerapkan Geist/Geist Mono, tata letak compact global, dan warna adaptif Light/Dark."""
+    """Menerapkan Geist/Geist Mono, tata letak compact global, template Plotly, dan warna adaptif Light/Dark."""
+    _register_plotly_theme()
     st.markdown(
         """
         <style>
         @import url('https://fonts.googleapis.com/css2?family=Geist+Mono:wght@400;500;600&family=Geist:wght@400;500;600;700&display=swap');
 
-/* 1. Ruang Kontainer Utama Lebih Rapat (aman dari header atas Streamlit) */
+        /* 1. Ruang Kontainer Utama Rapat & Aman dari Header Atas Streamlit */
         .block-container {
             padding-top: 4rem !important;
             padding-bottom: 2rem !important;
             max-width: 1200px;
         }
 
-        /* Jarak antar-elemen di area utama lebih padat */
         .stMainBlockContainer [data-testid="stVerticalBlock"] {
             gap: 0.65rem;
         }
@@ -25,7 +59,7 @@ def apply_custom_theme() -> None:
             font-family: 'Geist', -apple-system, BlinkMacSystemFont, sans-serif !important;
         }
 
-h1, h2, h3 {
+        h1, h2, h3 {
             font-family: 'Geist', sans-serif !important;
             color: var(--text-color) !important;
             letter-spacing: -0.025em;
@@ -35,7 +69,7 @@ h1, h2, h3 {
         h1 {
             font-size: 1.65rem !important;
             line-height: 1.2 !important;
-            padding-top: 0.15rem !important;
+            padding-top: 0.25rem !important;
             padding-bottom: 0.65rem !important;
         }
 
@@ -52,20 +86,19 @@ h1, h2, h3 {
             padding-top: 0.5rem !important;
             padding-bottom: 0.35rem !important;
         }
+
         .stMarkdown p, .stMarkdown li {
             font-size: 0.875rem !important;
             line-height: 1.5;
             color: color-mix(in srgb, var(--text-color) 82%, transparent);
         }
 
-        /* Label di atas input/dropdown dibuat kecil dan rapat */
         [data-testid="stWidgetLabel"] p {
             font-size: 0.82rem !important;
             font-weight: 500;
             margin-bottom: 0.1rem !important;
         }
 
-        /* Aksen Geist Mono untuk angka metrik, caption, dan kode */
         code, pre, [data-testid="stMetricValue"], [data-testid="stCaptionContainer"] {
             font-family: 'Geist Mono', monospace !important;
             letter-spacing: -0.02em;
@@ -93,7 +126,7 @@ h1, h2, h3 {
             font-size: 0.85rem !important;
         }
 
-        /* 5. Kotak Alert (st.success / st.info / st.warning) Lebih Tipis Tanpa Menghapus Warna Semantik */
+        /* 5. Kotak Alert (st.success / st.info / st.warning) Lebih Tipis */
         [data-testid="stAlert"],
         [data-testid="stAlertContainer"] {
             border-radius: 6px !important;
@@ -108,7 +141,7 @@ h1, h2, h3 {
             line-height: 1.45;
         }
 
-        /* 6. Expander (Detail Metadata & Sumber Resmi) Lebih Ramping */
+        /* 6. Expander Lebih Ramping */
         [data-testid="stExpander"] {
             background-color: var(--secondary-background-color) !important;
             border: 1px solid color-mix(in srgb, var(--text-color) 16%, transparent) !important;
@@ -120,14 +153,14 @@ h1, h2, h3 {
             font-size: 0.85rem !important;
         }
 
-        /* 7. Garis Pemisah (st.divider) Lebih Tipis & Rapat */
+        /* 7. Garis Pemisah Lebih Tipis & Rapat */
         hr {
             margin-top: 0.75rem !important;
             margin-bottom: 0.75rem !important;
             border-color: color-mix(in srgb, var(--text-color) 12%, transparent) !important;
         }
 
-        /* 8. Tombol Primary Biru Neon (Compact & Adaptif Light/Dark) */
+        /* 8. Tombol Primary Biru Neon (Kontras Tinggi di Light & Dark) */
         button[kind="primary"],
         [data-testid="stBaseButton-primary"] {
             background-color: var(--primary-color) !important;
@@ -152,12 +185,4 @@ h1, h2, h3 {
         .atlas-eyebrow {
             font-family: 'Geist Mono', monospace !important;
             font-size: 0.75rem;
-            letter-spacing: 0.02em;
-            text-transform: uppercase;
-            color: color-mix(in srgb, var(--text-color) 62%, transparent);
-            margin-bottom: 0.2rem;
-        }
-        </style>
-        """,
-        unsafe_allow_html=True,
-    )
+            letter-spacing: 0.0
