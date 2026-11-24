@@ -1,4 +1,3 @@
-import io
 import re
 from pathlib import Path
 import requests
@@ -69,55 +68,56 @@ def beranda() -> None:
         with st.container(border=True):
             st.markdown("""
             ### 🌐 1. World Bank (WDI)
-            * **Cakupan:** Indikator makroekonomi jangka panjang, pertumbuhan PDB riil/nominal, neraca transaksi berjalan, perdagangan internasional, dan utang.
-            * **Penyedia:** World Development Indicators (WDI) API.
+            - **Cakupan:** Indikator makroekonomi jangka panjang, pertumbuhan PDB riil/nominal, neraca transaksi berjalan, perdagangan internasional, dan utang.
+            - **Penyedia:** World Development Indicators (WDI) API.
             """)
 
         with st.container(border=True):
             st.markdown("""
             ### 📈 2. FRED (Federal Reserve Bank of St. Louis)
-            * **Cakupan:** Suku bunga global/AS, perbandingan kebijakan moneter, inflasi produsen, dan harga komoditas strategis global.
-            * **Penyedia:** Federal Reserve Economic Data REST API.
+            - **Cakupan:** Suku bunga global/AS, perbandingan kebijakan moneter, inflasi produsen, dan harga komoditas strategis global.
+            - **Penyedia:** Federal Reserve Economic Data REST API.
             """)
 
         with st.container(border=True):
             st.markdown("""
             ### 🇺🇳 3. UN SDGs (United Nations)
-            * **Cakupan:** Indikator tujuan pembangunan berkelanjutan global, kemiskinan ekstrem, ketimpangan (*income share bottom 40%*), dan transisi energi bersih.
-            * **Penyedia:** United Nations Statistics Division (UNSD) SDG API.
+            - **Cakupan:** Indikator tujuan pembangunan berkelanjutan global, kemiskinan ekstrem, ketimpangan (*income share bottom 40%*), dan transisi energi bersih.
+            - **Penyedia:** United Nations Statistics Division (UNSD) SDG API.
             """)
 
     with col2:
         with st.container(border=True):
             st.markdown("""
             ### 🏥 4. WHO (World Health Organization)
-            * **Cakupan:** Indikator kesehatan publik, angka harapan hidup, stunting & gizi balita, tenaga medis, jaminan kesehatan semesta (*UHC*), dan modal manusia.
-            * **Penyedia:** WHO Global Health Observatory (GHO) OData API.
+            - **Cakupan:** Indikator kesehatan publik, angka harapan hidup, stunting & gizi balita, tenaga medis, jaminan kesehatan semesta (*UHC*), dan modal manusia.
+            - **Penyedia:** WHO Global Health Observatory (GHO) OData API.
             """)
 
         with st.container(border=True):
             st.markdown("""
             ### 🗳️ 5. V-Dem (Varieties of Democracy)
-            * **Cakupan:** Kualitas demokrasi elektoral, liberal, partisipatif, deliberatif, egaliter, korupsi sektor publik, supremasi hukum, dan kebebasan sipil.
-            * **Penyedia:** V-Dem Institute Dataset (Terintegrasi sinkronisasi *Codebook* penjelas & rumus matematis turunan).
+            - **Cakupan:** Kualitas demokrasi elektoral, liberal, partisipatif, deliberatif, egaliter, korupsi sektor publik, supremasi hukum, dan kebebasan sipil.
+            - **Penyedia:** V-Dem Institute Dataset (Terintegrasi sinkronisasi *Codebook* penjelas & rumus matematis turunan).
             """)
 
         with st.container(border=True):
             st.markdown("""
             ### 💻 6. Digital Society & Economy
-            * **Cakupan:** Inklusi keuangan (Global Findex), kesiapan ekonomi digital (UNCTAD), disinformasi, sensor internet, pemadaman jaringan, dan kebebasan digital (DSP).
-            * **Penyedia:** World Bank Findex, UNCTAD, & Digital Society Project (DSP).
+            - **Cakupan:** Inklusi keuangan (Global Findex), kesiapan ekonomi digital (UNCTAD), disinformasi, sensor internet, pemadaman jaringan, dan kebebasan digital (DSP).
+            - **Penyedia:** World Bank Findex, UNCTAD, & Digital Society Project (DSP).
             """)
 
     st.divider()
+
     with st.container(border=True):
-    st.subheader("⚙️ Prinsip Integritas & Transparansi Data")
-    st.markdown("""
-    * **Live API & Curated Local Database:** Sebagian besar modul memanfaatkan penarikan *real-time* via API resmi, sementara modul spesifik berukuran masif (seperti V-Dem dan DSP) menggunakan arsip data terkurasi resmi yang dioptimalkan secara lokal untuk menjamin kecepatan akses web publik.
-    * **Bebas Manipulasi:** Tidak ada data buatan atau tiruan (*zero hardcoding*). Seluruh angka bersumber mutlak dari publikasi lembaga aslinya.
-    * **Ekspor Terbuka:** Seluruh data yang ditampilkan dapat diunduh seketika dalam format CSV dan Excel (`.xlsx`) untuk diolah kembali di Stata, R, Python, maupun SPSS.
-    * **Pengembangan Berkelanjutan:** Platform ini terus berada dalam masa pengembangan aktif guna meningkatkan kemudahan pencarian variabel, memperkaya fitur eksplorasi, serta menyederhanakan pemanfaatan dataset bagi seluruh kalangan akademisi.
-    """)
+        st.subheader("⚙️ Prinsip Integritas & Transparansi Data")
+        st.markdown("""
+        - **Live API & Curated Local Database:** Sebagian besar modul memanfaatkan penarikan *real-time* via API resmi, sementara modul spesifik berukuran masif (seperti V-Dem dan DSP) menggunakan arsip data terkurasi resmi yang dioptimalkan secara lokal untuk menjamin kecepatan akses web publik.
+        - **Bebas Manipulasi:** Tidak ada data buatan atau tiruan (*zero hardcoding*). Seluruh angka bersumber mutlak dari publikasi lembaga aslinya.
+        - **Ekspor Terbuka:** Seluruh data yang ditampilkan dapat diunduh seketika dalam format CSV dan Excel (`.xlsx`) untuk diolah kembali di Stata, R, Python, maupun SPSS.
+        - **Pengembangan Berkelanjutan:** Platform ini terus berada dalam masa pengembangan aktif guna meningkatkan kemudahan pencarian variabel, memperkaya fitur eksplorasi, serta menyederhanakan pemanfaatan dataset bagi seluruh kalangan akademisi.
+        """)
 
     st.info("💡 Pilih dan klik menu modul di bilah navigasi sebelah kiri untuk mulai mengeksplorasi data.")
 
@@ -127,75 +127,75 @@ def beranda() -> None:
     # KOTAK SARAN, LAPORAN EROR & PERMINTAAN DATA BARU
     # =========================================================================
     with st.container(border=True):
-    st.subheader("📬 Kotak Saran, Laporan Kendala & Permintaan Data")
-    st.markdown(
-        "Menemukan kekeliruan data, *error* pada sistem, atau membutuhkan seri indikator baru untuk riset Anda? "
-        "Kirimkan masukan langsung ke email pengembang melalui formulir di bawah ini."
-    )
-
-    with st.form("feedback_form", clear_on_submit=True):
-        col_f1, col_f2 = st.columns(2)
-        with col_f1:
-            nama_pengirim = st.text_input(
-                "Nama Lengkap / Instansi Akademik*",
-                placeholder="Contoh: Budi Santoso, M.E. (Universitas Indonesia)",
-            )
-        with col_f2:
-            email_pengirim = st.text_input(
-                "Alamat Email Pengirim*",
-                placeholder="nama@domain.com",
-            )
-
-        tipe_pesan = st.selectbox(
-            "Kategori Pesan:",
-            [
-                "Laporan Kesalahan Data / Sistem Error",
-                "Permintaan Indikator / Dataset Tambahan",
-                "Kritik, Saran & Masukan Metodologi",
-                "Lainnya",
-            ],
+        st.subheader("📬 Kotak Saran, Laporan Kendala & Permintaan Data")
+        st.markdown(
+            "Menemukan kekeliruan data, *error* pada sistem, atau membutuhkan seri indikator baru untuk riset Anda? "
+            "Kirimkan masukan langsung ke email pengembang melalui formulir di bawah ini."
         )
 
-        isi_pesan = st.text_area(
-            "Detail Laporan / Pesan*",
-            placeholder="Jelaskan secara spesifik indikator mana yang mengalami kendala, atau sebutkan dataset yang ingin ditambahkan beserta sumber resminya...",
-            height=130,
-        )
+        with st.form("feedback_form", clear_on_submit=True, border=False):
+            col_f1, col_f2 = st.columns(2)
+            with col_f1:
+                nama_pengirim = st.text_input(
+                    "Nama Lengkap / Instansi Akademik*",
+                    placeholder="Contoh: Budi Santoso, M.E. (Universitas Indonesia)",
+                )
+            with col_f2:
+                email_pengirim = st.text_input(
+                    "Alamat Email Pengirim*",
+                    placeholder="nama@domain.com",
+                )
 
-        submitted = st.form_submit_button("📩 Kirim Pesan ke Pengembang", type="primary")
+            tipe_pesan = st.selectbox(
+                "Kategori Pesan:",
+                [
+                    "Laporan Kesalahan Data / Sistem Error",
+                    "Permintaan Indikator / Dataset Tambahan",
+                    "Kritik, Saran & Masukan Metodologi",
+                    "Lainnya",
+                ],
+            )
 
-        if submitted:
-            if not nama_pengirim.strip() or not email_pengirim.strip() or not isi_pesan.strip():
-                st.error("Mohon lengkapi Nama, Email, dan Detail Pesan sebelum mengirim.")
-            elif not is_valid_email(email_pengirim):
-                st.error("Format alamat email tidak valid (pastikan format seperti nama@domain.com).")
-            else:
-                with st.spinner("Mengirimkan pesan ke email pengembang..."):
-                    endpoint = f"https://formsubmit.co/{TARGET_EMAIL}"
-                    payload = {
-                        "name": nama_pengirim,
-                        "email": email_pengirim,
-                        "category": tipe_pesan,
-                        "message": isi_pesan,
-                        "_subject": f"[{tipe_pesan}] Pesan dari IE IndoEcon Explorer",
-                        "_captcha": "false",
-                    }
-                    headers = {"User-Agent": "Mozilla/5.0"}
+            isi_pesan = st.text_area(
+                "Detail Laporan / Pesan*",
+                placeholder="Jelaskan secara spesifik indikator mana yang mengalami kendala, atau sebutkan dataset yang ingin ditambahkan beserta sumber resminya...",
+                height=130,
+            )
 
-                    try:
-                        res = requests.post(endpoint, data=payload, headers=headers, timeout=10)
-                        if res.status_code in [200, 302]:
-                            st.success("🎉 Terima kasih! Laporan/masukan Anda telah berhasil dikirimkan ke email pengembang.")
-                        else:
+            submitted = st.form_submit_button("📩 Kirim Pesan ke Pengembang", type="primary")
+
+            if submitted:
+                if not nama_pengirim.strip() or not email_pengirim.strip() or not isi_pesan.strip():
+                    st.error("Mohon lengkapi Nama, Email, dan Detail Pesan sebelum mengirim.")
+                elif not is_valid_email(email_pengirim):
+                    st.error("Format alamat email tidak valid (pastikan format seperti nama@domain.com).")
+                else:
+                    with st.spinner("Mengirimkan pesan ke email pengembang..."):
+                        endpoint = f"https://formsubmit.co/{TARGET_EMAIL}"
+                        payload = {
+                            "name": nama_pengirim,
+                            "email": email_pengirim,
+                            "category": tipe_pesan,
+                            "message": isi_pesan,
+                            "_subject": f"[{tipe_pesan}] Pesan dari IE IndoEcon Explorer",
+                            "_captcha": "false",
+                        }
+                        headers = {"User-Agent": "Mozilla/5.0"}
+
+                        try:
+                            res = requests.post(endpoint, data=payload, headers=headers, timeout=10)
+                            if res.status_code in [200, 302]:
+                                st.success("🎉 Terima kasih! Laporan/masukan Anda telah berhasil dikirimkan ke email pengembang.")
+                            else:
+                                st.warning(
+                                    f"Formulir daring sedang mengalami kendala jaringan (Status: {res.status_code}). "
+                                    f"Silakan kirimkan laporan Anda secara langsung melalui email: `{TARGET_EMAIL}`"
+                                )
+                        except Exception:
                             st.warning(
-                                f"Formulir daring sedang mengalami kendala jaringan (Status: {res.status_code}). "
-                                f"Silakan kirimkan laporan Anda secara langsung melalui email: `{TARGET_EMAIL}`"
+                                "Koneksi ke server pengiriman laporan dibatasi oleh jaringan. "
+                                f"Silakan kirimkan masukan secara langsung melalui email: `{TARGET_EMAIL}`"
                             )
-                    except Exception:
-                        st.warning(
-                            "Koneksi ke server pengiriman laporan dibatasi oleh jaringan. "
-                            f"Silakan kirimkan masukan secara langsung melalui email: `{TARGET_EMAIL}`"
-                        )
 
     # =========================================================================
     # FOOTER PROFESIONAL (METADATA & COPYRIGHT)
