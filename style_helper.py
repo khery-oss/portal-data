@@ -84,7 +84,7 @@ def apply_custom_theme() -> None:
             font-size: 1.05rem !important;
             line-height: 1.35 !important;
             padding-top: 0.65rem !important;
-            padding-bottom: 0.65rem !important;
+            padding-bottom: 0.35rem !important;
         }
 
         .stMarkdown p, .stMarkdown li {
