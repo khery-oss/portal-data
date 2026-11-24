@@ -190,6 +190,10 @@ def apply_custom_theme() -> None:
             color: color-mix(in srgb, var(--text-color) 62%, transparent);
             margin-bottom: 0.2rem;
         }
+        
+        [data-testid="stDownloadButton"] button {
+            width: 100% !important;
+        }
         </style>
         """,
         unsafe_allow_html=True,
