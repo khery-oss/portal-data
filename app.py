@@ -117,17 +117,17 @@ def beranda() -> None:
 
     st.divider()
 
-    st.subheader("Arsitektur Modul Data")
+st.subheader("Arsitektur Modul Data")
     st.markdown(
         "Pilih modul langsung dari kartu di bawah atau melalui bilah navigasi di sebelah kiri:"
     )
 
-    # Grid 2x4 sejajar per baris dengan tautan langsung ke masing-masing halaman
+    # 1. DI DALAM LOOP: TETAP border=True (JANGAN diberi key="integritas_neon")
     for i in range(0, len(MODUL_INFO), 2):
         cols = st.columns(2)
         for col, modul in zip(cols, MODUL_INFO[i : i + 2]):
             with col:
-                with st.container(key="integritas_neon"):
+                with st.container(border=True):
                     st.markdown(
                         f"### {modul['icon']} {modul['judul']}\n"
                         f"- **Cakupan:** {modul['cakupan']}\n"
@@ -141,8 +141,25 @@ def beranda() -> None:
 
     st.divider()
 
-    with st.container(key="saran_neon"):
+    # 2. KEY NEON HIJAU HANYA DI SINI (Prinsip Integritas)
+    with st.container(key="integritas_neon"):
         st.subheader(":material/verified_user: Prinsip Integritas & Transparansi Data")
+        st.markdown(
+            "- **Live API & Curated Local Database:** Sebagian besar modul memanfaatkan penarikan *real-time* via API resmi, "
+            "sementara modul spesifik berukuran masif (seperti V-Dem dan DSP) menggunakan arsip data terkurasi resmi yang dioptimalkan "
+            "secara lokal untuk menjamin kecepatan akses web publik.\n"
+            "- **Bebas Manipulasi:** Tidak ada data buatan atau tiruan (*zero hardcoding*). Seluruh angka bersumber mutlak dari publikasi lembaga aslinya.\n"
+            "- **Ekspor Terbuka:** Seluruh data yang ditampilkan dapat diunduh seketika dalam format CSV dan Excel (`.xlsx`) "
+            "untuk diolah kembali di Stata, R, Python, maupun SPSS.\n"
+            "- **Pengembangan Berkelanjutan:** Platform ini terus berada dalam masa pengembangan aktif guna meningkatkan kemudahan "
+            "pencarian variabel, memperkaya fitur eksplorasi, serta menyederhanakan pemanfaatan dataset bagi seluruh kalangan akademisi."
+        )
+
+    st.divider()
+
+    # 3. KEY NEON BIRU HANYA DI SINI (Kotak Saran)
+    with st.container(key="saran_neon"):
+        st.subheader(":material/mail: Kotak Saran, Laporan Kendala & Permintaan Data")
         st.markdown(
             "- **Live API & Curated Local Database:** Sebagian besar modul memanfaatkan penarikan *real-time* via API resmi, "
             "sementara modul spesifik berukuran masif (seperti V-Dem dan DSP) menggunakan arsip data terkurasi resmi yang dioptimalkan "
