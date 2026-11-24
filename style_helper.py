@@ -2,7 +2,7 @@ import streamlit as st
 
 
 def apply_custom_theme() -> None:
-    """Menerapkan Space Mono, aksen tombol neon, dan warna adaptif Light/Dark."""
+    """Menerapkan Geist, aksen tombol neon, dan warna adaptif Light/Dark."""
     st.markdown(
         """
         <style>
@@ -10,12 +10,12 @@ def apply_custom_theme() -> None:
 
         /* Font utama */
         html, body, .stApp, .stMarkdown, p, li, label, input, textarea, button {
-            font-family: 'Space Mono', -apple-system, BlinkMacSystemFont, sans-serif !important;
+            font-family: 'Geist', -apple-system, BlinkMacSystemFont, sans-serif !important;
         }
 
         /* Judul mengikuti warna tema aktif (putih di Dark, gelap di Light) */
         h1, h2, h3 {
-            font-family: 'Space Mono', sans-serif !important;
+            font-family: 'Geist', sans-serif !important;
             color: var(--text-color) !important;
             letter-spacing: -0.03em;
             font-weight: 700 !important;
@@ -28,7 +28,7 @@ def apply_custom_theme() -> None:
 
         /* Aksen monospace untuk angka metrik, caption, dan kode */
         code, pre, [data-testid="stMetricValue"], [data-testid="stCaptionContainer"] {
-            font-family: 'Space Mono', monospace !important;
+            font-family: 'Geist', monospace !important;
         }
 
         /* Sidebar adaptif dengan garis batas halus */
@@ -79,7 +79,7 @@ def apply_custom_theme() -> None:
 
         /* Label kecil uppercase monospace di atas judul */
         .atlas-eyebrow {
-            font-family: 'Space Mono', monospace !important;
+            font-family: 'Geist', monospace !important;
             font-size: 0.78rem;
             letter-spacing: 0.08em;
             text-transform: uppercase;
