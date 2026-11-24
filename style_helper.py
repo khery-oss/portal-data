@@ -2,55 +2,65 @@ import streamlit as st
 
 
 def apply_custom_theme() -> None:
-    """Menerapkan tipografi dan gaya visual dark ledger ke halaman Streamlit."""
+    """Menerapkan Space Grotesk, JetBrains Mono, dan tema dark ledger."""
     st.markdown(
         """
         <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Space+Grotesk:wght@400;500;600;700&display=swap');
 
-        /* Font utama (hindari selektor * atau span agar ikon Material Streamlit tidak rusak) */
+        /* Font utama Space Grotesk (tanpa menyentuh span global agar ikon aman) */
         html, body, .stApp, .stMarkdown, p, li, label, input, textarea, button {
-            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            font-family: 'Space Grotesk', -apple-system, BlinkMacSystemFont, sans-serif !important;
         }
 
-        /* Judul tegas dengan jarak huruf rapat */
+        /* Judul putih terang dan tegas */
         h1, h2, h3 {
-            font-family: 'Inter', sans-serif;
-            color: #F8FAFC;
-            letter-spacing: -0.025em;
-            font-weight: 700;
+            font-family: 'Space Grotesk', sans-serif !important;
+            color: #F8FAFC !important;
+            letter-spacing: -0.03em;
+            font-weight: 700 !important;
+        }
+
+        /* Paragraf utama sedikit diredupkan agar hierarki judul menonjol */
+        .stMarkdown p, .stMarkdown li {
+            color: #CBD5E1;
         }
 
         /* Aksen monospace untuk angka metrik, caption, dan kode */
         code, pre, [data-testid="stMetricValue"], [data-testid="stCaptionContainer"] {
-            font-family: 'JetBrains Mono', monospace;
+            font-family: 'JetBrains Mono', monospace !important;
         }
 
         /* Sidebar dengan garis batas tegas */
         [data-testid="stSidebar"] {
-            background-color: #0E1520;
+            background-color: #0E1520 !important;
             border-right: 1px solid #1E293B;
         }
 
-        /* Kotak filter/input (TextInput, Selectbox, Multiselect) */
+        /* Kotak input dan filter */
         div[data-baseweb="input"] > div,
         div[data-baseweb="select"] > div {
-            background-color: #131B26;
-            border: 1px solid #1E293B;
+            background-color: #131B26 !important;
+            border: 1px solid #1E293B !important;
             border-radius: 6px;
         }
 
-        /* Kotak alert/catatan (st.info, st.warning, dll.) bergaya banner gelap */
+        /* Paksa kotak st.info / st.warning menjadi gelap netral (hilangkan teks biru) */
         [data-testid="stAlert"] {
-            background-color: #111827;
-            border: 1px solid #1E293B;
-            border-radius: 8px;
-            color: #CBD5E1;
+            background-color: #111827 !important;
+            border: 1px solid #1E293B !important;
+            border-radius: 8px !important;
         }
 
-        /* Kelas opsional untuk label kecil uppercase monospace di atas judul */
+        [data-testid="stAlert"] p,
+        [data-testid="stAlert"] li,
+        [data-testid="stAlert"] strong {
+            color: #CBD5E1 !important;
+        }
+
+        /* Label kecil uppercase monospace di atas judul */
         .atlas-eyebrow {
-            font-family: 'JetBrains Mono', monospace;
+            font-family: 'JetBrains Mono', monospace !important;
             font-size: 0.78rem;
             letter-spacing: 0.08em;
             text-transform: uppercase;
