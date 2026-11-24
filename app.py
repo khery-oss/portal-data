@@ -5,9 +5,8 @@ import streamlit as st
 from style_helper import apply_custom_theme
 
 # 1. Konfigurasi & tema dipanggil SEKALI saja di sini untuk semua halaman
-        st.set_page_config(
-        with st.container(key="beranda_hero"):
-        st.title(":material/analytics: IE IndoEcon Explorer")
+st.set_page_config(
+    page_title="IE IndoEcon Explorer",
     page_icon=":material/analytics:",
     layout="wide",
 )
@@ -93,7 +92,8 @@ def beranda() -> None:
         '<div class="atlas-eyebrow">INDONESIA MACRO &amp; INSTITUTIONAL DATA · OPEN ACCESS</div>',
         unsafe_allow_html=True,
     )
-    st.title(":material/analytics: IE IndoEcon Explorer")
+    with st.container(key="beranda_hero"):
+        st.title(":material/analytics: IE IndoEcon Explorer")
     st.markdown(
         "Portal observasi data makroekonomi, ketenagakerjaan, sosial-pendidikan, kesehatan publik, institusi politik, "
         "dan demokrasi Indonesia yang terintegrasi langsung dengan berbagai institusi resmi internasional dan nasional."
@@ -124,12 +124,12 @@ def beranda() -> None:
         "Pilih modul langsung dari kartu di bawah atau melalui bilah navigasi di sebelah kiri:"
     )
 
-    # Grid 2x4 sejajar per baris (bingkai netral)
+    # Grid 2x4 sejajar per baris dengan aksen warna unik per modul
     for i in range(0, len(MODUL_INFO), 2):
         cols = st.columns(2)
-        with st.container(key=f"card_{modul['key']}", border=True):
+        for col, modul in zip(cols, MODUL_INFO[i : i + 2]):
             with col:
-                with st.container(border=True):
+                with st.container(key=f"card_{modul['key']}", border=True):
                     st.markdown(
                         f"### {modul['icon']} {modul['judul']}\n"
                         f"- **Cakupan:** {modul['cakupan']}\n"
