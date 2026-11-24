@@ -2,20 +2,20 @@ import streamlit as st
 
 
 def apply_custom_theme() -> None:
-    """Menerapkan Geist, aksen tombol neon, dan warna adaptif Light/Dark."""
+    """Menerapkan IBM Plex Mono, aksen tombol neon, dan warna adaptif Light/Dark."""
     st.markdown(
         """
         <style>
-        @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Space+Grotesk:wght@400;500;600;700&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=IBMPlex+Mono:wght@400;500;600&family=Space+Grotesk:wght@400;500;600;700&display=swap');
 
         /* Font utama */
         html, body, .stApp, .stMarkdown, p, li, label, input, textarea, button {
-            font-family: 'Geist', -apple-system, BlinkMacSystemFont, sans-serif !important;
+            font-family: 'IBM Plex Mono', -apple-system, BlinkMacSystemFont, sans-serif !important;
         }
 
         /* Judul mengikuti warna tema aktif (putih di Dark, gelap di Light) */
         h1, h2, h3 {
-            font-family: 'Geist', sans-serif !important;
+            font-family: 'IBM Plex Mono', sans-serif !important;
             color: var(--text-color) !important;
             letter-spacing: -0.03em;
             font-weight: 700 !important;
@@ -28,7 +28,7 @@ def apply_custom_theme() -> None:
 
         /* Aksen monospace untuk angka metrik, caption, dan kode */
         code, pre, [data-testid="stMetricValue"], [data-testid="stCaptionContainer"] {
-            font-family: 'Geist', monospace !important;
+            font-family: 'IBM Plex Mono', monospace !important;
         }
 
         /* Sidebar adaptif dengan garis batas halus */
@@ -79,7 +79,7 @@ def apply_custom_theme() -> None:
 
         /* Label kecil uppercase monospace di atas judul */
         .atlas-eyebrow {
-            font-family: 'Geist', monospace !important;
+            font-family: 'IBM Plex Mono', monospace !important;
             font-size: 0.78rem;
             letter-spacing: 0.08em;
             text-transform: uppercase;
