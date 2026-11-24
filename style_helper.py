@@ -241,6 +241,43 @@ def apply_custom_theme() -> None:
             color: #38BDF8 !important;
             text-shadow: 0 0 10px rgba(56, 189, 248, 0.45);
         }
+
+        /* 10. Aksen Warna Beranda & 8 Kartu Modul */
+        .st-key-beranda_hero h1,
+        .st-key-beranda_hero h1 span {
+            color: #6EE7B7 !important;
+        }
+
+        .st-key-beranda_arsitektur h3 {
+            color: #FDBA74 !important;
+        }
+
+        /* Palet aksen per modul (1-4 mengikuti referensi, 5-8 pelengkap) */
+        .st-key-card_wb       { --card-accent: #60A5FA; } /* Biru */
+        .st-key-card_fred     { --card-accent: #6EE7B7; } /* Hijau Mint */
+        .st-key-card_unsdg    { --card-accent: #C084FC; } /* Ungu */
+        .st-key-card_bps      { --card-accent: #FCD34D; } /* Kuning Amber */
+        .st-key-card_who      { --card-accent: #FB7185; } /* Merah Muda / Coral */
+        .st-key-card_vdem     { --card-accent: #818CF8; } /* Indigo */
+        .st-key-card_dse      { --card-accent: #22D3EE; } /* Cyan */
+        .st-key-card_comtrade { --card-accent: #FB923C; } /* Oranye */
+
+        /* Terapkan aksen ke judul kartu, ikon, dan tautan Buka Modul */
+        [class*="st-key-card_"] h3,
+        [class*="st-key-card_"] h3 span,
+        [class*="st-key-card_"] [data-testid="stPageLink-NavLink"] p,
+        [class*="st-key-card_"] [data-testid="stPageLink-NavLink"] span {
+            color: var(--card-accent) !important;
+        }
+
+        /* Efek hover halus pada bingkai kartu mengikuti warna aksennya */
+        [class*="st-key-card_"] {
+            transition: border-color 0.2s ease !important;
+        }
+
+        [class*="st-key-card_"]:hover {
+            border-color: color-mix(in srgb, var(--card-accent) 60%, transparent) !important;
+        }
         </style>
         """,
         unsafe_allow_html=True,
