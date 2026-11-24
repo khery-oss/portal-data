@@ -1,5 +1,6 @@
 import io
 import re
+from pathlib import Path
 import requests
 import streamlit as st
 from style_helper import apply_custom_theme
@@ -13,11 +14,17 @@ st.set_page_config(
 apply_custom_theme()
 
 TARGET_EMAIL = "indoecon.project@gmail.com"
+PAGES_DIR = Path(__file__).resolve().parent / "pages"
 
 
 def is_valid_email(email: str) -> bool:
     pattern = r"^[\w\.-]+@[\w\.-]+\.\w+$"
     return re.match(pattern, email) is not None
+
+
+def find_page(prefix: str) -> str:
+    match = next(PAGES_DIR.glob(f"{prefix}_*.py"))
+    return f"pages/{match.name}"
 
 
 # 2. Seluruh konten halaman utama dibungkus di dalam fungsi beranda()
@@ -191,18 +198,18 @@ def beranda() -> None:
         st.markdown("© 2025–2026 • Pengembangan Aktif")
 
 
-# 3. Daftarkan seluruh halaman dan jalankan router di bagian PALING BAWAH
+# 3. Daftarkan seluruh halaman secara dinamis (bebas error karakter emoji)
 pg = st.navigation(
     [
         st.Page(beranda, title="Beranda", icon="🏠", default=True),
-        st.Page("pages/1_🌐_World_Bank.py", title="World Bank", icon="🌐"),
-        st.Page("pages/2_📈_FRED.py", title="FRED", icon="📈"),
-        st.Page("pages/4_UN_UN_SDG.py", title="UN SDG", icon="🇺🇳"),
-        st.Page("pages/5_🏛️_BPS.py", title="BPS", icon="🏛️"),
-        st.Page("pages/6_🏥_WHO.py", title="WHO", icon="🏥"),
-        st.Page("pages/7_🗳️_V-Dem.py", title="V-Dem", icon="🗳️"),
-        st.Page("pages/8_💻_Digital_Society_and_Economy.py", title="Digital Society & Economy", icon="💻"),
-        st.Page("pages/9_🚢_Comtrade.py", title="Comtrade", icon="🚢"),
+        st.Page(find_page("1"), title="World Bank", icon="🌐"),
+        st.Page(find_page("2"), title="FRED", icon="📈"),
+        st.Page(find_page("4"), title="UN SDG", icon="🇺🇳"),
+        st.Page(find_page("5"), title="BPS", icon="🏛️"),
+        st.Page(find_page("6"), title="WHO", icon="🏥"),
+        st.Page(find_page("7"), title="V-Dem", icon="🗳️"),
+        st.Page(find_page("8"), title="Digital Society & Economy", icon="💻"),
+        st.Page(find_page("9"), title="Comtrade", icon="🚢"),
     ]
 )
 
