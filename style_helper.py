@@ -209,14 +209,15 @@ def apply_custom_theme() -> None:
             font-weight: 600 !important;
         }
 
-        /* B. Prinsip Integritas & Transparansi Data (TETAP NEON HIJAU) */
+/* B. Prinsip Integritas & Transparansi Data (Aksen Kiri Hijau, Tanpa Glow) */
         .st-key-integritas_neon {
-            border: 1px solid #22C55E !important;
+            background-color: var(--secondary-background-color) !important;
+            border: 1px solid color-mix(in srgb, var(--text-color) 14%, transparent) !important;
+            border-left: 3px solid #22C55E !important;
             border-radius: 8px !important;
             padding: 1.1rem 1.25rem !important;
-            box-shadow: 0 0 14px rgba(34, 197, 94, 0.32) !important;
+            box-shadow: none !important;
         }
-
         .st-key-integritas_neon h3 {
             color: #22C55E !important;
             text-shadow: 0 0 10px rgba(34, 197, 94, 0.45);
