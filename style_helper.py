@@ -2,45 +2,64 @@ import streamlit as st
 
 
 def apply_custom_theme() -> None:
-    """Menerapkan Geist, Geist Mono, aksen tombol biru neon, dan warna adaptif Light/Dark."""
+    """Menerapkan Geist/Geist Mono, tata letak compact global, dan warna adaptif Light/Dark."""
     st.markdown(
         """
         <style>
         @import url('https://fonts.googleapis.com/css2?family=Geist+Mono:wght@400;500;600&family=Geist:wght@400;500;600;700&display=swap');
 
-        /* Font utama Geist (tanpa menyentuh span global agar ikon Material Streamlit aman) */
+        /* 1. Ruang Kontainer Utama Lebih Rapat (mengurangi ruang kosong atas/bawah) */
+        .block-container {
+            padding-top: 2rem !important;
+            padding-bottom: 2rem !important;
+            max-width: 1200px;
+        }
+
+        /* Jarak antar-elemen di area utama lebih padat */
+        .stMainBlockContainer [data-testid="stVerticalBlock"] {
+            gap: 0.65rem;
+        }
+
+        /* 2. Tipografi Global Ringkas (aman untuk ikon Material & grafik SVG) */
         html, body, .stApp, .stMarkdown, p, li, label, input, textarea, button {
             font-family: 'Geist', -apple-system, BlinkMacSystemFont, sans-serif !important;
         }
 
-        /* Judul tegas dan rapat mengikuti warna tema aktif */
-/* Judul tegas, rapat, dan proporsional */
         h1, h2, h3 {
             font-family: 'Geist', sans-serif !important;
             color: var(--text-color) !important;
-            letter-spacing: -0.03em;
+            letter-spacing: -0.025em;
             font-weight: 700 !important;
+            padding-top: 0.15rem !important;
+            padding-bottom: 0.15rem !important;
         }
 
         h1 {
-            font-size: 2.15rem !important;   /* st.title() — turun dari ~2.15rem (44px) ke ~30px */
+            font-size: 1.65rem !important;
             line-height: 1.2 !important;
-            padding-top: 0.25rem !important;
         }
 
         h2 {
-            font-size: 1.35rem !important;   /* st.header() — ~21.6px */
+            font-size: 1.15rem !important;
             line-height: 1.3 !important;
         }
 
         h3 {
-            font-size: 1.1rem !important;    /* st.subheader() — ~17.6px */
+            font-size: 1.0rem !important;
             line-height: 1.35 !important;
         }
 
-        /* Paragraf sedikit lebih lembut, tetap adaptif di Light & Dark */
         .stMarkdown p, .stMarkdown li {
+            font-size: 0.875rem !important;
+            line-height: 1.5;
             color: color-mix(in srgb, var(--text-color) 82%, transparent);
+        }
+
+        /* Label di atas input/dropdown dibuat kecil dan rapat */
+        [data-testid="stWidgetLabel"] p {
+            font-size: 0.82rem !important;
+            font-weight: 500;
+            margin-bottom: 0.1rem !important;
         }
 
         /* Aksen Geist Mono untuk angka metrik, caption, dan kode */
@@ -49,61 +68,66 @@ def apply_custom_theme() -> None:
             letter-spacing: -0.02em;
         }
 
-        /* Sidebar adaptif dengan garis batas halus */
+        /* 3. Sidebar Compact & Adaptif */
         [data-testid="stSidebar"] {
             background-color: var(--secondary-background-color) !important;
             border-right: 1px solid color-mix(in srgb, var(--text-color) 14%, transparent);
         }
 
-        /* Kotak input dan filter adaptif */
+        [data-testid="stSidebarNavLink"] {
+            padding-top: 0.3rem !important;
+            padding-bottom: 0.3rem !important;
+            font-size: 0.85rem !important;
+        }
+
+        /* 4. Kotak Input & Dropdown Lebih Ramping */
         div[data-baseweb="input"] > div,
         div[data-baseweb="select"] > div {
             background-color: var(--secondary-background-color) !important;
             border: 1px solid color-mix(in srgb, var(--text-color) 18%, transparent) !important;
-            border-radius: 6px;
+            border-radius: 6px !important;
+            min-height: 36px !important;
+            font-size: 0.85rem !important;
         }
 
-        /* Kotak st.info / st.warning adaptif (netral di Dark maupun Light) */
-        [data-testid="stAlert"] {
-            background-color: var(--secondary-background-color) !important;
-            border: 1px solid color-mix(in srgb, var(--text-color) 16%, transparent) !important;
-            border-radius: 8px !important;
+        /* 5. Kotak Alert (st.success / st.info / st.warning) Lebih Tipis Tanpa Menghapus Warna Semantik */
+        [data-testid="stAlert"],
+        [data-testid="stAlertContainer"] {
+            border-radius: 6px !important;
+            padding-top: 0.45rem !important;
+            padding-bottom: 0.45rem !important;
+            border: 1px solid color-mix(in srgb, var(--text-color) 14%, transparent);
         }
 
         [data-testid="stAlert"] p,
-        [data-testid="stAlert"] li,
-        [data-testid="stAlert"] strong {
-            color: var(--text-color) !important;
+        [data-testid="stAlert"] li {
+            font-size: 0.85rem !important;
+            line-height: 1.45;
         }
 
-        /* Tombol Primary Biru Neon (Kontras tinggi di Light & Dark) */
+        /* 6. Expander (Detail Metadata & Sumber Resmi) Lebih Ramping */
+        [data-testid="stExpander"] {
+            background-color: var(--secondary-background-color) !important;
+            border: 1px solid color-mix(in srgb, var(--text-color) 16%, transparent) !important;
+            border-radius: 6px !important;
+        }
+
+        [data-testid="stExpander"] summary {
+            padding: 0.45rem 0.75rem !important;
+            font-size: 0.85rem !important;
+        }
+
+        /* 7. Garis Pemisah (st.divider) Lebih Tipis & Rapat */
+        hr {
+            margin-top: 0.75rem !important;
+            margin-bottom: 0.75rem !important;
+            border-color: color-mix(in srgb, var(--text-color) 12%, transparent) !important;
+        }
+
+        /* 8. Tombol Primary Biru Neon (Compact & Adaptif Light/Dark) */
         button[kind="primary"],
         [data-testid="stBaseButton-primary"] {
             background-color: var(--primary-color) !important;
             color: #FFFFFF !important;
             border: 1px solid #38BDF8 !important;
-            font-weight: 600 !important;
-            box-shadow: 0 0 14px rgba(0, 140, 255, 0.55) !important;
-            transition: transform 0.15s ease, box-shadow 0.15s ease !important;
-        }
-
-        button[kind="primary"]:hover,
-        [data-testid="stBaseButton-primary"]:hover {
-            background-color: #0047D1 !important;
-            transform: translateY(-1px);
-            box-shadow: 0 0 22px rgba(0, 212, 255, 0.75) !important;
-        }
-
-        /* Label kecil uppercase Geist Mono di atas judul */
-        .atlas-eyebrow {
-            font-family: 'Geist Mono', monospace !important;
-            font-size: 0.78rem;
-            letter-spacing: 0.02em;
-            text-transform: uppercase;
-            color: color-mix(in srgb, var(--text-color) 62%, transparent);
-            margin-bottom: 0.25rem;
-        }
-        </style>
-        """,
-        unsafe_allow_html=True,
-    )
+            border-radius: 6px !
