@@ -185,4 +185,12 @@ def apply_custom_theme() -> None:
         .atlas-eyebrow {
             font-family: 'Geist Mono', monospace !important;
             font-size: 0.75rem;
-            letter-spacing: 0.0
+            letter-spacing: 0.02em;
+            text-transform: uppercase;
+            color: color-mix(in srgb, var(--text-color) 62%, transparent);
+            margin-bottom: 0.2rem;
+        }
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
