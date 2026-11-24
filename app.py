@@ -6,7 +6,8 @@ from style_helper import apply_custom_theme
 
 # 1. Konfigurasi & tema dipanggil SEKALI saja di sini untuk semua halaman
 st.set_page_config(
-    page_title="IE IndoEcon Explorer",
+    with st.container(key="beranda_hero"):
+        st.title(":material/analytics: IE IndoEcon Explorer")
     page_icon=":material/analytics:",
     layout="wide",
 )
@@ -117,7 +118,8 @@ def beranda() -> None:
 
     st.divider()
 
-    st.subheader("Arsitektur Modul Data")
+    with st.container(key="beranda_arsitektur"):
+        st.subheader("Arsitektur Modul Data")
     st.markdown(
         "Pilih modul langsung dari kartu di bawah atau melalui bilah navigasi di sebelah kiri:"
     )
@@ -125,7 +127,7 @@ def beranda() -> None:
     # Grid 2x4 sejajar per baris (bingkai netral)
     for i in range(0, len(MODUL_INFO), 2):
         cols = st.columns(2)
-        for col, modul in zip(cols, MODUL_INFO[i : i + 2]):
+        with st.container(key=f"card_{modul['key']}", border=True):
             with col:
                 with st.container(border=True):
                     st.markdown(
