@@ -21,9 +21,10 @@ def is_valid_email(email: str) -> bool:
     return re.match(pattern, email) is not None
 
 
-def find_page(prefix: str) -> str:
-    match = next(PAGES_DIR.glob(f"{prefix}_*.py"))
-    return f"pages/{match.name}"
+def find_page(prefix: str):
+    """Path halaman berawalan `prefix_`, atau None bila berkasnya tidak ada (app tidak crash)."""
+    match = next(PAGES_DIR.glob(f"{prefix}_*.py"), None)
+    return f"pages/{match.name}" if match else None
 
 
 MODUL_INFO = [
@@ -38,7 +39,7 @@ MODUL_INFO = [
         "key": "fred",
         "judul": "2. FRED (Federal Reserve Bank of St. Louis)",
         "icon": ":material/show_chart:",
-        "cakupan": "Suku bunga global/AS, perbandingan kebijakan moneter, inflasi produsen, dan harga komoditas strategis global.",
+        "cakupan": "Seri data Indonesia di FRED: nilai tukar, inflasi, suku bunga, uang beredar, dan statistik perdagangan, dengan opsi agregasi frekuensi untuk data harian dan mingguan.",
         "penyedia": "Federal Reserve Economic Data REST API.",
     },
     {
@@ -67,20 +68,20 @@ MODUL_INFO = [
         "judul": "6. V-Dem (Varieties of Democracy)",
         "icon": ":material/how_to_vote:",
         "cakupan": "Kualitas demokrasi elektoral, liberal, partisipatif, deliberatif, egaliter, korupsi sektor publik, supremasi hukum, dan kebebasan sipil.",
-        "penyedia": "V-Dem Institute Dataset (Terintegrasi sinkronisasi *Codebook* penjelas & rumus matematis turunan).",
+        "penyedia": "V-Dem Institute Dataset (terintegrasi dengan *Codebook* penjelas).",
     },
     {
         "key": "dse",
         "judul": "7. Digital Society & Economy",
         "icon": ":material/devices:",
-        "cakupan": "Inklusi keuangan (Global Findex), kesiapan ekonomi digital (UNCTAD), disinformasi, sensor internet, pemadaman jaringan, dan kebebasan digital (DSP).",
-        "penyedia": "World Bank Findex, UNCTAD, & Digital Society Project (DSP).",
+        "cakupan": "Inklusi keuangan (Global Findex), infrastruktur dan akses digital (ICT), disinformasi, sensor internet, pemadaman jaringan, dan kebebasan digital (DSP).",
+        "penyedia": "World Bank Findex, World Bank WDI (ICT), & Digital Society Project (DSP).",
     },
     {
         "key": "comtrade",
         "judul": "8. UN Comtrade",
         "icon": ":material/directions_boat:",
-        "cakupan": "Statistik perdagangan internasional barang meliputi nilai ekspor, impor, neraca dagang, dan mitra dagang Indonesia menurut kode HS.",
+        "cakupan": "Nilai ekspor dan impor barang Indonesia menurut kode HS (sejak 1989) dan SITC (1962 sampai 1989), serta total perdagangan jangka panjang. Mitra dagang: seluruh dunia (tanpa rincian per negara mitra).",
         "penyedia": "United Nations Comtrade API.",
     },
 ]
@@ -92,15 +93,14 @@ def beranda() -> None:
         '<div class="atlas-eyebrow">INDONESIA MACRO &amp; INSTITUTIONAL DATA · OPEN ACCESS</div>',
         unsafe_allow_html=True,
     )
-    with st.container(key="beranda_hero"):
-        st.title(":material/analytics: IE IndoEcon Explorer")
+    st.title(":material/analytics: IE IndoEcon Explorer")
     st.markdown(
         "Portal observasi data makroekonomi, ketenagakerjaan, sosial-pendidikan, kesehatan publik, institusi politik, "
         "dan demokrasi Indonesia yang terintegrasi langsung dengan berbagai institusi resmi internasional dan nasional."
     )
 
     # =========================================================================
-    # CATATAN AKADEMIS & PENGGUNAAN RISET (NEON BIRU)
+    # CATATAN AKADEMIS & PENGGUNAAN RISET
     # =========================================================================
     with st.container(key="pedoman_neon"):
         with st.expander(":material/menu_book: Pedoman Penggunaan Akademis & Standar Sitasi", expanded=False):
@@ -118,16 +118,15 @@ def beranda() -> None:
 
     st.divider()
 
-    with st.container(key="beranda_arsitektur"):
-        st.subheader("Arsitektur Modul Data")
+    st.subheader("Arsitektur Modul Data")
     st.markdown(
         "Pilih modul langsung dari kartu di bawah atau melalui bilah navigasi di sebelah kiri:"
     )
 
-    # Grid 2x4 sejajar per baris dengan aksen warna unik per modul
+    # Grid 2 kolom; container ber-key berada di dalam kolom agar CSS st-key-card_* menempel di kartu
     for i in range(0, len(MODUL_INFO), 2):
         cols = st.columns(2)
-        for col, modul in zip(cols, MODUL_INFO[i : i + 2]):
+        for col, modul in zip(cols, MODUL_INFO[i:i + 2]):
             with col:
                 with st.container(key=f"card_{modul['key']}", border=True):
                     st.markdown(
@@ -135,16 +134,19 @@ def beranda() -> None:
                         f"- **Cakupan:** {modul['cakupan']}\n"
                         f"- **Penyedia:** {modul['penyedia']}"
                     )
-                    st.page_link(
-                        PAGES[modul["key"]],
-                        label="Buka Modul",
-                        icon=":material/arrow_forward:",
-                    )
+                    if modul["key"] in PAGES:
+                        st.page_link(
+                            PAGES[modul["key"]],
+                            label="Buka Modul",
+                            icon=":material/arrow_forward:",
+                        )
+                    else:
+                        st.caption("Modul belum tersedia.")
 
     st.divider()
 
     # =========================================================================
-    # PRINSIP INTEGRITAS (NEON HIJAU)
+    # PRINSIP INTEGRITAS
     # =========================================================================
     with st.container(key="integritas_neon"):
         st.subheader(":material/verified_user: Prinsip Integritas & Transparansi Data")
@@ -152,7 +154,8 @@ def beranda() -> None:
             "- **Live API & Curated Local Database:** Sebagian besar modul memanfaatkan penarikan *real-time* via API resmi, "
             "sementara modul spesifik berukuran masif (seperti V-Dem dan DSP) menggunakan arsip data terkurasi resmi yang dioptimalkan "
             "secara lokal untuk menjamin kecepatan akses web publik.\n"
-            "- **Bebas Manipulasi:** Tidak ada data buatan atau tiruan (*zero hardcoding*). Seluruh angka bersumber mutlak dari publikasi lembaga aslinya.\n"
+            "- **Bebas Manipulasi:** Tidak ada data buatan atau tiruan (*zero hardcoding*). Seluruh angka bersumber dari publikasi lembaga aslinya. "
+            "Perlakuan data seperti pembulatan atau agregasi frekuensi, bila ada, dijelaskan pada modul yang bersangkutan.\n"
             "- **Ekspor Terbuka:** Seluruh data yang ditampilkan dapat diunduh seketika dalam format CSV dan Excel (`.xlsx`) "
             "untuk diolah kembali di Stata, R, Python, maupun SPSS.\n"
             "- **Pengembangan Berkelanjutan:** Platform ini terus berada dalam masa pengembangan aktif guna meningkatkan kemudahan "
@@ -162,7 +165,7 @@ def beranda() -> None:
     st.divider()
 
     # =========================================================================
-    # KOTAK SARAN, LAPORAN EROR & PERMINTAAN DATA BARU (NEON BIRU)
+    # KOTAK SARAN, LAPORAN EROR & PERMINTAAN DATA BARU
     # =========================================================================
     with st.container(key="saran_neon"):
         st.subheader(":material/mail: Kotak Saran, Laporan Kendala & Permintaan Data")
@@ -171,7 +174,8 @@ def beranda() -> None:
             "Kirimkan masukan langsung ke email pengembang melalui formulir di bawah ini."
         )
 
-        with st.form("feedback_form", clear_on_submit=True, border=False):
+        # clear_on_submit dimatikan: isian tidak hilang bila validasi atau pengiriman gagal
+        with st.form("feedback_form", clear_on_submit=False, border=False):
             col_f1, col_f2 = st.columns(2)
             with col_f1:
                 nama_pengirim = st.text_input(
@@ -209,7 +213,8 @@ def beranda() -> None:
                     st.error("Format alamat email tidak valid (pastikan format seperti nama@domain.com).")
                 else:
                     with st.spinner("Mengirimkan pesan ke email pengembang..."):
-                        endpoint = f"https://formsubmit.co/{TARGET_EMAIL}"
+                        # Endpoint /ajax mengembalikan JSON, sehingga keberhasilan bisa diverifikasi
+                        endpoint = f"https://formsubmit.co/ajax/{TARGET_EMAIL}"
                         payload = {
                             "name": nama_pengirim,
                             "email": email_pengirim,
@@ -217,19 +222,24 @@ def beranda() -> None:
                             "message": isi_pesan,
                             "_subject": f"[{tipe_pesan}] Pesan dari IE IndoEcon Explorer",
                             "_captcha": "false",
+                            "_honey": "",  # honeypot anti-spam
                         }
-                        headers = {"User-Agent": "Mozilla/5.0"}
+                        headers = {"User-Agent": "Mozilla/5.0", "Accept": "application/json"}
 
                         try:
                             res = requests.post(endpoint, data=payload, headers=headers, timeout=10)
-                            if res.status_code in [200, 302]:
+                            try:
+                                berhasil = res.status_code == 200 and str(res.json().get("success")).lower() == "true"
+                            except ValueError:
+                                berhasil = False
+                            if berhasil:
                                 st.success("Terima kasih! Laporan/masukan Anda telah berhasil dikirimkan ke email pengembang.")
                             else:
                                 st.warning(
-                                    f"Formulir daring sedang mengalami kendala jaringan (Status: {res.status_code}). "
+                                    f"Pesan belum terkonfirmasi terkirim (status: {res.status_code}). "
                                     f"Silakan kirimkan laporan Anda secara langsung melalui email: `{TARGET_EMAIL}`"
                                 )
-                        except Exception:
+                        except requests.RequestException:
                             st.warning(
                                 "Koneksi ke server pengiriman laporan dibatasi oleh jaringan. "
                                 f"Silakan kirimkan masukan secara langsung melalui email: `{TARGET_EMAIL}`"
@@ -251,17 +261,23 @@ def beranda() -> None:
         st.markdown("© 2025–2026 • Pengembangan Aktif")
 
 
-# 3. Daftarkan seluruh halaman sekali saja agar dipakai bersama oleh sidebar & kartu Beranda
-PAGES = {
-    "wb": st.Page(find_page("1"), title="World Bank", icon=":material/public:"),
-    "fred": st.Page(find_page("2"), title="FRED", icon=":material/show_chart:"),
-    "unsdg": st.Page(find_page("4"), title="UN SDG", icon=":material/eco:"),
-    "bps": st.Page(find_page("5"), title="BPS", icon=":material/account_balance:"),
-    "who": st.Page(find_page("6"), title="WHO", icon=":material/local_hospital:"),
-    "vdem": st.Page(find_page("7"), title="V-Dem", icon=":material/how_to_vote:"),
-    "dse": st.Page(find_page("8"), title="Digital Society & Economy", icon=":material/devices:"),
-    "comtrade": st.Page(find_page("9"), title="Comtrade", icon=":material/directions_boat:"),
+# 3. Daftarkan halaman sekali saja; halaman yang berkasnya tidak ada dilewati
+PAGE_SPEC = {
+    "wb": ("1", "World Bank", ":material/public:"),
+    "fred": ("2", "FRED", ":material/show_chart:"),
+    "unsdg": ("4", "UN SDG", ":material/eco:"),
+    "bps": ("5", "BPS", ":material/account_balance:"),
+    "who": ("6", "WHO", ":material/local_hospital:"),
+    "vdem": ("7", "V-Dem", ":material/how_to_vote:"),
+    "dse": ("8", "Digital Society & Economy", ":material/devices:"),
+    "comtrade": ("9", "Comtrade", ":material/directions_boat:"),
 }
+
+PAGES = {}
+for key, (prefix, title, icon) in PAGE_SPEC.items():
+    path = find_page(prefix)
+    if path:
+        PAGES[key] = st.Page(path, title=title, icon=icon)
 
 pg = st.navigation(
     [
