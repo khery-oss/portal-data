@@ -4,10 +4,12 @@ import streamlit as st
 
 
 def _register_plotly_theme() -> None:
-    """Mendaftarkan template Plotly global bergaya dark/light ledger."""
+    """Mendaftarkan template Plotly global bergaya dark/light ledger.
+    Catatan: st.plotly_chart default theme="streamlit" menimpa colorway dan font template ini.
+    Agar template berlaku penuh, panggil st.plotly_chart(..., theme=None)."""
     pio.templates["atlas_ledger"] = go.layout.Template(
         layout=dict(
-            font=dict(family="Geist, sans-serif", size=12, color="#64748B"),
+            font=dict(family="Geist, sans-serif", size=12, color="#94A3B8"),
             paper_bgcolor="rgba(0,0,0,0)",
             plot_bgcolor="rgba(0,0,0,0)",
             colorway=["#2DD4BF", "#38BDF8", "#818CF8", "#F59E0B"],
@@ -16,14 +18,14 @@ def _register_plotly_theme() -> None:
                 gridcolor="rgba(148, 163, 184, 0.12)",
                 zeroline=False,
                 showline=False,
-                tickfont=dict(family="Geist Mono, monospace", size=11, color="#64748B"),
+                tickfont=dict(family="Geist Mono, monospace", size=11, color="#94A3B8"),
             ),
             yaxis=dict(
                 showgrid=True,
                 gridcolor="rgba(148, 163, 184, 0.12)",
                 zeroline=False,
                 showline=False,
-                tickfont=dict(family="Geist Mono, monospace", size=11, color="#64748B"),
+                tickfont=dict(family="Geist Mono, monospace", size=11, color="#94A3B8"),
             ),
             hoverlabel=dict(
                 bgcolor="#0F172A",
@@ -99,7 +101,8 @@ def apply_custom_theme() -> None:
             margin-bottom: 0.1rem !important;
         }
 
-        code, pre, [data-testid="stMetricValue"], [data-testid="stCaptionContainer"] {
+        /* Monospace hanya untuk kode dan angka; caption tetap Geist agar kalimat panjang mudah dibaca */
+        code, pre, [data-testid="stMetricValue"] {
             font-family: 'Geist Mono', monospace !important;
             letter-spacing: -0.02em;
         }
@@ -159,10 +162,9 @@ def apply_custom_theme() -> None:
             border-color: color-mix(in srgb, var(--text-color) 12%, transparent) !important;
         }
 
-        /* 8. Tombol Primary & Unduh Tegas (Tanpa Glow Berlebihan) */
+        /* 8. Tombol: Primary solid, Unduh outline (hierarki aksi utama vs aksi sekunder) */
         button[kind="primary"],
-        [data-testid="stBaseButton-primary"],
-        [data-testid="stDownloadButton"] button {
+        [data-testid="stBaseButton-primary"] {
             background-color: #0057FF !important;
             color: #FFFFFF !important;
             border: 1px solid #2563EB !important;
@@ -175,14 +177,27 @@ def apply_custom_theme() -> None:
         }
 
         button[kind="primary"]:hover,
-        [data-testid="stBaseButton-primary"]:hover,
-        [data-testid="stDownloadButton"] button:hover {
+        [data-testid="stBaseButton-primary"]:hover {
             background-color: #0047D1 !important;
             border-color: #3B82F6 !important;
         }
 
         [data-testid="stDownloadButton"] button {
             width: 100% !important;
+            background-color: transparent !important;
+            color: var(--text-color) !important;
+            border: 1px solid color-mix(in srgb, #3B82F6 70%, var(--text-color)) !important;
+            border-radius: 6px !important;
+            min-height: 36px !important;
+            font-size: 0.85rem !important;
+            font-weight: 600 !important;
+            box-shadow: none !important;
+            transition: background-color 0.15s ease, border-color 0.15s ease !important;
+        }
+
+        [data-testid="stDownloadButton"] button:hover {
+            background-color: color-mix(in srgb, #3B82F6 14%, transparent) !important;
+            border-color: #3B82F6 !important;
         }
 
         /* Label kecil uppercase Geist Mono di atas judul */
@@ -195,8 +210,8 @@ def apply_custom_theme() -> None:
             margin-bottom: 0.2rem;
         }
 
-        /* 9. Struktur Editorial Beranda (Garis Aksen Kiri + Pertahankan Glow Hijau Integritas) */
-        /* A. Pedoman Penggunaan Akademis (Aksen Kiri Biru, Tanpa Glow) */
+        /* 9. Struktur Editorial Beranda (Garis Aksen Kiri, Tanpa Glow) */
+        /* A. Pedoman Penggunaan Akademis (Aksen Kiri Biru) */
         .st-key-pedoman_neon [data-testid="stExpander"] {
             border: 1px solid color-mix(in srgb, var(--text-color) 14%, transparent) !important;
             border-left: 3px solid #3B82F6 !important;
@@ -209,7 +224,7 @@ def apply_custom_theme() -> None:
             font-weight: 600 !important;
         }
 
-/* B. Prinsip Integritas & Transparansi Data (Aksen Kiri Hijau, Tanpa Glow) */
+        /* B. Prinsip Integritas & Transparansi Data (Aksen Kiri Hijau) */
         .st-key-integritas_neon {
             background-color: var(--secondary-background-color) !important;
             border: 1px solid color-mix(in srgb, var(--text-color) 14%, transparent) !important;
@@ -218,12 +233,12 @@ def apply_custom_theme() -> None:
             padding: 1.1rem 1.25rem !important;
             box-shadow: none !important;
         }
+        /* Hijau dicampur warna teks tema: terang di mode gelap, lebih tua di mode terang */
         .st-key-integritas_neon h3 {
-            color: #22C55E !important;
-            text-shadow: 0 0 10px rgba(34, 197, 94, 0.45);
+            color: color-mix(in srgb, #22C55E 65%, var(--text-color)) !important;
         }
 
-        /* C. Kotak Saran (Aksen Kiri Biru, Tanpa Glow) */
+        /* C. Kotak Saran (Aksen Kiri Biru) */
         .st-key-saran_neon {
             background-color: var(--secondary-background-color) !important;
             border: 1px solid color-mix(in srgb, var(--text-color) 14%, transparent) !important;
@@ -244,9 +259,10 @@ def apply_custom_theme() -> None:
             border-color: color-mix(in srgb, #3B82F6 55%, transparent) !important;
         }
 
+        /* Biru dicampur warna teks tema agar tetap terbaca di mode terang maupun gelap */
         [class*="st-key-card_"] [data-testid="stPageLink-NavLink"] p,
         [class*="st-key-card_"] [data-testid="stPageLink-NavLink"] span {
-            color: #38BDF8 !important;
+            color: color-mix(in srgb, #0EA5E9 65%, var(--text-color)) !important;
             font-weight: 500 !important;
         }
         </style>
